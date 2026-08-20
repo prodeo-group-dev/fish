@@ -58,7 +58,7 @@ The second use case is the thin version of `Customer.recordReceipt()`, which tod
 - `id`, `name`, `entityId` (which Group entity sells to this Customer — NFR-SO03), `facilityId?` (where relevant), `creditTerms`, `avalArrangement` (UC-SO1's aval/guarantee detail — free-form or structured, not yet specified, mirroring `Supplier.bankAvalArrangement`'s open shape in the PO design).
 
 ### 3.2 `SalesOrder`
-- `id`, `customerId`, `entityId`, `facilityId?`, `lines: List<SalesOrderLine>`, `deliveryTerms`.
+- `id`, `customerId`, `entityId`, `facilityId?`, `lines: List<SalesOrderLine>`, `deliveryTerms` — all built. `entityId`/`deliveryTerms` required (NFR-SO03, UC-SO2); `facilityId` stays optional, not every sale is trade-finance-linked.
 - **Status lifecycle**, richer than the GL Engine's current computed `Draft→PartiallyDelivered→Fulfilled`: `Draft → AvalConfirmed → PartiallyFulfilled → Fulfilled → Invoiced → PartiallyCollected → Collected`, with `Cancelled` and `Amended` as side-transitions per UC-SO7. `AvalConfirmed` is a hard prerequisite state — no transition into `PartiallyFulfilled`/`Fulfilled` is legal without passing through it first (FR-SO03). Exact transition rules not finalized in this pass, same discipline as the PO document's §3.2 — flagged, not guessed.
 - `deliverLine()`'s current responsibility (recognizing AR/revenue immediately on delivery) is retained in spirit but gated: the equivalent call on this system's side must check `avalConfirmed` before proceeding, and the *timing* of the GL Engine crossing depends on the resolved revenue recognition point (§4), not necessarily the delivery moment itself.
 
