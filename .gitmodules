@@ -10,3 +10,6 @@
 [submodule "POP"]
 	path = POP
 	url = https://github.com/prodeo-group-dev/fish-purchase-order-processing.git
+[submodule "HR"]
+	path = HR
+	url = https://github.com/prodeo-group-dev/fish-hr-payroll.git
