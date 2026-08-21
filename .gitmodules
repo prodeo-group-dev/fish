@@ -13,3 +13,6 @@
 [submodule "HR"]
 	path = HR
 	url = https://github.com/prodeo-group-dev/fish-hr-payroll.git
+[submodule "common"]
+	path = common
+	url = https://github.com/prodeo-group-dev/fish-common.git
