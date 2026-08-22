@@ -1,0 +1,125 @@
+# Cote d'Ivoire tax and currency settings — machine-readable form of
+# docs/CI/CI_Tax_And_Currency_Settings.md.
+#
+# Cote d'Ivoire is the fourth and last of the Mano River jurisdictions named
+# in the spec's own tax-computation scope list - completes that list rather
+# than adding new scope, same as SL/LR/GN.
+#
+# Status: reference data, 2026-08-22. Real, current DGI-derived figures for
+# the 2026 fiscal year (see sources at the bottom) - not fabricated.
+#
+# CURRENCY: XOF is recorded for reference only and is explicitly NOT
+# onboarded - confirmed 2026-08-22, this system only recognises SLE across
+# the Mano River operation. Do not seed Money/Company.baseCurrency with XOF
+# on the strength of this file. XOF is also shared across all 8 UEMOA
+# states, not Cote d'Ivoire-specific - unlike every other currency in this
+# document set.
+#
+# its reflects a genuine 2024 structural reform (Ordinance 2023-718/719,
+# effective 2024-01-01) that abolished and merged three separate taxes
+# (IS/IGR/CN) into one unified ITS. Sources describing "IGR bands" predate
+# this reform and are superseded, not a second valid figure.
+
+metadata:
+  taxYear: "2026 (fiscal year, Loi de Finances 2026)"
+  jurisdiction: "Cote d'Ivoire"
+  asOf: "2026-08-22"
+  fabricated: false
+
+currency:
+  isoCode: XOF
+  onboarded: false
+  onboardedNote: "SLE is the sole recognized currency across the Mano River operation, confirmed 2026-08-22 - XOF recorded for reference only, not for use"
+  decimalPlaces: 0
+  decimalPlacesNote: "XOF has no minor unit in practice, same zero-decimal-place category as Guinea's GNF"
+  sharedCurrencyNote: "shared across all 8 UEMOA member states (Benin, Burkina Faso, Cote d'Ivoire, Guinea-Bissau, Mali, Niger, Senegal, Togo) - not Cote d'Ivoire-specific, unlike every other currency in this document set"
+
+corporateIncomeTax:
+  # Impot sur les Benefices Industriels et Commerciaux (BIC). Maps to the
+  # already-built TaxType.CORPORATE_INCOME_TAX. Residency-dependent split -
+  # a sixth distinct TaxRule-shape complication across this document set.
+  residentRate: 0.25
+  nonResidentRate: 0.35
+  nonEstablishedOnlineMarketplace:
+    rate: 0.30
+    appliesTo: "non-established online marketplaces with Cote d'Ivoire-sourced turnover"
+    thresholdAnnual: 50000000
+    note: "new for 2026, targets digital platforms without local establishment - a genuinely novel category, not traditional resident/non-resident"
+
+tva:
+  # Genuine VAT terminology, same as Guinea (not GST like SL/Liberia).
+  # TaxType has no VAT/GST member yet - recorded ahead of that gap closing.
+  standardRate: 0.18
+  reducedRate:
+    rate: 0.09
+    appliesTo: "jute/sisal fibers, livestock/poultry feed and inputs, fertilizer-manufacturing inputs and packaging"
+    effectiveFrom: "2026-01-17"
+    legalBasis: "Order No. 2026-03, 2026-01-07"
+    volatilityNote: "these goods were exempt, then briefly moved to the full 18% standard rate, then reduced to 9% - all within roughly two weeks in January 2026. Treat as more volatile than the UK's stable reduced/zero VAT categories, not equally settled policy."
+
+its:
+  # Impot sur les Traitements et Salaires, for HR/'s PayrollTaxRule.
+  # Unified 2024 reform (Ordinance 2023-718/719, effective 2024-01-01)
+  # merged IS + IGR + CN (Contribution Nationale) into this single tax.
+  legalBasis: "Ordinance 2023-718/719, effective 2024-01-01"
+  assessmentBase: "gross salary directly, no flat professional-expense deduction (unlike the pre-2024 regime)"
+  bands:
+    - rate: 0.00
+      lowerThresholdMonthly: 0
+      upperThresholdMonthly: 75000
+    - rate: 0.16
+      lowerThresholdMonthly: 75001
+      upperThresholdMonthly: 240000
+    - rate: 0.21
+      lowerThresholdMonthly: 240001
+      upperThresholdMonthly: 800000
+    - rate: 0.24
+      lowerThresholdMonthly: 800001
+      upperThresholdMonthly: 2400000
+    - rate: 0.28
+      lowerThresholdMonthly: 2400001
+      upperThresholdMonthly: 8000000
+    - rate: 0.32
+      lowerThresholdMonthly: 8000001
+      upperThresholdMonthly: null
+  deductions:
+    # Only two deductions permitted - a genuinely tight, specific rule.
+    familyDependents:
+      reductionPerHalfShare: 5500
+      maxShares: 5
+      appliedTo: "computed ITS amount, not taxable income"
+    cnpsEmployeeContribution:
+      rate: 0.063
+      note: "the only other deduction permitted"
+
+cnps:
+  # Caisse Nationale de Prevoyance Sociale - Cote d'Ivoire's NI/PRSI/
+  # NASSIT/CNSS equivalent. Most granularly itemized in this document set.
+  employee:
+    rate: 0.063
+    composition: "retirement only"
+  employer:
+    rateRange: [0.1415, 0.1715]
+    composition:
+      retirement: 0.077
+      familyBenefits: 0.05
+      maternity: 0.0075
+      workplaceAccidentsRange: [0.02, 0.05]
+      note: "workplace-accidents rate varies by risk category, driving both the employer total's own range and the overall combined range"
+  combinedRange: [0.2045, 0.2345]
+  cmu:
+    # Couverture Maladie Universelle - folded into CNPS collection but a
+    # distinct scheme (health, not pension/family/accident).
+    employee: 0.015
+    employer: 0.03
+  caps:
+    retirementMonthly: 3375000
+    familyMaternityAccidentsMonthly: 70000
+    note: "retirement cap is much higher than the family/maternity/accidents cap - not the same ceiling"
+
+sources:
+  - "https://www.koaci.com/article/2026/01/15/cote-divoire/economie/cote-divoire-annexe-fiscale-2026-eclairage-sur-les-nouvelles-regles-qui-vont-impacter-les-entreprises-ivoiriennes_193630.html"
+  - "https://blog.avocats.deloitte.fr/cote-divoire-les-principales-mesures-de-la-loi-de-finances-pour-2026/"
+  - "https://www.teamfrance-export.fr/infos-sectorielles/39967/39967-la-cote-divoire-instaure-une-tva-de-9-sur-les-aliments-pour-animaux"
+  - "https://macalculatriceenligne.com/afrique/calcul-impot-revenu-cote-ivoire/"
+  - "https://macalculatriceenligne.com/afrique/calcul-cnps-cote-ivoire/"
