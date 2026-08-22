@@ -6,6 +6,8 @@
 
 **Scope note:** England/Wales/Northern Ireland figures throughout. Scotland has its own devolved Income Tax bands (different from the below) — out of scope here since Purse's stated footprint is UK, Northern Ireland, and Republic of Ireland, not Scotland specifically. If a Scottish entity is ever onboarded, this document needs a Scotland-specific section, not a silent substitution.
 
+**Machine-readable form:** `docs/UK/uk_tax_and_currency_settings.yaml` holds the same figures as structured key-value data (nested by section: `currency`, `corporationTax`, `vat`, `paye`, `nationalInsurance`), for whenever this needs to be loaded as actual config/seed data rather than just read as prose. Kept in sync by hand for now — nothing generates one from the other.
+
 ---
 
 ## 1. Currency

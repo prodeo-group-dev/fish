@@ -1,0 +1,106 @@
+# UK tax and currency settings — machine-readable form of
+# docs/UK/UK_Tax_And_Currency_Settings.md.
+#
+# Status: reference data, 2026-08-22. Real, current HMRC/gov.uk-sourced
+# figures for the 2026/27 UK tax year (see sources at the bottom) - not
+# fabricated, per the existing codebase precedent against inventing UK tax
+# figures (HR/.../payroll_tax_rule.kt's KDoc). England/Wales/Northern Ireland
+# only - Scotland has its own devolved Income Tax bands, not represented here.
+#
+# This file is data, not wiring: nothing in GL/ or HR/ reads it yet.
+# TaxRule's flat-rate shape can't represent corporationTax's tiering as-is,
+# TaxType has no vat member yet, and HR/'s PayrollTaxRule is still
+# unpopulated - see the markdown doc for exactly what each section maps to
+# and what would need to change to actually consume these values.
+#
+# UK tax years run 6 April-5 April and rates/thresholds change most Budgets.
+# Re-verify before relying on this for a period that has since rolled over.
+
+metadata:
+  taxYear: "2026/27"
+  jurisdiction: "UK (England, Wales, Northern Ireland)"
+  asOf: "2026-08-22"
+  fabricated: false
+
+currency:
+  isoCode: GBP
+  decimalPlaces: 2
+  symbol: "£"
+  # decimalPlaces already comes for free via Money's use of
+  # java.util.Currency.getInstance("GBP").defaultFractionDigits - listed
+  # here for completeness, not because it needs seeding anywhere.
+  # symbol is NOT currently stored or rendered anywhere in code -
+  # Money.toString() prints "10.00 GBP", not "£10.00".
+
+corporationTax:
+  # Maps to the already-built TaxType.CORPORATE_INCOME_TAX.
+  smallProfitsRate: 0.19
+  smallProfitsThreshold: 50000
+  mainRate: 0.25
+  mainRateThreshold: 250000
+  marginalRelief:
+    fraction: "3/200"
+    band: [50000, 250000]
+    effectiveMarginalRate: 0.265
+    # associated-companies divisor: the 50000/250000 thresholds are each
+    # divided by (1 + number of associated companies) for group structures.
+    associatedCompaniesDivisorApplies: true
+
+vat:
+  # TaxType has no VAT member yet - recorded ahead of that gap closing.
+  standardRate: 0.20
+  reducedRate: 0.05
+  zeroRate: 0.00
+
+paye:
+  # For HR/'s PayrollTaxRule, still unpopulated pending sourced figures.
+  personalAllowance: 12570
+  personalAllowanceTaper:
+    startsAt: 100000
+    withdrawalRate: "£1 per £2 of income above 100000"
+    fullyWithdrawnAt: 125140
+  bands:
+    basic:
+      rate: 0.20
+      lowerThreshold: 12571
+      upperThreshold: 50270
+    higher:
+      rate: 0.40
+      lowerThreshold: 50271
+      upperThreshold: 125140
+    additional:
+      rate: 0.45
+      lowerThreshold: 125141
+      upperThreshold: null
+  payeThreshold:
+    weekly: 242
+    monthly: 1048
+
+nationalInsurance:
+  class1:
+    employee:
+      mainRate: 0.08
+      upperRate: 0.02
+      primaryThreshold:
+        weekly: 242
+        monthly: 1048
+      upperEarningsLimit:
+        weekly: 967
+        monthly: 4189
+    employer:
+      rate: 0.15
+      secondaryThreshold:
+        annual: 5000
+        monthly: 417
+      reducedRateCarveOut:
+        appliesTo: "employees under 21 / apprentices under 25"
+        rate: 0.00
+        upTo:
+          upperSecondaryThresholdWeekly: 967
+
+sources:
+  - "https://pocketwise.co.uk/tax/corporation-tax-rates-2026-27/"
+  - "https://clearfigures.co.uk/vat-rates-uk"
+  - "https://www.riftrefunds.co.uk/advice/tax-updates-by-year/26-27-personal-allowance/"
+  - "https://www.freeagent.com/rates/national-insurance-class-1-employers/"
+  - "https://www.freeagent.com/rates/national-insurance-class-1-employees/"
