@@ -1,0 +1,94 @@
+# Sierra Leone tax and currency settings — machine-readable form of
+# docs/SL/SL_Tax_And_Currency_Settings.md.
+#
+# Sierra Leone is the project's actual primary market-facing wedge, not a
+# secondary jurisdiction like IE/NG - already named first in the spec's own
+# tax-scope list. This closes a previously-open gap, not new scope.
+#
+# Status: reference data, 2026-08-22. Real, current NRA-derived figures for
+# the 2026 fiscal year (see sources at the bottom) - not fabricated.
+#
+# corporateIncomeTax.standardRate changed THIS fiscal year (25% -> 30%,
+# Finance Act 2026) - more likely to move again than the other figures here.
+#
+# paye.bands' thresholds are flagged unresolved, not just unsourced: sources
+# consistently give the band structure (5 bands, 0/15/20/25/30%) but
+# inconsistently label the threshold unit as old Leone (SLL) vs New Leone
+# (SLE, post-2022 redenomination). thresholdUnitConfirmed: false reflects
+# that honestly rather than picking one silently.
+
+metadata:
+  taxYear: "2026 (fiscal year, Finance Act 2026)"
+  jurisdiction: "Sierra Leone"
+  asOf: "2026-08-22"
+  fabricated: false
+
+currency:
+  isoCode: SLE
+  decimalPlaces: 2
+  symbol: "Le"
+  # SLE (New Leone), not SLL (old Leone) - Sierra Leone redenominated 2022,
+  # 1 SLE = 1,000 SLL. symbol is NOT currently stored or rendered anywhere
+  # in code, same gap already flagged for GBP/EUR/NGN.
+
+corporateIncomeTax:
+  # Maps to the already-built TaxType.CORPORATE_INCOME_TAX. Flat rate, no
+  # small-company exemption or tiering identified in this sourcing pass -
+  # the simplest of the UK/IE/NG/SL TaxRule-shape gaps, since a single flat
+  # rate already fits this one directly.
+  standardRate: 0.30
+  changedThisFiscalYear:
+    from: 0.25
+    to: 0.30
+    reason: "align with regional average and top marginal individual income tax rate"
+    act: "Finance Act 2026"
+  note: "coincidentally matches GL/'s existing TaxRuleTest.kt illustrative fixture (0.30) - that fixture predates this document and wasn't sourced from anything, the match is coincidental"
+
+gst:
+  # Sierra Leone's VAT-equivalent terminology. TaxType has no GST/VAT member
+  # yet - recorded ahead of that gap closing. Single flat rate, unlike the
+  # UK/IE/NG's multi-band VAT - no reduced/zero tiers identified.
+  standardRate: 0.15
+  base: "total taxable value; for imports, CIF value plus import duty"
+  administeredBy: "Commissioner General, National Revenue Authority (NRA)"
+  inEffectSince: 2009
+
+paye:
+  # For HR/'s PayrollTaxRule, a jurisdiction beyond its current "UK and
+  # Ireland first" scope. Band structure confirmed; threshold unit is not.
+  thresholdUnitConfirmed: false
+  thresholdUnitNote: "sources uniformly write 'SLL 600' but Sierra Leone's own cited minimum-wage figures (SLL 600 -> SLL 800) are far more consistent with New Leone (SLE) post-2022 values than pre-2022 old-Leone values - likely a labeling error in secondary sources, not confirmed via a primary NRA source (the one PDF found in this pass failed to extract as readable text)"
+  bands:
+    - rate: 0.00
+      upperThresholdMonthly: 600
+    - rate: 0.15
+      lowerThresholdMonthly: 601
+      upperThresholdMonthly: 1200
+    - rate: 0.20
+      lowerThresholdMonthly: 1201
+      upperThresholdMonthly: 1800
+    - rate: 0.25
+      lowerThresholdMonthly: 1801
+      upperThresholdMonthly: 2400
+    - rate: 0.30
+      lowerThresholdMonthly: 2401
+      upperThresholdMonthly: null
+
+nassit:
+  # National Social Security and Insurance Trust - Sierra Leone's NI/PRSI/
+  # pension equivalent. Most confidently sourced figure in this document -
+  # consistent everywhere checked, no unit-label ambiguity like paye above.
+  employee:
+    rate: 0.05
+  employer:
+    rate: 0.10
+  combined: 0.15
+  base: "covered earnings (basic salary) - excludes food concessions, housing/travel allowances, overtime, bonuses, commissions"
+
+sources:
+  - "https://take-profit.org/en/statistics/corporate-tax-rate/sierra-leone/"
+  - "https://news.bloombergtax.com/daily-tax-report-international/sierra-leone-mof-presents-2026-budget-statement"
+  - "https://mail.nra.gov.sl/individuals-and-partnerships/goods-and-services-tax"
+  - "https://sl.icalculator.com/income-tax-rates.html"
+  - "https://rivermate.com/guides/sierra-leone/employment-cost-calculator"
+  - "https://thebettsfirmsl.com/blog/pay-as-you-earn-paye-compliance-management-in-sierra-leone"
