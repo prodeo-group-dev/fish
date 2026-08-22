@@ -1,0 +1,109 @@
+# Nigeria tax and currency settings — machine-readable form of
+# docs/NG/NG_Tax_And_Currency_Settings.md.
+#
+# SCOPE FLAG, not a scope decision: Nigeria is not otherwise mentioned
+# anywhere in this project (Mano River = Sierra Leone/Liberia/Guinea/
+# Cote d'Ivoire only). Built on explicit instruction despite that gap -
+# treat as provisional until Nigeria's in-scope status is settled
+# elsewhere in the project.
+#
+# Status: reference data, 2026-08-22. Real, current figures under the
+# Nigeria Tax Act (NTA) 2025, effective 2026-01-01 - not the prior regime
+# it replaced, and not fabricated (see sources at the bottom).
+#
+# This file is data, not wiring: nothing in GL/ or HR/ reads it yet.
+# companiesIncomeTax's small-company exemption (turnover AND fixed-assets
+# test) is a third distinct shape from the UK's tiering and Ireland's
+# trading/passive split - TaxRule's single flat rate can't represent any
+# of the three.
+#
+# employer pension rate is flagged unstable, not just unsourced - PenCom
+# has an active, unfinalized proposal to raise it as of August 2026.
+
+metadata:
+  taxYear: "2026 (NTA 2025 regime, effective 2026-01-01)"
+  jurisdiction: "Nigeria"
+  asOf: "2026-08-22"
+  fabricated: false
+  inScopeElsewhereInProject: false
+
+currency:
+  isoCode: NGN
+  decimalPlaces: 2
+  symbol: "₦"
+  # symbol is NOT currently stored or rendered anywhere in code, same gap
+  # already flagged for GBP/EUR. NGN itself is new to this project - not
+  # among the four v1 currencies (GBP, EUR, SLE, USD) named in the spec.
+
+companiesIncomeTax:
+  # Maps to the already-built TaxType.CORPORATE_INCOME_TAX. Flat rate,
+  # capital gains folded in (NTA 2025 change - previously separate 10% CGT).
+  standardRate: 0.30
+  capitalGainsIncludedInStandardRate: true
+  smallCompanyExemption:
+    turnoverAtOrBelow: 100000000
+    fixedAssetsAtOrBelow: 250000000
+    exemptFrom: ["companiesIncomeTax", "capitalGainsTax", "developmentLevy"]
+    note: "turnover threshold raised from 25,000,000 under the prior regime - both tests must be met, not just turnover"
+  developmentLevy:
+    rate: 0.04
+    base: "assessable profits (pre-tax-depreciation, pre-losses)"
+    appliesTo: "non-small companies only"
+    consolidates: ["Tertiary Education Tax", "IT Levy", "NASENI levy", "Police Trust Fund levy"]
+
+vat:
+  # TaxType has no VAT member yet - recorded ahead of that gap closing.
+  standardRate: 0.075
+  zeroRate:
+    rate: 0.00
+    appliesTo: "food and basic consumables"
+    effectiveFrom: "2026-01-01"
+    note: "scope expansion under NTA 2025 - not zero-rated before"
+  exempt:
+    appliesTo: ["healthcare services", "medicines", "education services", "passenger road transport"]
+
+personalIncomeTax:
+  # For HR/'s PayrollTaxRule - a sixth jurisdiction beyond its current
+  # "UK and Ireland first" scope, recorded as reference data only.
+  bands:
+    - rate: 0.00
+      upperThreshold: 800000
+    - rate: 0.15
+      lowerThreshold: 800001
+      upperThreshold: 3000000
+    - rate: 0.18
+      lowerThreshold: 3000001
+      upperThreshold: 12000000
+    - rate: 0.21
+      lowerThreshold: 12000001
+      upperThreshold: 25000000
+    - rate: 0.23
+      lowerThreshold: 25000001
+      upperThreshold: 50000000
+    - rate: 0.25
+      lowerThreshold: 50000001
+      upperThreshold: null
+  minimumWageExemption:
+    monthlyThreshold: 70000
+    annualEquivalent: 840000
+    note: "a deduction exemption, distinct from the 0% band above, not merely a restatement of it"
+
+pension:
+  # Pension Reform Act (2014, as in force) - a separate statute from NTA
+  # 2025. Nigeria's rough equivalent of UK NI / Irish PRSI.
+  employee:
+    rate: 0.08
+    stable: true
+  employer:
+    rateMinimum: 0.10
+    stable: false
+    note: "under active, unfinalized PenCom review as of 2026-08 - proposed increase is employer-side only"
+  combinedMinimum: 0.18
+
+sources:
+  - "https://www.ey.com/en_gl/technical/tax-alerts/nigeria-tax-act-2025-has-been-signed-highlights"
+  - "https://www.safeguardglobal.com/resources/blog/nigeria-tax-act-2025/"
+  - "https://businessday.ng/business-economy/article/nigerias-tax-reforms-set-lowest-vat-rate-among-african-peers/"
+  - "https://www.mondaq.com/nigeria/capital-gains-tax/1726922/understanding-personal-income-tax-under-the-nigerian-tax-act-2025"
+  - "https://smartsmssolutions.com/resources/blog/ng/companies-income-tax-development-levy-effective-tax-rate"
+  - "https://nairametrics.com/2026/07/22/pencom-to-increase-statutory-pension-contribution-rates-in-reform-act-review/"

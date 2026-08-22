@@ -1,0 +1,99 @@
+# Republic of Ireland tax and currency settings — machine-readable form of
+# docs/IE/IE_Tax_And_Currency_Settings.md.
+#
+# Status: reference data, 2026-08-22. Real, current Revenue.ie-sourced
+# figures for the 2026 tax year (calendar year, see sources at the bottom) -
+# not fabricated, mirroring the same discipline as docs/UK's settings.
+#
+# This file is data, not wiring: nothing in GL/ or HR/ reads it yet.
+# corporationTax's trading-vs-passive split is a genuinely different SHAPE
+# from the UK's small-profits/main-rate tiering, not just different numbers -
+# TaxRule's single flat rate can't represent "which rate applies depends on
+# income type" any more than it can represent the UK's marginal relief.
+#
+# employerPrsi is deliberately omitted, not zeroed or guessed - it's banded
+# by weekly earnings and wasn't confidently sourced. Needs a follow-up
+# lookup, not an approximation.
+
+metadata:
+  taxYear: "2026"
+  jurisdiction: "Republic of Ireland"
+  asOf: "2026-08-22"
+  fabricated: false
+
+currency:
+  isoCode: EUR
+  decimalPlaces: 2
+  symbol: "€"
+  # symbol is NOT currently stored or rendered anywhere in code, same gap
+  # already flagged for GBP.
+
+corporationTax:
+  # Maps to the already-built TaxType.CORPORATE_INCOME_TAX, but the
+  # trading/passive split doesn't fit TaxRule's single-rate shape.
+  tradingRate: 0.125
+  passiveRate: 0.25
+  knowledgeDevelopmentBoxRate: 0.0625
+  pillarTwoMinimumRate: 0.15
+  pillarTwoAppliesAtConsolidatedRevenue: 750000000
+
+vat:
+  # TaxType has no VAT member yet - recorded ahead of that gap closing.
+  # Five bands, not three like the UK - band COUNT varies by jurisdiction.
+  standardRate: 0.23
+  reducedRate: 0.135
+  secondReducedRate:
+    rate: 0.09
+    appliesTo: "food, catering, hairdressing services"
+    effectiveFrom: "2026-07-01"
+    note: "permanent reduction from 0.135 - mid-year, not a January Budget change"
+  superReducedRate:
+    rate: 0.048
+    appliesTo: "livestock only"
+  zeroRate: 0.00
+
+incomeTax:
+  # For HR/'s PayrollTaxRule. SRCOP (standard rate cut-off point) varies by
+  # filing status, unlike the UK's single threshold.
+  standardRate: 0.20
+  higherRate: 0.40
+  standardRateCutOffPoint:
+    single: 44000
+    marriedOneIncome: 53000
+    marriedTwoIncomes:
+      combinedMax: 88000
+      maxTransferablePerPerson: 44000
+
+universalSocialCharge:
+  # No UK equivalent - Irish-specific, additional to Income Tax and PRSI.
+  bands:
+    - rate: 0.005
+      upperThreshold: 12012
+    - rate: 0.02
+      lowerThreshold: 12013
+      upperThreshold: 28700
+    - rate: 0.03
+      lowerThreshold: 28701
+      upperThreshold: 70044
+    - rate: 0.08
+      lowerThreshold: 70045
+      upperThreshold: null
+  exemption:
+    totalIncomeAtOrBelow: 13000
+
+prsi:
+  classA:
+    employee:
+      rate: 0.042
+      rateFrom20261001: 0.0435
+      exemptAtOrBelowWeekly: 352
+    employer:
+      rate: null
+      note: "not sourced - banded by weekly earnings, needs follow-up lookup, not guessed"
+
+sources:
+  - "https://financetool.ie/guides/corporation-tax-ireland-2026"
+  - "https://www.vatcalc.com/ireland/ireland-extends-again-hospitality-and-tourism-9-vat/"
+  - "https://www.accountantdirectory.ie/blog/vat-rates-ireland/"
+  - "https://kpmg.com/ie/en/insights/tax/budget-2026/tables.html"
+  - "https://www.irishtaxhub.ie/blog/irish-income-tax-bands-usc-rates-what-you-will-pay"
