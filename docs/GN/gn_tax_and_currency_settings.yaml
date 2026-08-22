@@ -1,0 +1,107 @@
+# Guinea tax and currency settings — machine-readable form of
+# docs/GN/GN_Tax_And_Currency_Settings.md.
+#
+# Guinea is the third of the four Mano River jurisdictions named in the
+# spec's own tax-computation scope list - closes a previously-open gap,
+# same as SL and Liberia.
+#
+# Status: reference data, 2026-08-22. Real, current DGI-derived figures for
+# the 2026 fiscal year (see sources at the bottom) - not fabricated.
+#
+# CURRENCY: GNF is recorded for reference only and is explicitly NOT
+# onboarded - confirmed 2026-08-22, this system only recognises SLE across
+# the Mano River operation. Do not seed Money/Company.baseCurrency with GNF
+# on the strength of this file.
+#
+# its (income tax on wages) is the best-sourced band table in the whole
+# UK/IE/NG/SL/LR/GN document set - traces to a specific citable legal
+# instrument (Article 63, Law L/2021/032/AN), unlike SL's unresolved
+# threshold-unit gap or Liberia's conflicting NASSCORP figures.
+
+metadata:
+  taxYear: "2026 (fiscal year, 2022 General Tax Code still in force)"
+  jurisdiction: "Guinea"
+  asOf: "2026-08-22"
+  fabricated: false
+
+currency:
+  isoCode: GNF
+  onboarded: false
+  onboardedNote: "SLE is the sole recognized currency across the Mano River operation, confirmed 2026-08-22 - GNF recorded for reference only, not for use"
+  decimalPlaces: 0
+  decimalPlacesNote: "GNF has no minor unit in practice - would be Money's first zero-decimal-place currency if ever onboarded, same category as JPY"
+
+corporateIncomeTax:
+  # Maps to the already-built TaxType.CORPORATE_INCOME_TAX. Sector-dependent
+  # rate, same shape as Liberia's mining/oil carve-out (reduced rate for a
+  # specific sector) - a fifth distinct TaxRule-shape complication in this
+  # document set, though structurally resembling Liberia's rather than new.
+  standardRate: 0.35
+  miningExploitationRate: 0.30
+  note: "highest standard headline rate across the whole document set (UK 0.25, IE 0.125/0.25, NG 0.30, SL 0.30, LR 0.25/0.30)"
+
+tva:
+  # Guinea genuinely uses VAT (TVA) terminology, unlike SL/Liberia's GST.
+  # TaxType has no VAT/GST member yet - recorded ahead of that gap closing.
+  standardRate: 0.18
+  note: "no reduced/zero-rate tiers identified in this sourcing pass - single flat rate, same simplicity as SL's GST"
+
+its:
+  # Impot sur les Traitements et Salaires, for HR/'s PayrollTaxRule.
+  # Article 63, Law L/2021/032/AN (2022 General Tax Code, in force since
+  # 2022-01-01). Best-sourced band table in this document set.
+  legalBasis: "Article 63, Law L/2021/032/AN (2022 General Tax Code)"
+  assessmentBase: "gross salary minus capped employee CNSS contributions (capped at 125,000 GNF/month) and mandatory pension withholdings; Article 59's flat-rate allowances repealed"
+  bands:
+    - rate: 0.00
+      lowerThresholdMonthly: 0
+      upperThresholdMonthly: 1000000
+    - rate: 0.05
+      lowerThresholdMonthly: 1000001
+      upperThresholdMonthly: 3000000
+    - rate: 0.08
+      lowerThresholdMonthly: 3000001
+      upperThresholdMonthly: 5000000
+    - rate: 0.10
+      lowerThresholdMonthly: 5000001
+      upperThresholdMonthly: 10000000
+    - rate: 0.15
+      lowerThresholdMonthly: 10000001
+      upperThresholdMonthly: 20000000
+    - rate: 0.20
+      lowerThresholdMonthly: 20000001
+      upperThresholdMonthly: null
+  note: "lowest top marginal rate (0.20) of any jurisdiction in this document set, despite Guinea's Corporate Income Tax being the highest - a real asymmetry between the two tax bases, not an inconsistency to reconcile"
+
+cnss:
+  # Caisse Nationale de Securite Sociale - Guinea's NI/PRSI/NASSIT
+  # equivalent. Employer rate is genuinely itemized, not a flat headline
+  # figure like SL/Liberia's employer rates.
+  employer:
+    rate: 0.18
+    breakdown:
+      familyAllowances: 0.06
+      workplaceAccidents: 0.04
+      healthExpenses: 0.04
+      variousAllowances: 0.04
+  employee:
+    rate: 0.05
+    capMonthly: 125000
+  additionalEmployerLevies:
+    # Separate from the 0.18 CNSS figure above - a real additional
+    # payroll-cost layer if this is ever used for cost-of-employment
+    # modeling, not just tax computation.
+    lumpSumPayment:
+      rate: 0.06
+      legalBasis: "General Tax Code Article 201"
+    apprenticeshipOrTrainingContribution:
+      apprenticeshipTaxRate: 0.02
+      trainingContributionRate: 0.015
+      note: "one or the other applies per headcount, not both"
+
+sources:
+  - "https://import-export.societegenerale.fr/fr/fiche-pays/guinee/presentation-fiscalite"
+  - "https://www.invest.gov.gn/page/cadre-juridique-et-fiscal?onglet=fiscalite-des-entreprises"
+  - "https://africarrieres.com/guinea/en/guide/employeur-entreprise/employer-taxes"
+  - "https://walirh.com/en/blog/calcul-its-progressif-guinee-2026"
+  - "https://rivermate.com/guides/guinea/taxes"

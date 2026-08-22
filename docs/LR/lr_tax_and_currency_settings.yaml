@@ -1,0 +1,97 @@
+# Liberia tax and currency settings — machine-readable form of
+# docs/LR/LR_Tax_And_Currency_Settings.md.
+#
+# Liberia is named alongside Sierra Leone/Guinea/Cote d'Ivoire in the spec's
+# own tax-computation scope list - closes a previously-open gap, same as SL.
+#
+# Status: reference data, 2026-08-22. Real, current LRA-derived figures for
+# the 2026 fiscal year (see sources at the bottom) - not fabricated.
+#
+# CURRENCY: LRD is recorded for reference only and is explicitly NOT
+# onboarded - confirmed 2026-08-22, this system only recognises SLE across
+# the Mano River operation. Do not seed Money/Company.baseCurrency with LRD
+# on the strength of this file.
+#
+# GST is mid-transition (12% -> 13% under the Liberia Tax Amendment Act of
+# December 2025, enacted 2026-03-24) and a full GST->VAT replacement is
+# separately planned for 2027 - this file reflects 2026 only.
+#
+# nasscorp has two genuinely CONFLICTING source versions, not resolved here -
+# recorded as an open conflict, not picked arbitrarily.
+
+metadata:
+  taxYear: "2026 (fiscal year)"
+  jurisdiction: "Liberia"
+  asOf: "2026-08-22"
+  fabricated: false
+
+currency:
+  isoCode: LRD
+  onboarded: false
+  onboardedNote: "SLE is the sole recognized currency across the Mano River operation, confirmed 2026-08-22 - LRD recorded for reference only, not for use"
+  decimalPlaces: 2
+  practicalNote: "USD circulates widely alongside LRD in Liberia's real economy (de facto, not de jure, dual-currency) - doesn't change the SLE-only decision"
+
+corporateIncomeTax:
+  # Maps to the already-built TaxType.CORPORATE_INCOME_TAX. Sector-dependent
+  # rate - a fourth distinct TaxRule-shape gap, after UK's tiering,
+  # Ireland's trading/passive split, and Nigeria's turnover-and-assets test.
+  generalRate: 0.25
+  miningAndOilRate: 0.30
+
+gst:
+  # Liberia's VAT-equivalent terminology, mid-transition. TaxType has no
+  # GST/VAT member yet - recorded ahead of that gap closing.
+  standardRate: 0.13
+  standardRateNote: "raised from 0.12, effective 2026-01-01, enacted via the Liberia Tax Amendment Act of December 2025 (approved 2026-03-24, published 2026-04-01)"
+  telecommunicationsRate: 0.15
+  futureChange:
+    replacesWith: "VAT"
+    plannedLaunchYear: 2027
+    likelyLaunchRate: 0.18
+    registrationOpensFrom: "2026-07-01"
+    note: "not yet in effect as of this document's 2026-08-22 write date"
+
+paye:
+  # For HR/'s PayrollTaxRule, a jurisdiction beyond its current "UK and
+  # Ireland first" scope. Denominated in LRD in the source data even though
+  # LRD itself isn't an onboarded currency here - band thresholds are
+  # jurisdiction reference data regardless of which currencies this system
+  # actually posts in. A real conversion-step gap if this is ever wired up
+  # while the system stays SLE-only.
+  currencyOfThresholds: LRD
+  bands:
+    - rate: 0.00
+      upperThreshold: 100000
+    - rate: 0.10
+      lowerThreshold: 100001
+      upperThreshold: 200000
+    - rate: 0.15
+      lowerThreshold: 200001
+      upperThreshold: 500000
+    - rate: 0.25
+      lowerThreshold: 500001
+      upperThreshold: null
+
+nasscorp:
+  # National Social Security and Welfare Corporation - Liberia's NI/PRSI/
+  # NASSIT equivalent. Genuinely conflicting sources, NOT resolved -
+  # recorded as an open conflict rather than picking one arbitrarily.
+  resolved: false
+  versionA:
+    employer: 0.05
+    employee: 0.05
+    structure: "flat, symmetric"
+  versionB:
+    employer: 0.03
+    employee: 0.0475
+    structure: "split: National Pensions Fund (0.06 combined) + Employment Injury Scheme (0.0175, employer-side implied)"
+  agreedFact: "employee's mandatory contribution is deductible from gross income for income tax purposes"
+
+sources:
+  - "https://www.vatupdate.com/2026/01/17/liberias-2026-budget-proposes-digital-tax-gst-hike-and-tax-incentive-reforms/"
+  - "https://kpmg.com/us/en/taxnewsflash/news/2026/01/liberia-draft-budget-tax-measures.html"
+  - "https://www.vatupdate.com/2025/11/13/liberia-to-raise-gst-to-13-in-2026-plans-18-vat-launch-in-2027/"
+  - "https://revenue.lra.gov.lr/important-revenue-noticeadjustment-to-goods-and-services-tax-gst-rates/"
+  - "https://cardinalpointadvisors.net/how-to-calculate-paye-tax-in-liberia-a-step-by-step-guide-for-2026/"
+  - "https://rivermate.com/guides/liberia/taxes"
