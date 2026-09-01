@@ -1,0 +1,688 @@
+<meta charset="UTF-8">
+<title>FiSH GL Engine</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --ink: #17140f;
+    --ink-soft: #4a4436;
+    --paper: #f1ebdd;
+    --paper-raised: #e6dcc4;
+    --paper-line: rgba(23, 20, 15, 0.14);
+    --gold: #93701f;
+    --gold-strong: #7a5c17;
+    --teal: #24504a;
+    --teal-soft: #3c6a63;
+    --shadow: rgba(23, 20, 15, 0.16);
+    --focus: #93701f;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #efe8d6;
+      --ink-soft: #beb193;
+      --paper: #153153;
+      --paper-raised: #211d16;
+      --paper-line: rgba(239, 232, 214, 0.16);
+      --gold: #cba24b;
+      --gold-strong: #e0b869;
+      --teal: #79b3a8;
+      --teal-soft: #5c8f86;
+      --shadow: rgba(0, 0, 0, 0.5);
+      --focus: #cba24b;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #efe8d6;
+    --ink-soft: #beb193;
+    --paper: #153153;
+    --paper-raised: #211d16;
+    --paper-line: rgba(239, 232, 214, 0.16);
+    --gold: #cba24b;
+    --gold-strong: #e0b869;
+    --teal: #79b3a8;
+    --teal-soft: #5c8f86;
+    --shadow: rgba(0, 0, 0, 0.5);
+    --focus: #cba24b;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    scroll-snap-type: y proximity;
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation: none !important; transition: none !important; }
+  }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--gold-strong); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+  h1, h2, h3, .display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    text-wrap: balance;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .mono {
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--teal-soft);
+  }
+
+  /* --- progress / counter rail --- */
+  .rail {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--paper-line);
+    z-index: 50;
+  }
+  .rail-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--gold);
+    transition: width 0.15s linear;
+  }
+  .counter {
+    position: fixed;
+    bottom: 20px;
+    right: 24px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    background: var(--paper);
+    padding: 6px 10px;
+    border: 1px solid var(--paper-line);
+    z-index: 50;
+    letter-spacing: 0.04em;
+  }
+
+  .theme-toggle {
+    position: fixed;
+    bottom: 20px;
+    left: 24px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--paper);
+    color: var(--ink-soft);
+    border: 1px solid var(--paper-line);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 50;
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .theme-toggle:hover { color: var(--ink); border-color: var(--gold); }
+  .theme-toggle .icon-dark { display: none; }
+  :root[data-theme="dark"] .theme-toggle .icon-light { display: none; }
+  :root[data-theme="dark"] .theme-toggle .icon-dark { display: inline; }
+
+  .deck { width: 100%; }
+
+  section.slide {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 88px 24px;
+    scroll-snap-align: start;
+    border-bottom: 1px solid var(--paper-line);
+    position: relative;
+  }
+
+  .slide-inner { max-width: 840px; width: 100%; margin: 0 auto; }
+
+  .slide-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .slide-num { font-family: 'IBM Plex Mono', monospace; color: var(--gold); font-size: 0.85rem; }
+
+  .rule {
+    border: none;
+    border-top: 1px solid var(--paper-line);
+    margin: 28px 0;
+  }
+  .rule-strong {
+    border: none;
+    border-top: 2px solid var(--ink);
+    margin: 20px 0;
+    opacity: 0.85;
+  }
+
+  p.lede {
+    font-size: 1.28rem;
+    line-height: 1.55;
+    max-width: 62ch;
+    color: var(--ink);
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+  }
+  p.body-text {
+    font-size: 1.03rem;
+    line-height: 1.7;
+    max-width: 66ch;
+    color: var(--ink-soft);
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+  }
+
+  .stat {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: clamp(2.4rem, 6vw, 3.6rem);
+    color: var(--gold-strong);
+    line-height: 1;
+  }
+  .stat-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    margin-top: 8px;
+    max-width: 24ch;
+    line-height: 1.4;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 32px 28px;
+    margin-top: 8px;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    margin-top: 8px;
+  }
+
+  .ledger-table {
+    width: 100%;
+    min-width: 480px;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 0.96rem;
+  }
+  .ledger-table th {
+    text-align: left;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal-soft);
+    font-weight: 500;
+    padding: 0 14px 10px 0;
+    border-bottom: 2px solid var(--ink);
+  }
+  .ledger-table td {
+    padding: 13px 14px 13px 0;
+    border-bottom: 1px solid var(--paper-line);
+    vertical-align: top;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .ledger-table td:first-child, .ledger-table th:first-child { color: var(--ink); font-weight: 500; }
+  .ledger-table tbody tr:last-child td { border-bottom: 1px solid var(--ink); }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.74rem;
+    padding: 5px 11px;
+    border: 1px solid var(--paper-line);
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+  }
+  .tag.on { border-color: var(--teal); color: var(--teal); }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1px;
+    background: var(--paper-line);
+    margin-top: 8px;
+    border: 1px solid var(--paper-line);
+  }
+  .card {
+    background: var(--paper);
+    padding: 22px 22px 24px;
+  }
+  .card h3 { font-size: 1.08rem; margin-bottom: 8px; }
+  .card p { font-size: 0.92rem; line-height: 1.55; color: var(--ink-soft); margin: 0; }
+
+  .quote-mark {
+    font-family: 'Fraunces', serif;
+    font-size: 3.2rem;
+    color: var(--gold);
+    line-height: 0.5;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  ul.plain { list-style: none; padding: 0; margin: 18px 0 0; }
+  ul.plain li {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--paper-line);
+    display: flex;
+    gap: 16px;
+    align-items: baseline;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  ul.plain li strong { color: var(--ink); font-weight: 500; min-width: 168px; flex-shrink: 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; letter-spacing: 0.02em; }
+
+  .cover {
+    justify-content: space-between;
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+  .tagline {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(1.3rem, 3vw, 1.7rem);
+    color: var(--ink);
+    margin: 18px 0 22px;
+    max-width: 44ch;
+    text-align: left;
+  }
+  .wordmark {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(3.6rem, 11vw, 6.4rem);
+    letter-spacing: -0.01em;
+    line-height: 0.95;
+  }
+  .cover-sub { max-width: 46ch; margin-top: 22px; }
+  .cover-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--paper-line);
+    padding-top: 16px;
+  }
+
+  .ask-figure {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 10px 0 4px;
+  }
+  .ask-figure .stat { font-size: clamp(2.6rem, 7vw, 4.2rem); }
+
+  .close-cta {
+    margin-top: 40px;
+    padding-top: 28px;
+    border-top: 1px solid var(--paper-line);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 640px) {
+    section.slide { padding: 72px 20px; }
+    .counter { right: 12px; bottom: 12px; }
+    ul.plain li { flex-direction: column; gap: 4px; }
+    ul.plain li strong { min-width: 0; }
+  }
+</style>
+
+<div class="rail"><div class="rail-fill" id="railFill"></div></div>
+<div class="counter mono"><span id="curSlide">01</span> / <span id="totalSlides">12</span></div>
+<button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+  <span class="icon-light">&#9788;</span><span class="icon-dark">&#9789;</span>
+</button>
+
+<div class="deck" id="deck">
+
+  <section class="slide cover">
+    <div class="slide-inner">
+      <div class="eyebrow">Pre-seed · Confidential · Prepared for investor review</div>
+      <div class="mono" style="letter-spacing:0.1em; text-transform:uppercase; font-size:0.95rem; font-weight:600; color:var(--teal-soft); margin-bottom:6px;">Financial Information Systems Handler</div>
+      <div class="wordmark">FiSH</div>
+      <p class="tagline">Business infrastructure for companies that don't have any.</p>
+      <p class="lede cover-sub">A multi-jurisdiction business-management engine built on GLaaS — general ledger as a service. Real bookkeeping. Real tax compliance. Real financial visibility. Built for markets most software was never designed to serve.</p>
+    </div>
+    <div class="slide-inner cover-foot">
+      <span>FiSH GL Engine — Investment Overview</span>
+      <span>femi.falase@theprodeogroup.com</span>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">02</span><span class="eyebrow">The Problem</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:20px;">Capital is already moving into this region. It has nowhere compliant to land.</h2>
+      <p class="body-text">Most businesses across this region run on paper, spreadsheets, or software built for a market with different tax law, different currency reality, and different audit expectations entirely. Meanwhile the capital is real: Sierra Leone imports over $160M of rice a year despite 5.4 million hectares of arable land, 75% of it uncultivated — regionally, ECOWAS imports roughly $3.5B of rice annually against a shortfall the bloc has committed $24B to closing by 2035. That capital still needs somewhere compliant to land.</p>
+      <p class="body-text">The World Bank's own review of Sierra Leone's agri-finance sector is blunt about why capital doesn't convert into credit: it isn't a shortage of capital or ambition, it's a shortage of trustworthy financial data. The government's own MUNAFA Fund reached over 6,800 SMEs, over 70% of them women-led — yet a national survey found only <strong style="color:var(--ink)">8.5% of all firms have ever received any formal microfinance</strong>, attributed to poor targeting and fragmented delivery. The same gap - a business with no books a lender, auditor, or tax authority can actually trust - exists well beyond agrifinance, in every sector this region's businesses operate in.</p>
+      <p class="body-text" style="margin-bottom:4px">Nigeria is the contrast that sharpens this — same missing layer, a completely different market around it:</p>
+      <div class="card-grid" style="margin:8px 0 20px">
+        <div class="card"><h3 style="color:var(--teal)">Mano River</h3><p>Capital is real and already committed — $24B pledged through the ECOWAS Rice Roadmap. No compliant ledger exists here at all. Uncontested ground, ready to enter now.</p></div>
+        <div class="card"><h3 style="color:var(--gold-strong)">Nigeria</h3><p>Capital and demand are already proven — a mature, vibrant market, the largest in West Africa. Fintech exists here (Opay among others), but none of it is a compliant, IFRS-grounded ledger. Heavily contested — worth entering only once, and only ready.</p></div>
+      </div>
+      <hr class="rule" />
+      <p class="body-text" style="font-size:1.08rem; color:var(--ink)">The connective tissue missing isn't more capital. It's a ledger these businesses, and the institutions financing them, can actually trust — one that speaks the region's own tax law, not a generic import from a market it was never built for.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">03</span><span class="eyebrow">Why Now</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:20px;">The tailwinds are already funded. The infrastructure underneath them isn't built.</h2>
+      <div class="stat-grid">
+        <div>
+          <div class="stat">$3.5B</div>
+          <div class="stat-label">ECOWAS rice imports, every single year, until the infrastructure to close that gap exists</div>
+        </div>
+        <div>
+          <div class="stat">65%</div>
+          <div class="stat-label">of Sierra Leone's labour force works in agriculture — ~60% of GDP</div>
+        </div>
+        <div>
+          <div class="stat">65</div>
+          <div class="stat-label">international + domestic firms at the Oct 2025 Sierra Leone Agrifood Investor Summit</div>
+        </div>
+        <div>
+          <div class="stat">$42B</div>
+          <div class="stat-label">AfDB-estimated financing gap for women entrepreneurs across Africa — capital already earmarked, not a shortage of ambition</div>
+        </div>
+      </div>
+      <p class="body-text" style="margin-top:32px">Agrifinance is the clearest-quantified example, not the whole opportunity: outgrower schemes, commodity buyers, DFI-backed SME facilities, and government programmes are already active across that one value chain, and none of them run on a ledger built to report, audit, and compute tax the way Sierra Leone, Liberia, Guinea, and Côte d'Ivoire actually require. The same absence holds for any regulated business in these markets, in any sector.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">04</span><span class="eyebrow">The Solution</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:16px;">FiSH — a General Ledger Engine built to be someone else's infrastructure.</h2>
+      <p class="lede">Not another bookkeeping app, but <strong style="color:var(--ink)">GLaaS</strong> — General Ledger as a Service: a multi-tenant, API-first ledger engine — double-entry, audited, IFRS-aligned — designed from its first line of code to run four jurisdictions' tax law and a dozen business types on one shared core.</p>
+      <p class="body-text">Cloud-native and service-oriented, not a monolith: the ledger core, sales, purchasing, inventory, and HR/payroll are each built as independently deployable services, not modules bolted onto one codebase. The ledger core is live on AWS today; the rest are built and tested to the same standard, ready to deploy on the same pattern — the same architecture proven infrastructure companies run at scale, not a prototype's shortcut.</p>
+      <div class="card-grid">
+        <div class="card"><h3>Real double-entry ledger</h3><p>Chart of Accounts, period locking, full audit trail, multi-currency (SLE/GBP/USD/EUR and more).</p></div>
+        <div class="card"><h3>Built-in tax engine</h3><p>Corporate income tax, GST/VAT/TVA, and payroll levies computed per-jurisdiction — SL, Liberia, Guinea, Côte d'Ivoire, plus UK, Ireland, Nigeria already modelled.</p></div>
+        <div class="card"><h3>IFRS-grounded reporting</h3><p>Trial Balance, Balance Sheet, P&L, Cash Flow, AR/AP ageing, ECL provisioning, fixed-asset depreciation — not spreadsheet approximations.</p></div>
+        <div class="card"><h3>API-first, multi-tenant</h3><p>Every capability exposed as a clean service boundary — the same engine is already built to carry four internal product lines, not just one.</p></div>
+      </div>
+      <p class="body-text" style="margin-top:24px; color:var(--ink); font-weight:500">This is the magnet: not persuading capital to move, just giving it somewhere compliant to land.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">05</span><span class="eyebrow">Who This Reaches</span></div>
+      <h2 style="font-size:2.2rem; margin-bottom:24px;">People should be able to run their business from their phone.</h2>
+      <p class="lede">The phone in a smallholder farmer's pocket carries more computing power than the guidance computer that flew Apollo 11 to the moon. The barrier was never capability — it was software built for a smartphone and a bank branch neither exists for most of this market.</p>
+      <hr class="rule" />
+      <p class="body-text">FiSH's own interface is a mobile-first progressive web app — no app-store install, works on an ordinary phone browser, built for a single-column screen first and widened from there. Platform-agnostic by design: iOS or Android doesn't matter, because there's no native app to fragment across either one. Underneath it, the engine is API-first: any business built on FiSH chooses its own access layer for its own customers — web, mobile, USSD, whatever actually reaches them — without the ledger itself needing to change.</p>
+      <p class="body-text" style="color:var(--ink)">Design the ledger to not care how a business's customers reach it, and the addressable market stops being "who can afford a smartphone" and starts being whoever that business decides to serve.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">06</span><span class="eyebrow">Market Size</span></div>
+      <h2 style="font-size:2.2rem; margin-bottom:20px;">GLaaS is for the 99%.</h2>
+      <p class="lede">Enterprise software was built for the other 1% — the large corporations with the IT budgets to afford it. Everyone else, the overwhelming majority of the world's businesses and jobs, has been left with spreadsheets, paper, or nothing at all.</p>
+      <hr class="rule" />
+      <div class="table-scroll">
+      <table class="ledger-table">
+        <thead><tr><th>Metric</th><th>SMEs</th><th>Large enterprises</th></tr></thead>
+        <tbody>
+          <tr><td>Share of all businesses</td><td>~90% worldwide (formal businesses) — 99%+ including micro-enterprises</td><td>~1–10%</td></tr>
+          <tr><td>Share of employment</td><td>&gt;50% worldwide — 60%+ in OECD economies</td><td>Remainder</td></tr>
+          <tr><td>Share of GDP</td><td>&lt;10% in low-income countries — ~50% in high-income countries</td><td>Inversely correlated with income level</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="stat-label" style="margin-top:12px; max-width:none">Source: World Bank SME Finance (worldbank.org/en/topic/smefinance); OECD SMEs and Entrepreneurship (oecd.org).</p>
+      <p class="body-text" style="margin-top:24px; color:var(--ink)">The GDP line is the tell, not a caveat: in the lower-income countries FiSH targets first, SMEs are the overwhelming majority of businesses and employers, yet capture the smallest share of GDP — and, historically, of software built for them. That gap between headcount and investment is exactly where GLaaS is built to sit.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">07</span><span class="eyebrow">Depth, Not a Demo</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:20px;">Four jurisdictions' tax law, already reasoned through — not left for later.</h2>
+      <div class="table-scroll">
+      <table class="ledger-table">
+        <thead><tr><th>Jurisdiction</th><th>Corporate tax</th><th>Consumption tax</th><th>What's distinct</th></tr></thead>
+        <tbody>
+          <tr><td>Sierra Leone</td><td>30% CIT</td><td>15% flat GST</td><td>NASSIT 5%/10% payroll; PAYE band-unit conflict recorded openly, not guessed past</td></tr>
+          <tr><td>Liberia</td><td>25% / 30% sector-split</td><td>GST mid-transition 12%→13%</td><td>Full VAT replacement planned 2027 — modelled as unstable, not settled</td></tr>
+          <tr><td>Guinea</td><td>35% / 30% (mining)</td><td>18% flat TVA</td><td>Six-bracket income tax under Article 63, Law L/2021/032/AN</td></tr>
+          <tr><td>Côte d'Ivoire</td><td>25% / 35% residency-split</td><td>TVA, volatile agri rate</td><td>2024 reform merged three prior taxes (IS/IGR/CN) into one — reflected, not stale</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="body-text" style="margin-top:24px">That's the difference between claiming tax compliance and building tax rules detailed enough to file a real return through.</p>
+      <p class="body-text" style="color:var(--ink)">That's the barrier a foreign entrant can't shortcut. A generic ledger gets re-skinned with a new currency symbol in a week; four jurisdictions' actual tax law — Sierra Leone's own NRA-derived Finance Act 2026 figures among them — can't be faked into existence that fast. Every quarter FiSH is live first is a quarter a competitor spends catching up on law, not code.</p>
+      <p class="body-text">That same real-time ledger already powers the Dashboard's own money-velocity, expense-velocity, and sales-to-expense gauges (see the product itself, not a mockup) — the compliance layer and the growth-management tool are the same underlying books, checked daily, not just at filing time. That's what turns what looks like a basic accounting tool into a critical compliance <em>and</em> growth-management asset.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">08</span><span class="eyebrow">The Opportunity</span></div>
+      <h2 style="font-size:2.2rem; margin-bottom:20px;">The money is there. The technology is there. The businesses are there.</h2>
+      <div class="card-grid">
+        <div class="card"><h3 style="color:var(--gold-strong)">The money</h3><p>$24B committed to the ECOWAS Rice Roadmap through 2035 — real, already-pledged capital, not a projection. It has nowhere compliant to land.</p></div>
+        <div class="card"><h3 style="color:var(--teal)">The technology</h3><p>GLaaS is live on AWS today, not a mockup — four jurisdictions' tax law already reasoned through, IFRS-grounded reporting, built and tested to a real production bar.</p></div>
+        <div class="card"><h3 style="color:var(--ink-soft)">The businesses</h3><p>A median age of 19.9, secondary enrolment up from 73% to 87% in two years, and 91.5% of firms never touched formal finance — most of them women-run — a market this size, still unclaimed.</p></div>
+      </div>
+      <hr class="rule" />
+      <p class="body-text" style="font-size:1.08rem; color:var(--ink)">What's missing between them: <strong style="color:var(--ink)">GLaaS</strong> — the ecosystem for every one of these businesses to manage their existence, not just their books. That's the piece that turns three separate facts into one company's opportunity.</p>
+      <p class="body-text" style="margin-top:8px; color:var(--ink); font-weight:500">That's what we've built.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">09</span><span class="eyebrow">The Ask</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:8px;">Pre-seed, priced to buy the one thing a working product can't buy itself: distribution.</h2>
+      <div class="ask-figure"><span class="stat">$350K</span><span style="color:var(--ink-soft); font-family:'IBM Plex Mono',monospace">–</span><span class="stat">$550K</span></div>
+      <p class="body-text" style="margin-top:-4px">No tenants live yet — that's what this raise is for. Sized to 12–18 months of runway to reach one milestone: real paying tenants live across all four Mano River markets — the proof point the next round, and Nigeria, both get underwritten on. Open to sizing against a firm term sheet.</p>
+      <div class="card-grid" style="margin:24px 0">
+        <div class="card"><h3 style="color:var(--ink-soft)">Risk</h3><p>Low on two fronts, open on a third. Technical risk is retired — a solo founder already carried this from design through a live AWS deployment. Competitive risk is low too: capital penetration this shallow (just 8.5% of Sierra Leonean firms have ever received formal microfinance) means no entrenched incumbent to out-compete for share. What's genuinely still open is adoption risk — earning trust from businesses that have never kept formal books — which the milestone this raise funds is built to prove out, not assume away.</p></div>
+        <div class="card"><h3 style="color:var(--teal)">Opportunity</h3><p>The market the last two slides laid out — young, increasingly educated, still 91.5% untouched by formal finance, sitting on already-committed regional capital — is what this raise buys entry to, while it's still unclaimed.</p></div>
+        <div class="card"><h3 style="color:var(--gold-strong)">Reward</h3><p>A working, tested, IFRS-grounded ledger, not a specification — plus named channel access (SMEDA, MUNAFA, ICASL, and AFAWA-backed banks already needing a way to hit women-lending targets) that turns a proven product into paying tenants. This raise buys the milestone, not the endgame: real tenants live in four markets — proof a pre-product raise never gets to underwrite against, and what the next round scales from, toward the same network economics already modelled: 1M business ledgers across Africa at £5–£10/month (GBP), £60M–£120M ARR once tenants are trading with tenants, not just paying for software.</p></div>
+      </div>
+      <hr class="rule" />
+      <div class="table-scroll">
+      <table class="ledger-table">
+        <thead><tr><th>Use of funds</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Engineering team</td><td>2–3 hires — the ledger core is proven; scaling delivery beyond one founder is the real bottleneck now</td></tr>
+          <tr><td>Mano River go-to-market</td><td>Business development into the SMEDA/MUNAFA/ICASL relationships already identified — real revenue, and the operating readiness Nigeria demands</td></tr>
+          <tr><td>SL or Liberia office</td><td>A physical base anchoring the Mano River operation — for the market-facing relationships this raise converts, and for the harder win: formal recognition from tax authorities themselves as an approved system for assessment and collection</td></tr>
+          <tr><td>Regional transport</td><td>Reliable transport to work traders, institutional partners, and government tax offices across Sierra Leone, Liberia, Guinea, and Côte d'Ivoire in person — government recognition isn't earned remotely</td></tr>
+          <tr><td>Nigeria market entry prep</td><td>Regulatory and partnership groundwork for entering a market that won't forgive an unready arrival</td></tr>
+          <tr><td>Compliance groundwork</td><td>Per-jurisdiction legal and regulatory work as external tenants move from pilot to paying</td></tr>
+          <tr><td>AWS infrastructure</td><td>Real, ongoing hosting cost for the live ECS/RDS deployment — recoverable from tenant subscription revenue once paying customers are live, not a permanent draw on the raise</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="body-text" style="margin-top:20px; color:var(--ink); font-weight:500">What follows is the proof: what's already built, what this raise still buys, how it earns, and who's building it.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">10</span><span class="eyebrow">Traction</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:8px;">The engine is built and running. The business isn't live on it yet — that's this raise.</h2>
+      <p class="body-text" style="margin-bottom:8px">Most pre-seed infrastructure pitches are a plan with no code behind it. This one has code, tests, and a real deployment — the ledger core is live on AWS today, with its onboarding flow tested end to end in production. What's still ahead is getting real customers actually operating on it.</p>
+      <div class="stat-grid" style="margin-top:28px">
+        <div><div class="stat">5+</div><div class="stat-label">independent services built and tested to the same bar — ledger core, sales, purchasing, inventory, HR/payroll</div></div>
+        <div><div class="stat">163</div><div class="stat-label">automated tests on the procurement service alone (149 unit, 14 against a real database)</div></div>
+        <div><div class="stat">Live</div><div class="stat-label">ledger core on AWS today — real ECS deployment, managed Postgres, Cognito authentication, CDN-served frontend</div></div>
+      </div>
+      <div class="tag-row">
+        <span class="tag on">Domain-driven design</span>
+        <span class="tag on">Test-driven throughout</span>
+        <span class="tag on">IFRS-grounded posting logic</span>
+        <span class="tag">IAS 1 · 2 · 7 · 9 · 16 · 21 · 23 · 36 · 37</span>
+        <span class="tag">IFRS 9 · 13 · 15</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">11</span><span class="eyebrow">Not a Single Product — a Platform</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:20px;">One core ledger, already built to carry more than one product line — not bolted on after the fact.</h2>
+      <ul class="plain">
+        <li><strong>Sibling ventures</strong>Other Prodeo Group product lines — treasury and rotating-savings/micro-lending among them — are built directly against FiSH's own ledger API: real integration surface exercised before this platform is sold externally, not a hypothetical.</li>
+        <li><strong>Extracted modules</strong>Sales Order Processing, Purchase Order Processing, Inventory Management, HR/Payroll — each its own tested service, talking to the core ledger over a clean boundary, not a monolith.</li>
+      </ul>
+      <p class="body-text" style="margin-top:24px; color:var(--ink); font-weight:500">It's a platform — one that works seamlessly with you.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">12</span><span class="eyebrow">Business Model</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:20px;">Sell the infrastructure, not the customer relationship.</h2>
+      <p class="body-text">FiSH doesn't compete with the businesses and institutions already active in these markets for market share — it sells them the ledger and tax-reporting layer they're each rebuilding badly on their own, or not building at all. Outgrower schemes, commodity buyers, and lenders are simply where the first paying relationships start.</p>
+      <div class="table-scroll">
+      <table class="ledger-table">
+        <thead><tr><th>Line</th><th>Mechanism</th></tr></thead>
+        <tbody>
+          <tr><td>GLaaS</td><td>General Ledger as a Service — per-tenant subscription for the core GL engine: accounts, periods, multi-currency, audit trail</td></tr>
+          <tr><td>Tax-computation-as-a-service</td><td>Per-jurisdiction filing-ready computation, sold standalone to institutions who already have books but no compliant tax layer</td></tr>
+          <tr><td>Ecosystem modules</td><td>Sales/Purchase Order Processing, Inventory, HR/Payroll — attach-on revenue once a tenant is on the core ledger</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="body-text" style="margin-top:24px; color:var(--ink)">This compounds, it doesn't just stack: Sales and Purchase Order Processing already model two FiSH tenants transacting directly with each other, not just each one privately booking its own side of the deal — and every eOrder or eInvoice one of them sends reaches a real counterparty who isn't a tenant yet, the transaction itself doing the introducing. At scale, that's the target — 1M business ledgers across Africa, each a counterparty another tenant can trust and trade with, at £5–£10 per ledger per month — priced for economies of scale, not per-customer margin (GBP — Prodeo Capital's own reporting currency; regional market figures elsewhere in this deck are USD, matching their original sources). That's £60M–£120M in annual recurring revenue once the network, not just the software, is doing the selling. Priced as an investment, not a cost: £5–£10 a month replaces the 2–5 back-office staff a business would otherwise need for the same bookkeeping, compliance, and reporting work — a rounding error next to that headcount, and next to what staying invisible to every lender, auditor, and tax authority costs on top of it.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">13</span><span class="eyebrow">Go-to-Market — Phase 1</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:20px;">Four real markets — Sierra Leone, Liberia, Guinea, Côte d'Ivoire — with a customer pipeline Prodeo Capital already sources.</h2>
+      <p class="body-text">Prodeo Capital's role is bringing businesses onto FiSH — a UK-regulated credit union is the clearest proof point, its requirements already modelled in the platform (Chart of Accounts, tenancy model, and onboarding flow all built). It isn't a live tenant yet: it comes on board once FiSH is proven, the same sequencing as any other business Prodeo Capital brings onto the platform, not a privileged internal case. That proof of capability — a real regulated business's ledger requirements, already modelled in code — is what de-risks every customer conversation that follows, ahead of any of them going live.</p>
+      <p class="body-text">Institutional relationships already identified as entry points: SMEDA (coordinating/advisory), the MUNAFA Fund (as a channel for its own lending capital, targeted more effectively with real data), and ICASL (standards recognition that gives FiSH's output credibility with banks and auditors). Sierra Leone, Liberia, Guinea, and Côte d'Ivoire all run on it — their tax rules are already modelled, not a future build.</p>
+      <p class="body-text">One example of what that channel work looks like in practice: the Mano River Union's AfDB-backed $4.2M grant already funding women cross-border traders in Liberia and Sierra Leone to formalise — a cohort with income to protect and no record-keeping tool of its own. Not yet a partnership, but exactly the kind of funded, ready-made audience this region keeps producing.</p>
+      <p class="body-text" style="color:var(--ink)">This region earns its own revenue and its own relationships — it isn't a warm-up act. It's also where FiSH builds the operating muscle a bigger, far more contested market won't wait around for: get to Nigeria undercooked, and entrenched players simply run you out. That's the clock this raise is racing: real operating experience here has to be in hand before Nigeria's 2027 window opens, not started after it.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">14</span><span class="eyebrow">Go-to-Market — Phase 2</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:16px;">Nigeria decides scale — and punishes an unready entrant fastest.</h2>
+      <p class="lede">West Africa's largest economy and its most contested digital-finance market. Mobile-money and neobank players — Opay among them — have already proven the demand for digital financial infrastructure at scale, and they will defend that ground hard. None of them are built as a compliant, IFRS-grounded ledger engine underneath a regulated business's own books — but arriving with an unproven product against incumbents that size doesn't get a second attempt.</p>
+      <p class="body-text">The tax engine isn't starting from zero here either: the Nigeria Tax Act 2025 (effective 2026-01-01) — a flat 30% CIT with a turnover-and-fixed-assets small-company exemption, plus a separate 4% Development Levy — is already modelled, with employer pension contributions flagged as under active PenCom review rather than guessed past.</p>
+      <p class="body-text" style="color:var(--ink)">The sequencing is the strategy: enter Nigeria carrying real operating experience from four other markets, not a first production deployment — timed past Nigeria's 2027 general election, when tax enforcement typically tightens, not before it.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="slide-head"><span class="slide-num mono">15</span><span class="eyebrow">Team</span></div>
+      <h2 style="font-size:2.1rem; margin-bottom:20px;">Founder-led, and the hardest part is already built.</h2>
+      <p class="lede">FiSH is a solo-founder build to date — the software you've just seen the depth of was designed and shipped by one person. That's the point: the technical risk a pre-seed cheque usually funds is already substantially retired.</p>
+      <p class="body-text">Founder background: an accountant and a software engineer — the two disciplines this platform actually required — with first-hand knowledge of the Nigerian market behind the Phase 2 sequencing. The accounting side is why the IFRS-grounded posting logic and multi-jurisdiction tax engine are modelled correctly, not approximated from the outside; the engineering side is why it's real, tested, shipped software, not a specification waiting for someone else to build it.</p>
+      <p class="body-text" style="color:var(--ink)">This raise funds what a solo founder structurally can't do alone: a team.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-inner">
+      <span class="quote-mark">"</span>
+      <h2 style="font-size:2.3rem; margin-bottom:24px;">The gap was never a lack of capital or ambition. It was a lack of business infrastructure anyone could trust.</h2>
+      <p class="body-text">FiSH is that infrastructure — built, tested, and running in production. What it doesn't have yet is a real business live on top of it. That's what this raise is for: get real customers, sourced through Prodeo Capital and sold directly, over the line and operating, in four markets first, so Nigeria meets a competitor with a track record, not a first attempt.</p>
+      <div class="close-cta">
+        <span>FiSH GL Engine</span>
+        <span>femi.falase@theprodeogroup.com</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  (function () {
+    var deck = document.getElementById('deck');
+    var slides = Array.prototype.slice.call(deck.querySelectorAll('section.slide'));
+    var railFill = document.getElementById('railFill');
+    var curEl = document.getElementById('curSlide');
+    var totalEl = document.getElementById('totalSlides');
+    totalEl.textContent = String(slides.length).padStart(2, '0');
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function onScroll() {
+      var scrollTop = window.scrollY;
+      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      var pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      railFill.style.width = pct + '%';
+
+      var mid = scrollTop + window.innerHeight / 2;
+      var current = 1;
+      for (var i = 0; i < slides.length; i++) {
+        if (slides[i].offsetTop <= mid) current = i + 1;
+      }
+      curEl.textContent = pad(current);
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+
+  (function () {
+    var root = document.documentElement;
+    var toggle = document.getElementById('themeToggle');
+    var stored = null;
+    try { stored = localStorage.getItem('fish-pitch-theme'); } catch (e) {}
+    if (stored === 'dark' || stored === 'light') root.setAttribute('data-theme', stored);
+
+    toggle.addEventListener('click', function () {
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.getAttribute('data-theme') || (prefersDark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('fish-pitch-theme', next); } catch (e) {}
+    });
+  })();
+</script>
