@@ -89,6 +89,39 @@ Lending's `ArrearsCase` has a confirmed destination (the Purse Credit Union Bank
 
 ---
 
-## 5. What this document changes right now
+## 6. AR/AP reconciliation — the tenant's-own-books principle (confirmed 2026-08-31)
 
-**Nothing in `fish-fish-gl-engine`.** `Creditor`/`PurchaseOrder`/`Customer`/`SalesOrder`/`StockItem` and their use cases/routes stay exactly as built. This document exists so that when extraction actually happens, the real open questions (§1.2's ECL question, §1.3's Option A/B fork, §2's atomicity question, §4's destination) get resolved deliberately rather than guessed mid-build — the same discipline `[[feedback_park_dont_guess]]` already established as this project's working style.
+**The user's own framing, verbatim across several exchanges, settling this precisely:** *"The aggregate of supplier balances will be Account Receivable AR in the GL. The aggregate of purchaser balances will be Account Payable AP in the GL"* → *"It is always from the perspective of the Tenant. The set of books we are reading"* → *"reconcile means the figures supplied through the SOP/POP must equal their respective AR/AP in the GL."*
+
+**The principle:** AR vs. AP is not a property of a transaction — it's a property of *whose books* record it. The GL Engine's existing `Creditor`→AP / `Customer`→AR treatment (§0, §1.1, §1.2) already embodies this correctly, but only from Prodeo's own single-tenant vantage point: a Purchase Order Prodeo raises against a Supplier is Prodeo's AP. Nothing about that changes here.
+
+**What's new, and not yet built:** once a counterparty is *also* a FiSH tenant — the "tenants trading with tenants" network this document's §4 destination-candidates and the pitch deck's Business Model slide both gesture at, but which has no cross-tenant transaction linking built anywhere today — the identical transaction has to post as the mirror entry on *that* tenant's own books: the same Purchase Order that's Prodeo's AP is that Supplier-tenant's AR, in their own Chart of Accounts, under their own Period. Ordinary double-entry, just applied per-tenant rather than assumed single-company. This is a genuinely new requirement, distinct from §1.1/§1.2's already-settled "thin posting interface" shape — it needs *two* postings per cross-tenant transaction, one per tenant, not one.
+
+**"Reconcile," given a concrete, testable definition, not left as a slogan:** the classic subsidiary-ledger-vs-control-account check, with SOP/POP standing in as the sub-ledger —
+- `sum(SOP's own Customer balances)` must equal the AR control account balance in **that Customer-tenant's own GL** (not Prodeo's).
+- `sum(POP's own Supplier/Creditor balances)` must equal the AP control account balance in **that Supplier-tenant's own GL** (not Prodeo's).
+
+If SOP/POP's own aggregate ever drifts from the GL Engine's control-account total on either side of a cross-tenant transaction, that drift is exactly what a reconciliation check exists to catch — the same failure mode a real subsidiary-ledger/control-account mismatch represents in conventional accounting, just crossing a tenant boundary instead of staying inside one company's books.
+
+**Not yet actionable, and deliberately not built speculatively here (same discipline as everything else in this document):** there is no cross-tenant PO/SO linking anywhere in the codebase today — a PurchaseOrder POP tracks and a SalesOrder SOP would track for the same real-world transaction are not connected records. SOP also has no persistence layer at all yet (`[[project_sop_repo]]`) — there is nothing to reconcile against on the SOP side until that exists. This section records the invariant future work must satisfy, not a reconciliation feature to build now.
+
+### 6.1 Generalizes to all four ecosystem systems, not just POP/SOP (confirmed 2026-08-31)
+
+**User's own framing:** *"SOP, POP, HR, IM are in reality types of subsidiary ledgers."* Correct, and it's the same structural pattern §6 already states for POP/SOP, extended to all four — each ecosystem system owns sub-ledger *detail*, the GL Engine holds the *control account* total, and the two must reconcile. This is also the same underlying logic Section 1.3's already-resolved Option A/B fork settled for Inventory specifically: *"The GL should be for committed costs"* — a control account is exactly that, a committed-cost total, not the business-rule detail behind it.
+
+Every `DimensionType` tag this reconciliation pattern actually needs already exists in `GL/src/main/kotlin/.../domain/common/dimension_type.kt` — confirmed by direct inspection, not assumed:
+
+| System | Sub-ledger detail it owns | GL control account | Dimension tag | Status, confirmed by code |
+|---|---|---|---|---|
+| POP | Creditor/Supplier balances | Accounts Payable | `VENDOR` | Tagged today; `AccountsPayableAging` already derives from it (§0) |
+| SOP | Customer balances | Accounts Receivable | `CUSTOMER` | Tagged today; `AccountsReceivableAging` already derives from it (§0) |
+| IM | Item costed valuation (weighted-average/WIP/NRV, per §1.3's Option B) | Inventory (Balance Sheet asset) | `ITEM` | Tagged today (`RecordInventoryReceiptUseCase`/`RecordInventoryIssueUseCase`) — but no `AccountsPayableAging`-equivalent reconciliation report exists yet for Inventory |
+| HR | `LeaveAccrual` liability, Salary Advances receivable — **not** `PayRun` itself, which is deliberately company-level with no per-employee reference (`[[project_pay_run]]`) | Accrued Leave Liability; Salary Advances Receivable | `EMPLOYEE` | Type exists and its own KDoc documents exactly this use ("a Salary Advance disbursement debits the Salary Advances control account tagged `EMPLOYEE`") — but grep confirms **zero actual usages** anywhere in `GL/src/main`. Documented intent, not yet wired. |
+
+**The one real gap this table surfaces, worth flagging rather than leaving implicit:** IM and HR both lack what POP/SOP already have — a working reconciliation report (`AccountsPayableAging`/`AccountsReceivableAging`'s equivalent) that actually derives the control-account-side total from tagged `JournalLine`s. Building those, and actually applying `DimensionType.EMPLOYEE` to `LeaveAccrual`/`SalaryAdvance` postings, are the concrete next steps if this reconciliation pattern gets built out — not done here, per this document's own standing discipline (§7).
+
+---
+
+## 7. What this document changes right now
+
+**Nothing in `fish-fish-gl-engine`.** `Creditor`/`PurchaseOrder`/`Customer`/`SalesOrder`/`StockItem` and their use cases/routes stay exactly as built. This document exists so that when extraction actually happens, the real open questions (§1.2's ECL question, §1.3's Option A/B fork, §2's atomicity question, §4's destination, §6's cross-tenant reconciliation invariant) get resolved deliberately rather than guessed mid-build — the same discipline `[[feedback_park_dont_guess]]` already established as this project's working style.
