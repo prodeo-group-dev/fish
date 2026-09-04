@@ -1,0 +1,86 @@
+# FiSH Tenancy/Administration Extraction (design-only, no code yet)
+
+**Status: design scoping, 2026-09-04. Nothing extracted, nothing deleted.** The user, mid-review of a cross-repo authorization gap (POP/SOP/IM/HR have no way to check a caller's GL-hosted `Membership`/`Role`/`AccessLevel`): *"This is conflating the role of the GL with the Administration of the Business' System. A separation should be done asap. It is essential for FiSH that the role of the Tenant has system wide administrative duties abstracted, attributed and ascribed to HIM AND ONLY HIM."* Followed by the model this extraction exists to enforce: *"By default the management role is ascribed to the Tenant - the business owner, the entrepreneur... he can have an operative managing each of GL, POP, IM, SOP, HR, etc... and ascribe permissions to them while he withholds the approvals or otherwise."*
+
+This is the same move already made four times over in this codebase — Lending, HR/Payroll, Purchase Order Processing, Sales Order Processing, and Inventory Management were all extracted out of `GL/` once their content stopped being "financial effect" and became operational/business detail the Ledger was never the right home for (`[[project_ledger_scope_boundary]]`: "GL's sole purpose is financial effect, never operational detail"). `com.theprodeogroup.fish.domain.tenancy` — Tenant, User, Membership, Role, AccessLevel, staff onboarding/invitation, KYB/KYC tracking — is Administration, not Ledger, and it currently lives inside `GL/`'s own repo.
+
+**Terminology (2026-09-04, documentation/copy only — no code rename):** the user asked that the business owner not be addressed as "the Tenant" — "he is a FiSH Customer and must be addressed respectfully," suggesting **"Entrepreneur."** This document, and future prose/UI-facing copy, refers to the person/business as **the Entrepreneur**. `Tenant`/`TenantId`/`tenantId` remain the actual class/field/column names in code — an internal technical term, unchanged for now — so this document still uses `Tenant` in backticks whenever referring to the code type itself, and "Entrepreneur" whenever referring to the person who holds it.
+
+---
+
+## 0. What's actually in GL today (confirmed by direct code inventory, not guessed)
+
+| Type | File | Role |
+|---|---|---|
+| `Tenant` | `domain/tenancy/tenant.kt` | The Entrepreneur's organization; owns Companies/admin Memberships by reference; KYB/admin-KYC/phone verification state machine, 180-day grace period |
+| `Company` | `domain/tenancy/company.kt` | One legal entity under a Tenant, own Chart of Accounts/currency/fiscal year — **heavily load-bearing for Ledger**: `Account`/`Period`/`JournalEntry` and 13+ other Ledger files are all `companyId`-scoped |
+| `User` | `domain/tenancy/user.kt` | A global login identity, no auth mechanics modeled, no Tenant reference (access is via `Membership`) |
+| `Membership` | `domain/tenancy/membership.kt` | The join of User × Tenant × Role, plus **`AccessLevel`** (independent of `Role`, 2026-08-29) and **`grantedModules: Set<ManagedModule>`** (binary per-module visibility, 2026-08-31) |
+| `Role` | `domain/tenancy/role.kt` | `OWNER_ADMIN, ACCOUNTANT, APPROVER, READ_ONLY, COMPLIANCE_ETHICS_REVIEW` — a label only, per its own KDoc, carries no behavior |
+| `AccessLevel` | `domain/tenancy/access_level.kt` | `NONE < READ < WRITE < APPROVE < ADMIN`, ordinal-comparable via `atLeast()` — this is where real enforcement actually lives |
+| `ManagedModule` | `domain/tenancy/managed_module.kt` | `GL, HR, SOP, POP, IM, TAX` |
+| `ModuleManagementPreference` | `domain/tenancy/module_management_preference.kt` | Captured at onboarding: "will you manage this module yourself, or delegate it?" — **intent capture only, explicitly not access control yet**, per its own KDoc: "once those systems (or a real per-module RBAC model here) are ready to act on it" |
+| `MembershipStatus`, `VerificationStatus`, `PhoneNumber` | — | Supporting value types |
+| `OnboardTenantUseCase`, `AddCompanyToTenantUseCase`, `InviteStaffMemberUseCase`, `KybGracePeriodSweep` | `application/` | The onboarding/staff-management application layer |
+| `GET /me`, `authorizeTenantForWrite/ForAdmin/ForModule` | `infrastructure/web/MeRoutes.kt`, `Auth.kt` | GL's own in-process enforcement — real, tested, live in production, but reachable only from inside GL's own JVM |
+
+**The genuinely good news, confirmed while investigating this**: the owner/operative/approval-delegation model the user just described is *already half-built*, not a green-field design. `Role.OWNER_ADMIN` + `AccessLevel.ADMIN` by default *is* "the Entrepreneur, and only the Entrepreneur, holds every permission by default." `Membership.accessLevel` being independent of `Membership.role` *is* "ascribe permissions to an operative while withholding approval" — an operative can be granted `WRITE` without `APPROVE`, or both, by an explicit two-field grant. `ModuleManagementPreference` *is* "an operative managing each of GL/POP/IM/SOP/HR" — captured at onboarding, just never wired to anything. What's missing isn't the model; it's (a) real per-module enforcement beyond GL's own routes, and (b) a home for all of this that isn't the Ledger repo.
+
+---
+
+## 1. What moves out vs. what stays
+
+**Moves out, in full:** `Tenant`, `User`, `Membership`, `Role`, `AccessLevel`, `ManagedModule`, `ModuleManagementPreference`, `MembershipStatus`, `VerificationStatus`, `PhoneNumber`, the onboarding/staff-invitation/KYB-sweep application layer, `GET /me`, and the `authorizeTenantFor*` family. This becomes a new sibling system — own repo, own database, own deployment, alongside `GL/POP/SOP/IM/HR` — that owns *"who can do what, in which Tenant, for which module"* as its whole reason for existing.
+
+**Stays in GL, unchanged:** `Company` and everything under it (`Account`, `Period`, `JournalEntry`, every report). Company is not Administration — it's the accounting entity itself, the scoping key GL's own Ledger aggregates depend on throughout. The precedent for "what moves vs. what's core Ledger" already exists in `docs/Ecosystem_Extraction_DDD_Design.md` §1.3's Option B reasoning (a business-rule/operational concern moves; the accounting fact stays) — Company is squarely on the "accounting fact" side, the same side `FixedAsset`'s depreciation stayed on.
+
+**The one real seam**: `Company.tenantId: TenantId` currently references GL's own `Tenant` aggregate directly (same-JVM value class). After extraction, this becomes a plain reference to the new system's Tenant — the same "hold a typed id, not the aggregate" pattern already used everywhere else a GL type points at something owned by a sibling repo (`Item.glStockItemId`, `LeaveAccrual`'s surviving `EmployeeId`, etc.).
+
+---
+
+## 2. What the new system is responsible for
+
+1. **Tenant identity and lifecycle** — onboarding (Draft→Active→Suspended→Closed), KYB/admin-KYC/phone verification, the 180-day grace period, exactly as `Tenant` already does.
+2. **User identity** — login identity, unchanged from today's `User`.
+3. **Membership and real, enforced authorization** — `Role`/`AccessLevel`/`grantedModules`, but now enforceable *by every module*, not just GL's own routes: this is the piece that makes `ModuleManagementPreference`'s captured intent ("someone else manages IM") into something IM can actually check.
+4. **The single cross-repo answer to "what can this caller do here?"** — every one of GL/POP/SOP/IM/HR, *including GL itself*, becomes a consumer of this system rather than GL uniquely hosting the check in-process. GL's own `authorizeTenantFor*` functions would be rewritten to call out to the new system exactly the way POP/SOP/IM/HR would, removing GL's own `MembershipRepository`/`UserRepository` special case entirely — one mechanism, not GL-plus-a-different-mechanism-for-everyone-else.
+
+**Chosen mechanism (confirmed earlier in this same design conversation, before the extraction question surfaced, and still the right choice after it)**: each consuming service calls the new system over HTTP with the caller's own forwarded bearer token — the same shape IM already uses to call GL for its own posting context. A JWT-claims/Cognito-Lambda approach was considered and set aside as more infrastructure than justified for now.
+
+---
+
+## 3. Open questions — parked, not guessed
+
+1. ~~**New repo name and deployment.**~~ **Resolved 2026-09-04 — "Enterprise Administration" (EA).** Repo `fish-enterprise-administration`, local folder `EA`, package `com.theprodeogroup.ea`, API domain `ea-api.theprodeogroup.com` — same naming shape as `fish-inventory-management`/`IM`/`com.theprodeogroup.im`. (An earlier pass in this same conversation floated "Tenancy" as the name; the user overrode it in favor of "Enterprise Administration" before any doc references were built on top of it.) See §5 for the full structure.
+
+2. **Data migration.** Unlike every prior extraction in this project (which moved code with no live production rows to carry), this one has **real production data already in GL's own database** — Purse's own Tenant, Companies, Users, Memberships are live (`MeRoutesTest.kt`'s "Purse"/"Purse UK" fixtures aren't just test data; they mirror what's actually deployed). This needs an actual migration plan — export/import or a dual-write cutover window — not just standing up fresh empty tables. Not resolved here.
+
+3. **Onboarding orchestration across two systems.** `OnboardTenantUseCase` today creates Tenant + Company + admin User + admin Membership together, in one GL-internal transaction-ish flow. After extraction, this spans two systems: EA creates Tenant/User/Membership (Draft), GL creates the Company referencing that Tenant's id, then something registers the new `CompanyId` back onto the Tenant. **One genuine relief, confirmed by inspection**: `Tenant.addCompany(companyId: CompanyId)` already takes a bare id, not a `Company` object — its own KDoc already says "Company and Membership are their own aggregate roots, never embedded here." No domain change needed on the Tenant side for this step; it's purely an orchestration question. This is the same "eventual consistency across two API calls, no shared transaction" tradeoff already parked in `docs/Ecosystem_Extraction_DDD_Design.md` §2 for Purchasing/Sales/Inventory — which system orchestrates (WEB calling both directly, or one service calling the other server-side) is not decided.
+
+4. **Does `ModuleManagementPreference` move too?** It's currently declared alongside `Company` (captured during Company setup) but is squarely an administration/delegation concept once it's wired to real enforcement rather than staying "intent capture only." Leans toward moving with EA; not decided.
+
+5. **GL's own migration path.** Does GL keep a short-lived local mirror/cache of Membership data for latency (accepting staleness), or call out fresh on every write? Given GL's own routes are the highest-traffic consumer of this data (every write today does an in-process check), this affects GL's own request latency/availability coupling in a way POP/SOP/IM/HR's occasional approval-gated actions don't. Not decided.
+
+---
+
+## 5. Structure — repo, packages, deployment shape
+
+**Repo**: `fish-enterprise-administration`, local folder `EA`, wired into `FiSH/` as a sixth submodule alongside GL/POP/SOP/IM/HR/common/WEB (`.gitmodules` gains an `[submodule "EA"]` entry, same shape as the other five).
+
+**Build**: the identical Kotlin/Ktor/Exposed/Postgres/HikariCP/Flyway stack every sibling system already uses — `EA/build.gradle.kts` is a copy of `IM/build.gradle.kts`/`HR/build.gradle.kts` with `group = "com.theprodeogroup.ea"` and `mainClass.set("com.theprodeogroup.ea.infrastructure.web.ApplicationKt")`. No new dependency choices to make; this is the fifth time this exact template has been used (GL, POP, SOP, IM, HR).
+
+**Package layout**, `com.theprodeogroup.ea.*`:
+- `domain.tenancy` — kept as one package, not split further, per this project's own stated convention ("group related small value objects/enums in one package... only split further when a cluster of related types genuinely grows large," `CLAUDE.md`). Holds `Tenant`, `User`, `Membership`, `Role`, `AccessLevel`, `ManagedModule`, `ModuleManagementPreference` (pending §3.4), `MembershipStatus`, `VerificationStatus`, `PhoneNumber`, `TenantStatus`, `TenantSegment`, and the domain events (`TenantActivated`/`TenantSuspended`/etc.) — ported essentially verbatim from `GL/.../domain/tenancy/*.kt`, since none of this domain logic changes, only its address does.
+- `application` — `OnboardTenantUseCase`, `AddCompanyToTenantUseCase` (now cross-system - see §3.3), `InviteStaffMemberUseCase`, `KybGracePeriodSweep`, plus a new use case backing the cross-repo check (§2.4) - something like `CheckMembershipUseCase` or folded directly into the route.
+- `infrastructure.persistence` — Exposed tables/repositories for Tenant/User/Membership, ported from `GL/.../infrastructure/persistence`'s equivalents; own Flyway migrations starting at `V1__baseline.sql` (not continuing GL's own migration numbering - a fresh database, per §3.2).
+- `infrastructure.web` — `GET /me` (moved from GL), the new cross-repo membership-check endpoint (§2.4's `GET /memberships/me?tenantId=X&module=Y` shape, drafted against GL earlier in this same investigation before the extraction call was made - see §6), staff invite/list routes, onboarding routes. JWT auth mirrors every sibling system's own `installXJwtAuth`/`XAuthenticated` shape - a primary human-facing verifier plus one named service-account verifier per caller (`EA_JWT_SERVICE_AUTH_NAME_GL`, `..._POP`, `..._SOP`, `..._IM`, `..._HR`), since GL itself becomes a caller too (§2.4).
+
+**Deployment**: own ECS Fargate service (`infra/terraform/ea.tf` in `GL/`, matching where `pop.tf`/`sop.tf`/`im.tf`/`hr.tf` already live - Terraform for every sibling service's infra has stayed centralized in GL's own `infra/terraform/` throughout this project, not distributed per-repo), own database on the shared RDS instance via the established 5-step procedure (`[[feedback_shared_rds_manual_database_creation]]`), API domain `ea-api.theprodeogroup.com`.
+
+**What does NOT change**: `GL/`'s own `domain.tenancy` package is deleted only once EA is built, tested, deployed, and GL's own `authorizeTenantFor*`/`/me` are rewired to call it - not before. Nothing in §5 authorizes starting that deletion; this section is scope for the new repo, not a green light to touch GL yet.
+
+---
+
+## 6. What NOT to read into this document
+
+This is design-only, matching every prior extraction's own opening line. Nothing has been extracted, no new repo has been created, and the interim mechanisms already built while this gap was being investigated — IM's `StoreManager` Cognito-Group check (`IM/.../infrastructure/web/Roles.kt`), and the `accessLevel` field added to GL's own `GET /me` response (`GL/.../MeRoutes.kt`/`Dtos.kt`, 2026-09-04) — are left in place as working stopgaps, not reverted, since both are small, backward-compatible, and their shape (a Role/AccessLevel/grantedModules answer, reachable over HTTP with a forwarded token) is very likely what EA itself ends up exposing anyway.
