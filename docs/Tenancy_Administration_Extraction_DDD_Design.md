@@ -61,6 +61,8 @@ This is the same move already made four times over in this codebase — Lending,
 
 5. **GL's own migration path.** Does GL keep a short-lived local mirror/cache of Membership data for latency (accepting staleness), or call out fresh on every write? Given GL's own routes are the highest-traffic consumer of this data (every write today does an in-process check), this affects GL's own request latency/availability coupling in a way POP/SOP/IM/HR's occasional approval-gated actions don't. Not decided.
 
+6. **Splitting Company's own metadata between GL and EA — raised 2026-09-05, explicitly held, not decided.** The user proposed moving Company-level administrative metadata (Official Name, Tax ID, Fiscal Year End, Budget) under EA, alongside Tenant. This is narrower than §1's "Company stays in GL, unchanged" - it doesn't move the aggregate, only a subset of its fields. The tension flagged in that same conversation: Chart of Accounts was floated as part of the same bundle, but COA is squarely on GL's hot path (the Ledger posts against it constantly), unlike Tenant/Membership checks which are periodic auth lookups - moving COA out would force every posting operation into a cross-system call, a much tighter coupling than what EA was designed for. A narrower cut (Official Name/Tax ID/Fiscal Year End/Budget move, Chart of Accounts and anything else GL reads on the posting path stays) was suggested as a possible resolution but not confirmed against the user's actual intent. Explicitly parked at the user's own request ("let's still hold... but let's have these functionalities encoded and stored") - recorded here so the idea isn't lost, not scoped further, nothing to build from this yet.
+
 ---
 
 ## 5. Structure — repo, packages, deployment shape
