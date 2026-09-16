@@ -1,10 +1,10 @@
 # FiSH — Scope of work: replace Prodeo-branded service-account principals
 
-**Version:** 0.2 (scope only — no production change yet). Merges this doc with the independently-written `Service_Account_Opaque_Identity_Migration_Scope.md`, which is now retired in favor of this one — same six-identity inventory, reconciled into a single plan rather than two competing docs.
+**Version:** 0.3 (scope only for the identity cutover itself — no terraform/Cognito change yet). Merges this doc with the independently-written `Service_Account_Opaque_Identity_Migration_Scope.md`, which is now retired in favor of this one — same six-identity inventory, reconciled into a single plan rather than two competing docs.
 **Date:** 2026-09-16  
-**Status:** Planning. Do **not** apply terraform or rotate Cognito users until cutover plan is approved. **§4's invariant is corrected in this version** — see §4.1.  
+**Status:** Planning for the terraform/Cognito cutover. **§4.1's architecture question is resolved** (GL adopted Option B, `GL@d376f66`) — the remaining work is §4's identity-shape decision (A/B/C) and the six-pair cutover itself, not further architecture. Do **not** apply terraform or rotate Cognito users until the cutover plan (§4 + §5) is approved.  
 **Parent decision:** `docs/Service_Account_Identity_And_EA_Membership_Design_Note.md` §6 / Follow-up #2  
-**Goal:** GLaaS module S2S must not use `@theprodeogroup.com` emails as the machine identity (“not calling on Prodeo”). Keep Option B (no EA membership for M2M) **where it already applies today** — see §4.1 for which pairs that actually is. Humans unchanged.
+**Goal:** GLaaS module S2S must not use `@theprodeogroup.com` emails as the machine identity (“not calling on Prodeo”). Keep Option B (no EA membership for M2M) — now settled for **all six pairs**, per §4.1. Humans unchanged.
 
 ---
 
@@ -22,10 +22,10 @@ Welcome mail is already suppressed (`message_action = SUPPRESS`). The issue is *
 |---------------|-------------------|---------------------------|----------------------------|------------------------------|
 | `pop_im_service_account_email` | `pop-im-service@theprodeogroup.com` | POP → IM | `POP_IM_SERVICE_ACCOUNT_USERNAME` | **No** — permanent bypass (`VerifiedIdentity.isServiceAccount`, design note Option B) |
 | `sop_im_service_account_email` | `sop-im-service@theprodeogroup.com` | SOP → IM | `SOP_IM_SERVICE_ACCOUNT_USERNAME` | **No** — same bypass |
-| `pop_gl_service_account_email` | `pop-gl-service@theprodeogroup.com` | POP → GL | `POP_GL_ENGINE_SERVICE_ACCOUNT_USERNAME` | **Yes** — real EA User + Membership provisioned and verified in production (`docs/POP_GL_Service_Account_Closure_Plan.md`) |
-| `sop_service_account_email` | `sop-service@theprodeogroup.com` | SOP → GL | `SOP_GL_ENGINE_SERVICE_ACCOUNT_USERNAME` | Architecturally yes — GL's `installFishJwtAuth` passes the *same* `eaMembershipGateway` to every named provider, human and service alike (`GL/Auth.kt`). Row existence unverified. |
-| `im_service_account_email` | `im-service@theprodeogroup.com` | IM → GL | `IM_GL_ENGINE_SERVICE_ACCOUNT_USERNAME` | Same as above — architecturally yes, row unverified |
-| `hr_service_account_email` | `hr-service@theprodeogroup.com` | HR → GL | `HR_GL_ENGINE_SERVICE_ACCOUNT_USERNAME` | Same as above — architecturally yes, row unverified |
+| `pop_gl_service_account_email` | `pop-gl-service@theprodeogroup.com` | POP → GL | `POP_GL_ENGINE_SERVICE_ACCOUNT_USERNAME` | **No, as of `GL@d376f66`.** Had a real, production-verified EA User + Membership (`docs/POP_GL_Service_Account_Closure_Plan.md`) — that row still exists but is now unnecessary; GL bypasses EA for this caller before ever reading it. Row retirement is WP4, not yet done. |
+| `sop_service_account_email` | `sop-service@theprodeogroup.com` | SOP → GL | `SOP_GL_ENGINE_SERVICE_ACCOUNT_USERNAME` | **No, as of `GL@d376f66`.** GL's `authorizeTenant` now bypasses EA for every `isServiceAccount` caller before any lookup. |
+| `im_service_account_email` | `im-service@theprodeogroup.com` | IM → GL | `IM_GL_ENGINE_SERVICE_ACCOUNT_USERNAME` | Same as above — **No, as of `GL@d376f66`.** |
+| `hr_service_account_email` | `hr-service@theprodeogroup.com` | HR → GL | `HR_GL_ENGINE_SERVICE_ACCOUNT_USERNAME` | Same as above — **No, as of `GL@d376f66`.** |
 
 **Files:** `GL/infra/terraform/{pop,sop,im,hr}_*_service_account.tf` + wiring in `pop.tf` / `sop.tf` / `im.tf` / `hr.tf`.  
 **Mechanism today:** Cognito **user** + app client + secret; `CognitoServiceAccountTokenProvider` does USERNAME/PASSWORD (or equivalent) auth; callees trust a dedicated **audience** (`IM_JWT_SERVICE_AUDIENCE_POP` / `_SOP`, etc.).
@@ -64,16 +64,15 @@ Welcome mail is already suppressed (`message_action = SUPPRESS`). The issue is *
 
 **Recommendation for first cut:** **A** (or B if email claim is hard-required everywhere), with a later epic for **C** if desired. Confirm SA JWT validation paths that `require` `email` before picking A.
 
-### 4.1 Corrected invariant — splits by row, does not hold uniformly
+### 4.1 Corrected invariant — RESOLVED, now holds uniformly across all six
 
-The original single invariant ("no `@theprodeogroup.com` on M2M principals; no EA User rows for these identities") is right for two of the six rows and wrong for the other four as things stand today:
+The original single invariant ("no `@theprodeogroup.com` on M2M principals; no EA User rows for these identities") did not hold for the four GL-bound rows as of v0.2 - GL's own `authorizeTenant()` resolved every caller, human or service, through EA's `/me`, and `pop-gl-service@theprodeogroup.com` had a real, production-verified EA User + Membership row.
 
-- **POP→IM, SOP→IM:** invariant holds as written. These already bypass EA permanently (Option B, shipped). A rename is a pure identity-shape change — no EA coordination needed.
-- **POP→GL, SOP→GL, IM→GL, HR→GL:** invariant does **not** hold today. GL's own `authorizeTenant()` resolves *every* caller — human or service — through EA's `/me`, and `pop-gl-service@theprodeogroup.com` already has a real, production-verified EA User + Membership row created specifically to pass that check. Renaming the Cognito username for any of these four without also resolving the question below would break that call path on the next request — EA has no User record matching the new opaque identity.
+**Resolved 2026-09-16:** GL adopted Option B for its own four service callers, same shape as IM's (`GL@d376f66` - `AuthenticatedCaller.isServiceAccount`, `authorizeTenant` bypasses EA entirely for service callers before ever consulting it). The invariant now holds for all six rows uniformly: no EA Membership involvement, for any of them, going forward.
 
-**Decision required before WP0 can close for the GL-bound four:** does GL's own gate also move to Option B (a real code change to `GL/Auth.kt` — add its own `isServiceAccount`-equivalent bypass, matching IM's), or does GL deliberately keep its service accounts EA-Membership-backed (e.g., because GL is the ledger of record and wants every posting traceable to a real, audited identity)? Either answer is workable; guessing at it isn't. If GL keeps the EA-Membership model, the migration for these four is "create a new EA User + Membership for the new opaque identity, cut over, retire the old EA row" — not a pure rename.
+**What this unblocks:** WP0's design-choice question (§4 A/B/C) is the only remaining decision for all six pairs - there is no longer a per-row split in mechanism.
 
-This is why §5's suggested sequencing (IM-bound pairs first) is more than a blast-radius call: those two are the *only* pairs where a rename alone is sufficient today. The GL-bound four are blocked on this decision regardless of phasing.
+**What this does NOT yet do:** `pop-gl-service@theprodeogroup.com`'s existing EA User + Membership row still exists in `ea_production`. It's now dead weight, not a model to replicate, but retiring it is still a live-production-data change belonging to WP4 ("remove old Cognito users + tidy vars/defaults"), not bundled into the `GL@d376f66` code change. Do not delete it casually - confirm no other caller depends on that specific row first.
 
 ---
 
@@ -81,7 +80,7 @@ This is why §5's suggested sequencing (IM-bound pairs first) is more than a bla
 
 | # | Package | Owner surface | Risk |
 |---|---------|---------------|------|
-| WP0 | Decision §4 (identity shape) **and** §4.1 (does GL's own gate adopt Option B, or stay EA-Membership-backed) + list of Auth.kt claim requirements per callee | Design | Blocks build — §4.1 specifically blocks the four GL-bound pairs |
+| WP0 | Decision §4 (identity shape) + list of Auth.kt claim requirements per callee. §4.1's decision is resolved (GL adopted Option B, `GL@d376f66`) — no longer a blocker. | Design | Blocks build on §4 only |
 | WP1 | Terraform: new usernames, `message_action=SUPPRESS`, secrets unchanged or rotated | `GL/infra/terraform` | Cognito user replace can break live S2S if ECS still has old username |
 | WP2 | Dual-run or blue/green: create new SA users → point one caller → verify → roll forward | Ops | Highest prod risk |
 | WP3 | Update ECS env USERNAME values via terraform apply / deploy | Jenkins/ECS | Must sync with Cognito |
@@ -98,7 +97,7 @@ This is why §5's suggested sequencing (IM-bound pairs first) is more than a bla
 - **Cognito username is immutable** on an existing user — usually **create new user**, cut over, delete old (not rename-in-place).  
 - **Single shared user pool** — collisions and cleanup matter.  
 - **Aud vs email:** authorization for M2M is primarily **app client audience**; email is still logged/validated in several places — audit those before non-email usernames.  
-- **No EA provisioning for the two IM-bound principals** (Option B, settled). **Unresolved for the four GL-bound principals** pending §4.1 — if GL keeps its EA-Membership model, the new opaque identities for those four need their own EA User + Membership rows (just not `@theprodeogroup.com`-shaped ones), not zero EA rows.
+- **No EA provisioning for any of the six principals** (Option B, now settled platform-wide per §4.1). The one existing exception - `pop-gl-service@theprodeogroup.com`'s EA Membership row - predates this decision and is scheduled for retirement (WP4), not a pattern to extend.
 
 ---
 
@@ -123,9 +122,10 @@ This is why §5's suggested sequencing (IM-bound pairs first) is more than a bla
 ## 9. Next ask of product/eng
 
 1. Approve **§4 option A vs B vs C**.  
-2. Answer **§4.1**: does GL's own service-to-service gate adopt Option B, or stay EA-Membership-backed? Gates all work on the four GL-bound pairs.  
-3. Approve **phasing**: IM-bound first (unblocked regardless of §4.1) vs all six in one window.  
-4. Pick a maintenance window / rollback owner.
+2. ~~Answer §4.1~~ **Resolved 2026-09-16:** GL adopts Option B (`GL@d376f66`). All six pairs are on the same footing now.  
+3. Approve **phasing**: any pair can go first now that §4.1 is resolved — still recommend IM-bound first as the lowest-risk pilot of the identity shape itself.  
+4. Pick a maintenance window / rollback owner.  
+5. Decide who/when retires `pop-gl-service@theprodeogroup.com`'s now-unnecessary EA Membership row (WP4) - separate from the code change, still a live-data action.
 
 ---
 
