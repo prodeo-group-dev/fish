@@ -112,7 +112,7 @@ Do **not** provision those service emails into EA. Absence from `ea_production` 
 ## 9. Follow-ups
 
 1. **Done:** IM KDoc Option B rewrite (IM@`2daea8a` / `3b4952b`) + explicit pointer from `VerifiedIdentity` to this design note (IM@`0fa0be9`). Optional, still open: same one-liner pointer on `Auth`'s own `authorizeIm` KDoc, which currently only cross-references `VerifiedIdentity.isServiceAccount`, not this file directly.  
-2. Replace `@theprodeogroup.com` SA principals in terraform with opaque M2M identities — **live production identity change; scope and plan separately before touching.**  
+2. Replace `@theprodeogroup.com` SA principals in terraform with opaque M2M identities — **live production identity change; scope and plan separately before touching.** Scoped in `docs/Service_Account_Principal_Cutover_Scope.md` — surfaces that this only holds "no EA row needed" for the two IM-bound pairs; the four GL-bound pairs need a further decision (does GL's own gate adopt Option B too?) before they can move.  
 3. **Done:** GLaaS wording throughout IM `VerifiedIdentity.kt` (confirmed IM@`3b4952b` - no remaining "SaaS" reference in the file).  
 4. When redesigning M2M, update this note with mechanism + migrate runbook.
 
