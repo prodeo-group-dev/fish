@@ -2,9 +2,9 @@
 
 **Version:** 0.4 (design fully decided; implementation — WP1 onward — not started). Merges this doc with the independently-written `Service_Account_Opaque_Identity_Migration_Scope.md`, which is now retired in favor of this one — same six-identity inventory, reconciled into a single plan rather than two competing docs.
 **Date:** 2026-09-16  
-**Status:** Both open questions resolved — **§4.1** (GL adopted Option B, `GL@d376f66`) and **§4** (identity shape is **Option B** — opaque email on a non-Prodeo domain — confirmed against `cognito.tf`'s `username_attributes = ["email"]` constraint, which rules out Option A outright). Remaining work is picking the actual domain string and executing WP1–WP5. Do **not** apply terraform or rotate Cognito users until phasing (§9.3) and a maintenance window (§9.4) are set.  
+**Status:** Both open questions resolved — **§4.1** (GL adopted the **EA-membership-bypass Option B**, `GL@d376f66`) and **§4** (identity shape is **opaque-domain SA emails** — non-Prodeo email addresses, confirmed against `cognito.tf`'s `username_attributes = ["email"]` constraint, which rules out non-email usernames outright). **Naming note:** "Option B" means two different things across these docs — the EA-membership bypass (design note) and the §4 identity-shape table's own middle row. Prefer the names above in prose; "Option B" stays fine as shorthand only inside §4's own table, where context is unambiguous. Remaining work is picking the actual domain string and executing WP1–WP5. Do **not** apply terraform or rotate Cognito users until phasing (§9.3) and a maintenance window (§9.4) are set.  
 **Parent decision:** `docs/Service_Account_Identity_And_EA_Membership_Design_Note.md` §6 / Follow-up #2  
-**Goal:** GLaaS module S2S must not use `@theprodeogroup.com` emails as the machine identity (“not calling on Prodeo”). Keep Option B (no EA membership for M2M) — now settled for **all six pairs**, per §4.1. Humans unchanged.
+**Goal:** GLaaS module S2S must not use `@theprodeogroup.com` emails as the machine identity (“not calling on Prodeo”). Keep the EA-membership-bypass Option B (no EA membership for M2M) — now settled for **all six pairs**, per §4.1. Humans unchanged.
 
 ---
 
@@ -54,7 +54,7 @@ Welcome mail is already suppressed (`message_action = SUPPRESS`). The issue is *
 
 ---
 
-## 4. Design choice — RESOLVED: Option B
+## 4. Design choice — RESOLVED: opaque-domain SA emails (the table's own "Option B" row)
 
 | Option | Idea | Pros | Cons |
 |--------|------|------|------|
@@ -62,7 +62,7 @@ Welcome mail is already suppressed (`message_action = SUPPRESS`). The issue is *
 | **B. Opaque email on non-Prodeo domain** | e.g. `pop-im@sa.fish.internal` (not a real mailbox) | Satisfies the pool's own email-username constraint with **zero** user-pool changes. Populates the `email` claim exactly the way every consuming `Auth.kt` already hard-requires (`getClaim("email").asString() ?: return@validate null` — confirmed in GL, IM, POP, SOP, HR) — no code change anywhere, just new Cognito users. | Still email-shaped; needs a one-time domain-naming decision (e.g. `sa.fish.internal`), otherwise no real con |
 | **C. Client-credentials (no user)** | app client only; no username | Clearest "not a person / not Prodeo" | Client-credentials tokens carry no `email` claim at all - would break every one of these `Auth.kt`'s validation logic (GL's, IM's) immediately, requiring a real code change to accept a different identifying claim (`client_id`/`sub`) everywhere a service caller is validated, not just a Cognito change. A bigger, separate epic if ever pursued - not this cutover. |
 
-**Decided:** **Option B.** Confirmed directly against `GL/infra/terraform/cognito.tf` and every consuming `Auth.kt`'s validation logic - not the "A, or B if forced" hedge this section used to carry. A is technically blocked by the shared pool's own configuration, and C's blast radius (real code changes across every callee) is disproportionate to a naming/branding problem. B is the one option that's a pure identity-shape change with no code touched anywhere.
+**Decided:** **opaque-domain SA emails** (the table's "B" row). Confirmed directly against `GL/infra/terraform/cognito.tf` and every consuming `Auth.kt`'s validation logic - not the "A, or B if forced" hedge this section used to carry. Non-email usernames are technically blocked by the shared pool's own configuration, and client-credentials' blast radius (real code changes across every callee) is disproportionate to a naming/branding problem. Opaque-domain emails is the one option that's a pure identity-shape change with no code touched anywhere.
 
 ### 4.1 Corrected invariant — RESOLVED, now holds uniformly across all six
 
@@ -80,7 +80,7 @@ The original single invariant ("no `@theprodeogroup.com` on M2M principals; no E
 
 | # | Package | Owner surface | Risk |
 |---|---------|---------------|------|
-| WP0 | ~~Decision §4~~ **Done** — Option B decided (§4), confirmed against `cognito.tf`'s `username_attributes = ["email"]` constraint and every consuming `Auth.kt`'s claim requirements. §4.1 also resolved (GL adopted Option B, `GL@d376f66`). **No remaining design blocker — WP1 can start.** | Design | Closed |
+| WP0 | ~~Decision §4~~ **Done** — opaque-domain SA emails decided (§4), confirmed against `cognito.tf`'s `username_attributes = ["email"]` constraint and every consuming `Auth.kt`'s claim requirements. §4.1 also resolved (GL adopted the EA-bypass Option B, `GL@d376f66`). **No remaining design blocker — WP1 can start.** | Design | Closed |
 | WP1 | Terraform: new opaque-domain email usernames (e.g. `*@sa.fish.internal`), `message_action=SUPPRESS`, secrets unchanged or rotated | `GL/infra/terraform` | Cognito user replace can break live S2S if ECS still has old username |
 | WP2 | Dual-run or blue/green: create new SA users → point one caller → verify → roll forward | Ops | Highest prod risk |
 | WP3 | Update ECS env USERNAME values via terraform apply / deploy | Jenkins/ECS | Must sync with Cognito |
@@ -97,7 +97,7 @@ The original single invariant ("no `@theprodeogroup.com` on M2M principals; no E
 - **Cognito username is immutable** on an existing user — usually **create new user**, cut over, delete old (not rename-in-place).  
 - **Single shared user pool** — collisions and cleanup matter.  
 - **Aud vs email:** authorization for M2M is primarily **app client audience**; email is still logged/validated in several places — audit those before non-email usernames.  
-- **No EA provisioning for any of the six principals** (Option B, now settled platform-wide per §4.1). The one existing exception - `pop-gl-service@theprodeogroup.com`'s EA Membership row - predates this decision and is scheduled for retirement (WP4), not a pattern to extend.
+- **No EA provisioning for any of the six principals** (the EA-bypass Option B, now settled platform-wide per §4.1). The one existing exception - `pop-gl-service@theprodeogroup.com`'s EA Membership row - predates this decision and is scheduled for retirement (WP4), not a pattern to extend.
 
 ---
 
@@ -121,8 +121,8 @@ The original single invariant ("no `@theprodeogroup.com` on M2M principals; no E
 
 ## 9. Next ask of product/eng
 
-1. ~~Approve §4 option A vs B vs C~~ **Resolved 2026-09-16:** Option B, confirmed against `cognito.tf`'s pool config and every `Auth.kt`'s claim requirements — see §4. Pick the actual domain string (e.g. `sa.fish.internal`) before WP1 starts; that's the one open naming detail, not an open design question.  
-2. ~~Answer §4.1~~ **Resolved 2026-09-16:** GL adopts Option B (`GL@d376f66`). All six pairs are on the same footing now.  
+1. ~~Approve §4 option A vs B vs C~~ **Resolved 2026-09-16:** opaque-domain SA emails, confirmed against `cognito.tf`'s pool config and every `Auth.kt`'s claim requirements — see §4. Pick the actual domain string (e.g. `sa.fish.internal`) before WP1 starts; that's the one open naming detail, not an open design question.  
+2. ~~Answer §4.1~~ **Resolved 2026-09-16:** GL adopts the EA-bypass Option B (`GL@d376f66`). All six pairs are on the same footing now.  
 3. Approve **phasing**: any pair can go first now that §4/§4.1 are both resolved — still recommend IM-bound first as the lowest-risk pilot of the identity shape itself.  
 4. Pick a maintenance window / rollback owner.  
 5. Decide who/when retires `pop-gl-service@theprodeogroup.com`'s now-unnecessary EA Membership row (WP4) - separate from the code change, still a live-data action.
