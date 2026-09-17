@@ -1,16 +1,8 @@
 # Platform Infrastructure Extraction — Design Note
 
-Status: **design-only, nothing moved yet**. Scopes pulling the shared
-Terraform project out of `GL/infra/terraform/` into its own repo, per the
-user's own framing: GL's repo shouldn't have to "conflate with things that
-have to do with GL" — i.e., GL's own application code shouldn't carry the
-operational detail of five sibling services it has nothing to do with
-functionally. Same reasoning this project already applied to POP, SOP, IM,
-HR, and EA (`docs/Ecosystem_Extraction_DDD_Design.md`,
-`docs/Tenancy_Administration_Extraction_DDD_Design.md`) — GL's sole purpose
-is financial effect, never operational detail, and that boundary currently
-stops at application code. It doesn't extend to infrastructure, which is
-the actual inconsistency this closes.
+Status: **moved 2026-09-17** to [`prodeo-group-dev/fish-infrastructure`](https://github.com/prodeo-group-dev/fish-infrastructure) (PRODEO1 checkout: `FiSH/Infrastructure`, initial tip `a719726`). The shared Terraform project no longer lives under `GL/infra/terraform/`; `GL/infra/README.md` and `GL/CLAUDE.md` point at the new repo. Framing unchanged: GL's application repo should not carry sibling-service / platform ops detail (same boundary as POP/SOP/IM/HR/EA extractions). **Still open:** remote state backend (S3 + DynamoDB lock) — local `terraform.tfstate` was never committed; as of 2026-09-17 it was not found under the new tree or old `GL/infra/terraform/` on PRODEO1 (see fish-infrastructure `docs/terraform-state-location.md`). Hold `terraform apply` / backend migrate until Femi approves.
+
+
 
 ## Confirmed current state
 
