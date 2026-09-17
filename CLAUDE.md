@@ -36,7 +36,7 @@ The first aggregate now exists: `com.theprodeogroup.fish.domain.tenancy.Tenant`,
 
 ## Repo structure
 
-This is nine git repos, not one — `FiSH/` (this repo — docs, business plans, `CLAUDE.md`) plus eight submodules, all **live in production** except `common`/`WEB`'s own status noted below:
+This is ten git repos, not one — `FiSH/` (this repo — docs, business plans, `CLAUDE.md`) plus nine submodules, all **live in production** except `common`/`WEB`'s own status noted below:
 
 | Path | GitHub repo | Visibility | What it is | Tests |
 |---|---|---|---|---|
@@ -48,8 +48,9 @@ This is nine git repos, not one — `FiSH/` (this repo — docs, business plans,
 | `EA/` | `fish-enterprise-administration` | private | Enterprise Administration — Tenant/User/Membership/Role, the Business Owner dashboard/communication surface, and the `GET /me` membership check every sibling calls. | 176 |
 | `WEB/` | `fish-gl-web` | private | The React/PWA frontend (`fish-gl-web`), talking to all of the above. | — |
 | `common/` | `fish-common` | public | Shared `Money`/`ValidationResult` value types, consumed as source (no published artifact) by GL/SOP/POP/IM/HR — see `common/README.md`. | — |
+| `Infrastructure/` | `fish-infrastructure` | private | The shared Terraform project provisioning every service above plus platform pieces (network, RDS, ECS cluster, Cognito, Jenkins) — relocated out of `GL/infra/terraform/` 2026-09-17, see `docs/Platform_Infrastructure_Extraction_Design.md`. One shared repo, deliberately not split per service. | — |
 
-`SOP`/`POP`/`IM`/`HR`/`EA`/`WEB` are **private** — several name a real counterparty, live trade finance deal terms, or are simply not meant for public visibility, unlike `GL`/`fish`/`common`, which are public.
+`SOP`/`POP`/`IM`/`HR`/`EA`/`WEB`/`Infrastructure` are **private** — several name a real counterparty, live trade finance deal terms, real AWS account details, or are simply not meant for public visibility, unlike `GL`/`fish`/`common`, which are public.
 
 Every submodule is pinned to a specific commit in `.gitmodules` — cloning `FiSH/` needs `git clone --recurse-submodules` (or `git submodule update --init` after a plain clone) to actually get the code, and after pulling changes made *inside* any submodule, its pointer in `FiSH/` needs its own commit to move forward (it doesn't update automatically). Don't assume editing files under a submodule and committing in `FiSH/` is enough — submodule commits happen in their own repo first, `FiSH/` only records which commit it's pinned to. Each sibling repo's own `README.md` (refreshed 2026-09-17) is the accurate, current source for what's built in it — this table is a map, not the detail.
 
