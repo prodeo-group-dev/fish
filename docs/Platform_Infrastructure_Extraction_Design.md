@@ -6,9 +6,15 @@ Status: **moved 2026-09-17** to [`prodeo-group-dev/fish-infrastructure`](https:/
 
 ## Confirmed current state
 
-`GL/infra/terraform/` is 29 `.tf` files, ~5,700 lines, provisioning
-infrastructure for **all six live services plus shared platform pieces**,
-not just GL:
+**As of 2026-09-17 the Terraform tree lives in
+[`prodeo-group-dev/fish-infrastructure`](https://github.com/prodeo-group-dev/fish-infrastructure)**
+(PRODEO1: `FiSH/Infrastructure` submodule). It is the same project that used
+to sit under `GL/infra/terraform/` (~29 `.tf` files, ~5,700 lines) —
+provisioning **all six live services plus shared platform pieces**, not just
+GL. `GL/infra/` now keeps only a pointer README (leftover non-module files
+under the old `terraform/` dir are being cleared in WP3).
+
+Still covers:
 
 - Per-service: `ea.tf`, `pop.tf`, `sop.tf`, `im.tf`, `hr.tf` (ECS
   services/task definitions, ALB target groups/listener rules, ACM certs,
@@ -22,20 +28,15 @@ not just GL:
   CloudFront/S3), `ecr.tf`, `iam.tf`, `secrets.tf`, `notifications.tf`,
   `github_runner.tf` (declared, never applied - see below).
 
-**State is local, not remote** — `versions.tf` already documents this as a
-known, deliberate-for-now limitation ("move to a remote backend (S3 +
-DynamoDB lock table)" flagged, not done). `terraform.tfstate` is gitignored
-and exists only on whichever machine last ran `terraform apply` — it has
-never been committed anywhere. This actually simplifies an extraction: there
-is no git history of state to preserve, only a file to relocate alongside
-the `.tf` files.
+**State is still local, not remote** - `versions.tf` documents this as a
+known limitation ("move to a remote backend (S3 + DynamoDB lock table)"
+flagged, not done). `terraform.tfstate` is gitignored and lives only on
+whichever machine last ran `terraform apply` — never committed. After the
+relocate it was **not** found on PRODEO1 under the new tree or the old
+`GL/infra/terraform/` path (see fish-infrastructure
+`docs/terraform-state-location.md`). Remote backend (WP4) stays blocked
+until that file is recovered.
 
-**No service's own `Jenkinsfile` depends on `.tf` files being present.**
-Confirmed this session: every deploy stage calls `aws ecr`/`aws ecs`
-directly by hardcoded resource name/ARN — none use
-`terraform_remote_state` or read anything from the Terraform project at
-apply time. Moving `infra/terraform/` out of `GL/` doesn't touch any
-service's deploy pipeline.
 
 ## Proposed scope
 
