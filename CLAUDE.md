@@ -36,7 +36,22 @@ The first aggregate now exists: `com.theprodeogroup.fish.domain.tenancy.Tenant`,
 
 ## Repo structure
 
-This is five git repos, not one: `FiSH/` (this repo — docs, business plans, `CLAUDE.md`), `GL/` (the Kotlin GL Engine code), and the three "ecosystem" extraction repos per `docs/Ecosystem_Extraction_DDD_Design.md` — `SOP/` (Sales Order Processing, §1.2, 106 tests), `POP/` (Purchase Order Processing, §1.1, requirements-captured only, nothing built), and `IM/` (Inventory Management, §1.3, 95 tests). Pushed separately to `https://github.com/prodeo-group-dev/fish`, `https://github.com/prodeo-group-dev/fish-fish-gl-engine`, `https://github.com/prodeo-group-dev/fish-sales-order-processing`, `https://github.com/prodeo-group-dev/fish-purchase-order-processing`, and `https://github.com/prodeo-group-dev/fish-inventory-management`. The three ecosystem repos are all **private** — their requirements docs name a real counterparty and live trade finance deal terms, unlike `GL`/`fish`, which are public. `GL/`, `SOP/`, `POP/`, and `IM/` are all linked into `FiSH/` as **git submodules** (`.gitmodules`), each pinned to a specific commit — cloning `FiSH/` needs `git clone --recurse-submodules` (or `git submodule update --init` after a plain clone) to actually get the code, and after pulling changes made *inside* any submodule, its pointer in `FiSH/` needs its own commit to move forward (it doesn't update automatically). Don't assume editing files under a submodule and committing in `FiSH/` is enough — submodule commits happen in their own repo first, `FiSH/` only records which commit it's pinned to.
+This is nine git repos, not one — `FiSH/` (this repo — docs, business plans, `CLAUDE.md`) plus eight submodules, all **live in production** except `common`/`WEB`'s own status noted below:
+
+| Path | GitHub repo | Visibility | What it is | Tests |
+|---|---|---|---|---|
+| `GL/` | `fish-fish-gl-engine` | public | The GLaaS Ledger engine — system of record for every financial posting. | 645 |
+| `SOP/` | `fish-sales-order-processing` | private | Sales Order Processing (trade finance: Bill for Collection, aval confirmation). | 258 |
+| `POP/` | `fish-purchase-order-processing` | private | Purchase Order Processing (suppliers, fulfillment, three-way match). | 214 |
+| `IM/` | `fish-inventory-management` | private | Inventory Management (costing engine, warehouse operations). | 243 |
+| `HR/` | `fish-hr-payroll` | private | HR/Payroll (Staff Cost Analysis; Performance Review designed, not built). | 203 |
+| `EA/` | `fish-enterprise-administration` | private | Enterprise Administration — Tenant/User/Membership/Role, the Business Owner dashboard/communication surface, and the `GET /me` membership check every sibling calls. | 176 |
+| `WEB/` | `fish-gl-web` | private | The React/PWA frontend (`fish-gl-web`), talking to all of the above. | — |
+| `common/` | `fish-common` | public | Shared `Money`/`ValidationResult` value types, consumed as source (no published artifact) by GL/SOP/POP/IM/HR — see `common/README.md`. | — |
+
+`SOP`/`POP`/`IM`/`HR`/`EA`/`WEB` are **private** — several name a real counterparty, live trade finance deal terms, or are simply not meant for public visibility, unlike `GL`/`fish`/`common`, which are public.
+
+Every submodule is pinned to a specific commit in `.gitmodules` — cloning `FiSH/` needs `git clone --recurse-submodules` (or `git submodule update --init` after a plain clone) to actually get the code, and after pulling changes made *inside* any submodule, its pointer in `FiSH/` needs its own commit to move forward (it doesn't update automatically). Don't assume editing files under a submodule and committing in `FiSH/` is enough — submodule commits happen in their own repo first, `FiSH/` only records which commit it's pinned to. Each sibling repo's own `README.md` (refreshed 2026-09-17) is the accurate, current source for what's built in it — this table is a map, not the detail.
 
 A prior attempt (in a separate, now-treated-as-lost chat) proposed splitting into ~47 files across 9 packages and only got partway through before creating duplicates. **Don't repeat that** — group related small value objects/enums in one package (as `common` already does) and only split further when a cluster of related types genuinely grows large.
 
