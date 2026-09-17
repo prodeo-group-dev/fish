@@ -27,7 +27,7 @@ Welcome mail is already suppressed (`message_action = SUPPRESS`). The issue is *
 | `im_service_account_email` | `im-service@theprodeogroup.com` | IM → GL | `IM_GL_ENGINE_SERVICE_ACCOUNT_USERNAME` | Same as above — **No, as of `GL@d376f66`.** |
 | `hr_service_account_email` | `hr-service@theprodeogroup.com` | HR → GL | `HR_GL_ENGINE_SERVICE_ACCOUNT_USERNAME` | Same as above — **No, as of `GL@d376f66`.** |
 
-**Files:** `GL/infra/terraform/{pop,sop,im,hr}_*_service_account.tf` + wiring in `pop.tf` / `sop.tf` / `im.tf` / `hr.tf`.  
+**Files:** `fish-infrastructure/{pop,sop,im,hr}_*_service_account.tf` + wiring in `pop.tf` / `sop.tf` / `im.tf` / `hr.tf`.  
 **Mechanism today:** Cognito **user** + app client + secret; `CognitoServiceAccountTokenProvider` does USERNAME/PASSWORD (or equivalent) auth; callees trust a dedicated **audience** (`IM_JWT_SERVICE_AUDIENCE_POP` / `_SOP`, etc.).
 
 **Out of inventory (related but different):** human Cognito users, operator token, supplier portal tokens, staff invites.
@@ -58,11 +58,11 @@ Welcome mail is already suppressed (`message_action = SUPPRESS`). The issue is *
 
 | Option | Idea | Pros | Cons |
 |--------|------|------|------|
-| ~~**A. Non-email Cognito usernames**~~ | ~~e.g. `fish-sa-pop-im`, still user+password app client~~ | ~~Smallest change; same code path~~ | **Not actually available.** All six identities live in the project's one and only Cognito User Pool (`aws_cognito_user_pool.this`, `GL/infra/terraform/cognito.tf`), which is configured `username_attributes = ["email"]`. Cognito enforces this at the API level — a non-email-shaped username is rejected outright (`InvalidParameterException`), for every user in the pool, human or service. Doing Option A for real would mean a *second*, separately-configured user pool (its own issuer/JWKS/audience wiring across all six consuming `Auth.kt`s) — bigger and riskier than Option C, not "smallest change." |
+| ~~**A. Non-email Cognito usernames**~~ | ~~e.g. `fish-sa-pop-im`, still user+password app client~~ | ~~Smallest change; same code path~~ | **Not actually available.** All six identities live in the project's one and only Cognito User Pool (`aws_cognito_user_pool.this`, `fish-infrastructure/cognito.tf`), which is configured `username_attributes = ["email"]`. Cognito enforces this at the API level — a non-email-shaped username is rejected outright (`InvalidParameterException`), for every user in the pool, human or service. Doing Option A for real would mean a *second*, separately-configured user pool (its own issuer/JWKS/audience wiring across all six consuming `Auth.kt`s) — bigger and riskier than Option C, not "smallest change." |
 | **B. Opaque email on non-Prodeo domain** | e.g. `pop-im@sa.fish.internal` (not a real mailbox) | Satisfies the pool's own email-username constraint with **zero** user-pool changes. Populates the `email` claim exactly the way every consuming `Auth.kt` already hard-requires (`getClaim("email").asString() ?: return@validate null` — confirmed in GL, IM, POP, SOP, HR) — no code change anywhere, just new Cognito users. | Still email-shaped; needs a one-time domain-naming decision (e.g. `sa.fish.internal`), otherwise no real con |
 | **C. Client-credentials (no user)** | app client only; no username | Clearest "not a person / not Prodeo" | Client-credentials tokens carry no `email` claim at all - would break every one of these `Auth.kt`'s validation logic (GL's, IM's) immediately, requiring a real code change to accept a different identifying claim (`client_id`/`sub`) everywhere a service caller is validated, not just a Cognito change. A bigger, separate epic if ever pursued - not this cutover. |
 
-**Decided:** **opaque-domain SA emails** (the table's "B" row). Confirmed directly against `GL/infra/terraform/cognito.tf` and every consuming `Auth.kt`'s validation logic - not the "A, or B if forced" hedge this section used to carry. Non-email usernames are technically blocked by the shared pool's own configuration, and client-credentials' blast radius (real code changes across every callee) is disproportionate to a naming/branding problem. Opaque-domain emails is the one option that's a pure identity-shape change with no code touched anywhere.
+**Decided:** **opaque-domain SA emails** (the table's "B" row). Confirmed directly against `fish-infrastructure/cognito.tf` and every consuming `Auth.kt`'s validation logic - not the "A, or B if forced" hedge this section used to carry. Non-email usernames are technically blocked by the shared pool's own configuration, and client-credentials' blast radius (real code changes across every callee) is disproportionate to a naming/branding problem. Opaque-domain emails is the one option that's a pure identity-shape change with no code touched anywhere.
 
 ### 4.1 Corrected invariant — RESOLVED, now holds uniformly across all six
 
@@ -81,7 +81,7 @@ The original single invariant ("no `@theprodeogroup.com` on M2M principals; no E
 | # | Package | Owner surface | Risk |
 |---|---------|---------------|------|
 | WP0 | ~~Decision §4~~ **Done** — opaque-domain SA emails decided (§4), confirmed against `cognito.tf`'s `username_attributes = ["email"]` constraint and every consuming `Auth.kt`'s claim requirements. §4.1 also resolved (GL adopted the EA-bypass Option B, `GL@d376f66`). **No remaining design blocker — WP1 can start.** | Design | Closed |
-| WP1 | Terraform: new opaque-domain email usernames (e.g. `*@sa.fish.internal`), `message_action=SUPPRESS`, secrets unchanged or rotated | `GL/infra/terraform` | Cognito user replace can break live S2S if ECS still has old username |
+| WP1 | Terraform: new opaque-domain email usernames (e.g. `*@sa.fish.internal`), `message_action=SUPPRESS`, secrets unchanged or rotated | `fish-infrastructure` | Cognito user replace can break live S2S if ECS still has old username |
 | WP2 | Dual-run or blue/green: create new SA users → point one caller → verify → roll forward | Ops | Highest prod risk |
 | WP3 | Update ECS env USERNAME values via terraform apply / deploy | Jenkins/ECS | Must sync with Cognito |
 | WP4 | Remove old Cognito users + tidy vars/defaults | Terraform | After all callers moved |
