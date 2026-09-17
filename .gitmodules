@@ -22,3 +22,6 @@
 [submodule "EA"]
 	path = EA
 	url = https://github.com/prodeo-group-dev/fish-enterprise-administration.git
+[submodule "Infrastructure"]
+	path = Infrastructure
+	url = https://github.com/prodeo-group-dev/fish-infrastructure.git
