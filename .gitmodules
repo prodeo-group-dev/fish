@@ -25,3 +25,6 @@
 [submodule "Infrastructure"]
 	path = Infrastructure
 	url = https://github.com/prodeo-group-dev/fish-infrastructure.git
+[submodule "ER/Principal/SchoolAdmissions"]
+	path = ER/Principal/SchoolAdmissions
+	url = https://github.com/prodeo-group-dev/fish-school-admissions.git
