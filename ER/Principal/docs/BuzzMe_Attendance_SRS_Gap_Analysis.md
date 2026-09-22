@@ -3,6 +3,7 @@
 **Source document:** `SRS-School-Attendance-RFID-Bluetooth-v1.0.docx` (Document ID `SRS-ATT-001`, v1.0, dated 2026-09-21, status "Draft for review"), supplied by Femi 2026-09-21/22.
 **Reviewed by:** +ER Education session, against the live SchoolAdmissions codebase (not memory) as of 2026-09-22.
 **Purpose:** Femi asked for this to be read and analysed, since BuzzMe is being built around it to serve FiSH+ER/SchoolAdmissions.
+**Update, 2026-09-22:** independently cross-checked by both the "BuzzMe peer-to-peer payment system" and "Route to Market - FiSH, FiSH+ER BuzzMe" sessions — see [Peer verification](#peer-verification-2026-09-22) below. **Correction to the headline finding as originally written:** the standalone-vs-integrated question below was not actually open — it was decided directly on 2026-09-21 ("Both": DPID's attendance vertical is a standalone, sellable product, with SchoolAdmissions as its first/reference integration, not a hypothetical deployment target). The SRS's vendor-neutral framing is by design, not an oversight needing correction. The real remaining question is narrower — see Peer verification.
 
 ## Headline finding
 
@@ -10,7 +11,7 @@
 
 That's a real mismatch with what's actually been built and is already live: BuzzMe's own recent updates this session described "the entire DPID↔Principal loop (identity resolution, attendance marking, credential issuance, linking) built and tested end to end," using the exact ownership split negotiated for UC-20 — BuzzMe owns credential verification and tap capture, SchoolAdmissions owns lesson resolution and is the system of record for the mark itself (`POST /schools/{schoolId}/attendance/auto`, `LessonSlotResolver`, `AttendanceService.mark()`). That integration is the Phase-3-deferred capability this SRS describes — already done, months ahead of the SRS's own schedule.
 
-**This needs a direct answer, not an assumption on my part:** is this SRS meant to describe what serves FiSH+ER specifically (in which case its scope and phasing should be corrected to build *on* SchoolAdmissions from Phase 1, not defer to it in Phase 3), or is BuzzMe deliberately building a standalone, sellable product where the FiSH integration is just one deployment target? Those are two different builds with very different amounts of duplicated work, and the SRS as written reads like the second one.
+**Originally written as an open question here — since resolved, see [Peer verification](#peer-verification-2026-09-22):** the answer is "both." DPID's attendance vertical is a standalone, sellable product (which is why the SRS is deliberately vendor-neutral, SIMS/Arbor/Bromcom named as real peers, not placeholders), *and* SchoolAdmissions is its first, reference integration. §11's Phase-3 MIS-connector framing isn't a mistake needing correction — it describes the general product roadmap for schools with no existing MIS, not the reference deployment specifically, which is already integrated today. The real open question this reframes to is narrower: how does DPID's "own primary store" mode (a real requirement for the sellable-product market) coexist with SchoolAdmissions already being the system of record in the reference deployment, without duplication risk *there* specifically?
 
 ## Where §7's data model would duplicate what SchoolAdmissions already owns
 
@@ -23,7 +24,7 @@ That's a real mismatch with what's actually been built and is already live: Buzz
 | `TimetableSlot` | `LessonSlot` (`domain/classroom/TimetableConflictDetector.kt`) — classSectionId, teacherId, room, day, time, subject |
 | `Register` / `Mark` | `AttendanceRecord` / `AttendanceCode` (`domain/attendance/AttendanceModels.kt`) |
 
-§3.3's own architecture list hedges this correctly — "Timetable and class membership store, **or sync from MIS**" — which is compatible with treating SchoolAdmissions as that MIS. But nothing in the SRS commits to that reading, and §11's phasing actively contradicts it (sync deferred to Phase 3). If BuzzMe builds its own primary copies of these four entities for Phase 1 "Core" rather than reading them live from SchoolAdmissions's already-existing endpoints, the platform ends up with two systems of record for the same facts (who's in which class, what a student's mark was) — precisely the split-brain problem the DPID↔Principal integration work this session was built to avoid.
+§3.3's own architecture list hedges this correctly — "Timetable and class membership store, **or sync from MIS**." As confirmed below, this isn't ambiguous in the reference deployment: SchoolAdmissions already is that MIS, already integrated, today. The table above stays valid evidence for a real, narrower risk: if DPID's general "own primary store" deployment mode (built for the sellable-product market, schools with no MIS) isn't kept cleanly separable from the reference deployment's config, these four entities could still end up duplicated for FiSH's own schools specifically — not because the architecture question is unsettled, but because a multi-tenant/deployment-mode boundary hasn't been designed yet.
 
 ## Where the SRS is legitimately BuzzMe's own domain, no conflict
 
@@ -55,8 +56,29 @@ Independent of the architecture question above, several SRS requirements assume 
 
 Before BuzzMe (or anyone) starts building against this SRS as written:
 
-1. **Get a direct answer on the standalone-vs-integrated question above** — it changes whether §7's four overlapping entities get built as BuzzMe's own primary store (duplication risk) or as thin reads through SchoolAdmissions's existing APIs (no duplication, matches what's already live).
-2. If the answer is "integrated, SchoolAdmissions is the MIS," **§11's phasing needs correcting** — the MIS connector shouldn't be Phase 3 when the real integration is already built and live.
+1. ~~Get a direct answer on the standalone-vs-integrated question~~ — **already answered ("both"), see Peer verification.** Superseded by the narrower question: **design an explicit deployment-mode boundary** so DPID's general "own primary store" mode (real requirement for the sellable-product market) can't silently duplicate §7's four entities for the reference deployment, where SchoolAdmissions already is the system of record.
+2. ~~§11's phasing needs correcting~~ — **not needed.** The SRS's vendor-neutral framing and Phase-3 MIS-connector placement are deliberate product-roadmap choices, not a doc that failed to account for FiSH. No correction required.
 3. **Formally propose FR-36's mark-code table for BK-ATT-2** — this looks like the real unblock that item has been waiting on.
 4. **Scope campus presence (FR-20-23) as new, explicit SchoolAdmissions work if wanted** — don't let it get built silently inside BuzzMe as a parallel data store.
 5. **Decide whether photo storage belongs on `StudentProfile` or is BuzzMe's own cache** before FR-50/UC-6 get built against a field that doesn't exist yet.
+6. **Decide who creates a brand-new student's first `IdentityProfile`** — see below, the single largest open item on BuzzMe's own side.
+
+## Peer verification, 2026-09-22
+
+Both peer sessions read the full document and checked their own side directly rather than taking the findings on faith — folding their results in here rather than leaving them scattered across chat.
+
+**BuzzMe confirmed zero split-brain risk in what's actually built today.** Its entire persisted schema is two tables (`identity_profiles`, `credentials`, `V1__baseline.sql`) — no `AcademicGroup`, `TimetableSlot`, `Register`, `Mark`, or school-scoped `Person` data anywhere in DPID's own store. Every attendance mark, lesson slot, class section, and student record lives only in SchoolAdmissions, unchanged. The §7 table above is accurate about what *would* duplicate if Phase 1 were built literally as the SRS's standalone framing implies — not a description of anything that currently exists.
+
+**BuzzMe's first read of the architecture question (superseded, kept for the record):** BuzzMe initially described this as a genuinely open question — building on "DPID stays identity/credential-only, permanently delegates attendance-of-record to whichever MIS is present," but never pinned down as a hard rule — and proposed escalating it to Femi as unresolved.
+
+**Route to Market corrected this immediately after**, having found the actual decision: the standalone-vs-integrated question **was already asked and answered directly on 2026-09-21**, in a session this analysis didn't have visibility into. The answer is **"both"** — DPID's attendance vertical is confirmed a standalone, sellable product, with SchoolAdmissions as its first/reference integration, not a hypothetical deployment target. That's why the SRS reads vendor-neutral throughout (SIMS/Arbor/Bromcom named as real peers, not placeholders) — by design, not an oversight, and not a document that needs correcting to name FiSH explicitly.
+
+Given "both" is confirmed, Route to Market reframed what's actually still open: **how does DPID support "own primary store" mode — a real requirement for a school with no existing MIS, which is most of the sellable-product market — without that becoming duplicate-entity risk for the reference deployment specifically, where SchoolAdmissions already is the system of record?** The §7 duplication table above is still valid evidence for that narrower question; it just isn't evidence that the SRS's phasing or neutrality needs fixing. This document's headline finding, recommendation items 1-2, and the §7 section have been corrected above to reflect this rather than left contradicting it.
+
+**Route to Market cross-referenced BuzzMe's own newer scoping doc** (`docs/Enrolment_Attendance_Client_Requirements.md`, dated 2026-09-21 — the same day as the SRS) and confirmed it **already treats the DPID↔Principal integration as done** for the reference deployment specifically: a thin client over SchoolAdmissions's live APIs, SchoolAdmissions as login provider and system of record, explicitly no duplicate entities. Consistent with "both" — the reference integration is already built correctly; the sellable-product deployment mode is the part without an explicit boundary yet.
+
+**New open item surfaced by that same doc, not visible from this side:** nothing creates a *new* `IdentityProfile` today. `IssueCredentialUseCase` requires one to already exist — neither side has decided how a brand-new student gets their first `IdentityProfileId`. Flagged there as the single largest open item on BuzzMe's own side. Same class of gap as the standalone-vs-integrated question: a real design decision needing a direct answer, not an assumption from either side.
+
+**Also independently confirmed by Route to Market:** the same photo-challenge gap (FR-50/UC-6) this document flags — zero photo concept anywhere in DPID's own domain either, deferred the same way.
+
+The four SchoolAdmissions-side gaps (photo field, safeguarding three-state masking, campus presence, roster endpoint) remain this side's own to prioritize, independent of how the architecture question resolves — none of them are blocked on Femi's answer.
