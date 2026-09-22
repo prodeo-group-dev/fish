@@ -1,9 +1,21 @@
 # SchoolAdmissions ↔ FiSH institution linkage, and Guardian-as-Customer
 
-**Status:** design confirmed, 2026-09-22. Item 1 (linkage) being built now, this
-session's own side. Item 2 (Guardian → SOP Customer) is designed and
-sequenced next — correctly *after* item 1, not parallel to it (see "Why
-sequencing matters" below).
+**Status:** design confirmed, 2026-09-22. **Item 1's SchoolAdmissions side
+is built, tested (3x real-Postgres rerun), and live on `master`**
+(`fish-school-admissions` `57ad955`) — `School` aggregate, idempotent
+`POST /schools`, new EA service-account trust
+(`buildJwksServiceVerifierForEa`, `requireServiceAccount`). **EA's own
+side is not built yet** — proposed to the live "Enterprise Administration
+- EA" peer session; that session is independently verifying the
+Organisation/Company taxonomy decision with Femi directly before
+committing to field naming or new Terraform/Cognito work, rather than
+building on a relayed confirmation (the right call — flag, don't just
+trust a second-hand relay for something with platform-wide reach). Not
+deployed to production yet either: `SCHOOLADMISSIONS_JWT_SERVICE_AUDIENCE_EA`
+has no value in the real task definition until EA's Cognito app client
+exists. Item 2 (Guardian → SOP Customer) is designed and sequenced next —
+correctly *after* item 1 fully lands (both sides), not parallel to it
+(see "Why sequencing matters" below).
 
 **Origin:** relayed via FiSH+ER WEB, from a direct instruction while building
 the Student Management Console's first slice (student roster, calling
