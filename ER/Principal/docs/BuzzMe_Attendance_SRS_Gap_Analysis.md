@@ -39,7 +39,7 @@ Not everything here overlaps. These are squarely BuzzMe/device-side concerns tha
 
 Independent of the architecture question above, several SRS requirements assume SchoolAdmissions capabilities that were checked directly and **do not exist yet**:
 
-- **No photo field anywhere.** `grep -ri photo src/main/kotlin/` returns nothing. FR-50 (photo challenge — the SRS's primary anti-buddy-punching control) and UC-6 depend entirely on a student photo existing somewhere queryable. This is a real, unbuilt dependency, not a small gap.
+- ~~No photo field anywhere~~ — **closed, 2026-09-22 (`a06ac09`).** `StudentProfile.photoUrl` now exists (a reference URL, not upload/binary storage — that mechanics decision stays open). FR-50 (photo challenge) and UC-6 depended entirely on this; BuzzMe's own client-side use of it is still unbuilt.
 - **No "unexpected tap" handling — it's a hard failure today, not a branch.** `AttendanceService.mark()` (line 70-72) does `require(student.classSectionId == classSectionId) { "class section mismatch" }` — a tap for a student not in the expected class section throws and rejects outright. FR-33 wants three options (wrong class / send to office / add as visitor) instead of a bare error.
 - **Mark codes are a closed 3-value enum, and BK-ATT-2 is exactly this gap.** `AttendanceCode` is `PRESENT | ABSENT | LATE` only — the parse-failure message literally says *"gov codes BLK"*. §4.4's FR-36 table (P/L/N/I/M/C/V/B/E) is a real, concrete candidate to unblock this — this is almost certainly the same "newer attendance SRS" BuzzMe flagged earlier this session as a candidate for BK-ATT-2's official code list. Worth confirming and formally adopting.
 - **Safeguarding masking is all-or-nothing, not the three-state visibility FR-53 wants.** Today `canAccessSafeguarding()` either returns the real flag value or `null` — a teacher without the role sees nothing, not even that a flag exists. FR-53 wants a middle tier: a discreet indicator that *something* is flagged, without exposing its content, to any teacher taking that register. That's a genuinely new access-control shape, not a tweak.
@@ -60,7 +60,7 @@ Before BuzzMe (or anyone) starts building against this SRS as written:
 2. ~~§11's phasing needs correcting~~ — **not needed.** The SRS's vendor-neutral framing and Phase-3 MIS-connector placement are deliberate product-roadmap choices, not a doc that failed to account for FiSH. No correction required.
 3. **Formally propose FR-36's mark-code table for BK-ATT-2** — this looks like the real unblock that item has been waiting on.
 4. **Scope campus presence (FR-20-23) as new, explicit SchoolAdmissions work if wanted** — don't let it get built silently inside BuzzMe as a parallel data store.
-5. **Decide whether photo storage belongs on `StudentProfile` or is BuzzMe's own cache** before FR-50/UC-6 get built against a field that doesn't exist yet.
+5. ~~Decide whether photo storage belongs on `StudentProfile` or is BuzzMe's own cache~~ — **done, 2026-09-22 (`a06ac09`).** `StudentProfile.photoUrl` (a reference URL, not upload) added, visible to anyone who can see the student, settable via `POST /schools/{schoolId}/students/{studentId}/photo` or CSV import (`photo_url` column). BuzzMe's own domain still has nothing photo-related — this only closes the SchoolAdmissions-side half of FR-50/UC-1.
 6. **Decide who creates a brand-new student's first `IdentityProfile`** — see below, the single largest open item on BuzzMe's own side.
 
 ## Peer verification, 2026-09-22
