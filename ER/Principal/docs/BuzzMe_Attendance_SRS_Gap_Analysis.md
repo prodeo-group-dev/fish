@@ -56,7 +56,7 @@ Independent of the architecture question above, several SRS requirements assume 
 
 Before BuzzMe (or anyone) starts building against this SRS as written:
 
-1. ~~Get a direct answer on the standalone-vs-integrated question~~ — **already answered ("both"), see Peer verification.** Superseded by the narrower question: **design an explicit deployment-mode boundary** so DPID's general "own primary store" mode (real requirement for the sellable-product market) can't silently duplicate §7's four entities for the reference deployment, where SchoolAdmissions already is the system of record.
+1. ~~Get a direct answer on the standalone-vs-integrated question~~ — **already answered ("both"), see Peer verification.** ~~Superseded by the narrower deployment-mode-boundary question~~ — **that's now settled too, direct instruction, 2026-09-22: "The Principal is its education MIS."** Not "a" reference integration among several — for the FiSH deployment specifically, SchoolAdmissions unambiguously *is* the MIS DPID delegates to. DPID's "own primary store" mode stays real for the general sellable product's *other* future deployments (schools with no existing MIS), but it is not an open question for this deployment — no boundary-design work is needed here, because there's no ambiguity to bound.
 2. ~~§11's phasing needs correcting~~ — **not needed.** The SRS's vendor-neutral framing and Phase-3 MIS-connector placement are deliberate product-roadmap choices, not a doc that failed to account for FiSH. No correction required.
 3. **Formally propose FR-36's mark-code table for BK-ATT-2** — this looks like the real unblock that item has been waiting on.
 4. **Scope campus presence (FR-20-23) as new, explicit SchoolAdmissions work if wanted** — don't let it get built silently inside BuzzMe as a parallel data store.
@@ -82,3 +82,5 @@ Given "both" is confirmed, Route to Market reframed what's actually still open: 
 **Also independently confirmed by Route to Market:** the same photo-challenge gap (FR-50/UC-6) this document flags — zero photo concept anywhere in DPID's own domain either, deferred the same way.
 
 The four SchoolAdmissions-side gaps (photo field, safeguarding three-state masking, campus presence, roster endpoint) remain this side's own to prioritize, independent of how the architecture question resolves — none of them are blocked on Femi's answer.
+
+**Confirmed by direct instruction, 2026-09-22: "The Principal is its education MIS."** Settles the deployment-mode-boundary question raised above — for the FiSH deployment, there's no "own primary store" ambiguity to design around; SchoolAdmissions is unambiguously the system of record DPID delegates to, full stop. That mode stays real for DPID's general sellable-product roadmap elsewhere, but doesn't touch this integration.
