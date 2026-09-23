@@ -1,21 +1,32 @@
 # SchoolAdmissions ↔ FiSH institution linkage, and Guardian-as-Customer
 
-**Status:** design confirmed, 2026-09-22. **Item 1's SchoolAdmissions side
-is built, tested (3x real-Postgres rerun), and live on `master`**
-(`fish-school-admissions` `57ad955`) — `School` aggregate, idempotent
-`POST /schools`, new EA service-account trust
-(`buildJwksServiceVerifierForEa`, `requireServiceAccount`). **EA's own
-side is not built yet** — proposed to the live "Enterprise Administration
-- EA" peer session; that session is independently verifying the
-Organisation/Company taxonomy decision with Femi directly before
-committing to field naming or new Terraform/Cognito work, rather than
-building on a relayed confirmation (the right call — flag, don't just
-trust a second-hand relay for something with platform-wide reach). Not
-deployed to production yet either: `SCHOOLADMISSIONS_JWT_SERVICE_AUDIENCE_EA`
-has no value in the real task definition until EA's Cognito app client
-exists. Item 2 (Guardian → SOP Customer) is designed and sequenced next —
-correctly *after* item 1 fully lands (both sides), not parallel to it
-(see "Why sequencing matters" below).
+**Status:** both items built, 2026-09-23. **Item 1 — fully live end to
+end**: SchoolAdmissions' side (`fish-school-admissions` `57ad955`) and
+EA's own calling side (`fish-enterprise-administration` `4243574`) both
+shipped and were verified together against real production Cognito +
+a real `POST /schools` call (a temporary diagnostic route, added and
+removed same day, `9dd95a6`/`375d34b` — response:
+`{"success":true,"httpStatus":200,"schoolId":"ee7fc00d-..."}`). One
+leftover from that verification: a real School row ("EA Verification
+Test - DELETE ME", `ee7fc00d-7375-4538-98f9-3444cdde2dd1`) still exists
+in production — SchoolAdmissions has no `DELETE /schools` route, so
+this needs manual DB cleanup if wanted, flagged rather than silently
+left. **Item 2 — Guardian-as-Customer — also built**
+(`fish-school-admissions` `c01b94d`; SOP's own first-ever inbound
+service-account leg, `fish-sales-order-processing` `69a0d6e`): new
+`GuardianAccount` aggregate (additive, not a migration of the existing
+embedded `Guardian` contact list — see "Concrete shape" below for why
+that changed from the original sketch), `FeeService.resolveGuardianCustomer`
+calling SOP's `POST /customers` through a new `SopCustomerGateway` +
+`CognitoServiceAccountTokenProvider`. Full unit + real-Postgres
+integration test coverage (3x rerun) on the SchoolAdmissions side; SOP's
+own new service-account bypass has dedicated end-to-end tests using a
+deliberately distinct test keypair (see that repo's own
+`ApplicationEndToEndTest.kt`). **Not yet deployed to production** —
+both sides need new Cognito app clients + Terraform
+(`schooladmissions_sop_service_account.tf`-shaped) before the real
+`SCHOOLADMISSIONS_SOP_*`/`SOP_JWT_SERVICE_AUDIENCE_SCHOOLADMISSIONS` env
+vars have real values.
 
 **Origin:** relayed via FiSH+ER WEB, from a direct instruction while building
 the Student Management Console's first slice (student roster, calling
@@ -171,9 +182,17 @@ ordering.**
   confirm against SOP's own expected `creditTerms` vocabulary rather than
   inventing one.
 
-**Not built yet** — designed and sequenced behind decision 1. Whoever
-picks this up next (likely this same thread, once decision 1 ships)
-should re-read `SOP/src/main/kotlin/.../customer.kt` and
-`CreateCustomerUseCase.kt` directly rather than trust this doc's summary,
-same standing practice as every other cross-system design note in this
-project.
+**Built, 2026-09-23** (`fish-school-admissions` `c01b94d`), once decision
+1 shipped — matches this section's own sketch closely, with two real
+corrections made while building rather than assumed away: `relationship`
+stays on the per-student embedded `Guardian`, never promoted onto
+`GuardianAccount` (the join-vs-aggregate distinction this section itself
+raised), and the actual creation trigger is a new, dedicated
+`FeeService.resolveGuardianCustomer` method rather than folded into
+`issueInvoice` itself — every non-guardian invoice keeps working through
+the exact same synchronous path it always has, since `resolveGuardianCustomer`
+is the only `suspend` method this class has. SOP's `Customer`/`CreateCustomerUseCase`
+needed no changes at all, confirmed by reading them directly before
+building rather than trusting this doc's own earlier summary — `creditTerms`
+defaults to `"Due on invoice"` (`FeeService.DEFAULT_GUARDIAN_CREDIT_TERMS`),
+picked after confirming SOP enforces no fixed vocabulary for it.
