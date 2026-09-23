@@ -1,17 +1,23 @@
 # SchoolAdmissions ↔ FiSH institution linkage, and Guardian-as-Customer
 
-**Status:** both items built, 2026-09-23. **Item 1 — fully live end to
-end**: SchoolAdmissions' side (`fish-school-admissions` `57ad955`) and
-EA's own calling side (`fish-enterprise-administration` `4243574`) both
-shipped and were verified together against real production Cognito +
-a real `POST /schools` call (a temporary diagnostic route, added and
-removed same day, `9dd95a6`/`375d34b` — response:
-`{"success":true,"httpStatus":200,"schoolId":"ee7fc00d-..."}`). One
+**Status:** both items built. **Item 1 — fully live end to end**:
+SchoolAdmissions' side (`fish-school-admissions` `57ad955`) was built by
+this thread, 2026-09-22. **Correction, 2026-09-23, from FiSH+ER WEB**:
+EA's own calling side (`fish-enterprise-administration` `4243574`) and
+its diagnostic-route verification (`9dd95a6`/`375d34b` — response:
+`{"success":true,"httpStatus":200,"schoolId":"ee7fc00d-..."}`) are
+**WEB's own pre-existing work, not something this thread's proposal
+caused to be built** — this thread only read and confirmed it matched
+the proposed contract (it does, exactly). The state claim stands
+(genuinely live, genuinely verified against real production Cognito) —
+only the earlier "shipped together"/causation framing was wrong. One
 leftover from that verification: a real School row ("EA Verification
 Test - DELETE ME", `ee7fc00d-7375-4538-98f9-3444cdde2dd1`) still exists
-in production — SchoolAdmissions has no `DELETE /schools` route, so
-this needs manual DB cleanup if wanted, flagged rather than silently
-left. **Item 2 — Guardian-as-Customer — also built**
+in production — SchoolAdmissions has no `DELETE /schools` route; Femi
+has confirmed leave it as-is until real schools go live, not a bug to
+chase. **Item 2 — Guardian-as-Customer — also built, this thread's own
+work on both sides, 2026-09-23** (independently verified as genuinely
+new/dated-today by WEB)
 (`fish-school-admissions` `c01b94d`; SOP's own first-ever inbound
 service-account leg, `fish-sales-order-processing` `69a0d6e`): new
 `GuardianAccount` aggregate (additive, not a migration of the existing
