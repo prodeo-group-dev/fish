@@ -73,6 +73,12 @@ A prior attempt (in a separate, now-treated-as-lost chat) proposed splitting int
 - **Money**: always amount + currency together, never a bare number — this doesn't exist in the codebase yet and should be built before `JournalLine`.
 - **IDs**: prefer typed ID wrappers (`@JvmInline value class`) over raw `UUID` once aggregates are built, so the compiler catches an `AccountId` passed where a `TenantId` is expected.
 
+## Configuration Management
+
+**Direct instruction, 2026-09-24**: Configuration Management — infrastructure-as-code (`Infrastructure/`), CI/CD pipeline config (every repo's `Jenkinsfile`), and cross-service application config/secrets wiring (env vars, Secrets Manager entries, task-definition wiring) — is owned by the "Configuration Manager CM" Claude session going forward, as one discipline. If you're a different session about to touch any of these: check `Infrastructure/COORDINATION.md` first (same row-claim protocol as `ER/Principal/SchoolAdmissions/COORDINATION.md`) and consider flagging CM-shaped work to that session rather than applying it solo — this is a request, not something enforceable across independent sessions, but two sessions hit real duplicate-work collisions on exactly this kind of change on 2026-09-24 (see `Infrastructure/docs/Jenkins_Operations_Runbook.md`'s own incident note) before this convention existed.
+
+A separate, recurring environment quirk (not this convention's job to fix): plan-mode's local plan file has repeatedly collided between concurrent sessions working the same task on 2026-09-24 (content from one session's plan appearing in another's) — flagged to Femi as a real tooling issue, not something either session caused or can patch around.
+
 ## Known environment constraint
 
 The Cowork sandbox this project has mostly been worked in has no Kotlin compiler, no Gradle, and blocks network access to Maven Central / Gradle services / JetBrains downloads. Actual compilation and test execution needs to happen in an environment with real tooling (local machine, or a Claude Code session) — designs and code written in Cowork sessions should be treated as unverified until run there.
