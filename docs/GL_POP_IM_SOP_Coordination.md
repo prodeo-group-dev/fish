@@ -32,6 +32,15 @@ GL-only reporting feature with no cross-service crossing) doesn't need a row
 here — this log is for the boundary work specifically, not a substitute for
 each service's own normal development.
 
+**CM, added 2026-09-28** ("Always coordinate with POP, IM, GL, and CM"):
+once a fix on this backlog is ready to actually merge/deploy, that step
+crosses into Configuration Manager CM's own established territory
+(`FiSH/CLAUDE.md`'s Configuration Management section) — check
+`Infrastructure/COORDINATION.md` and loop CM in before deploying, the same
+as any other infra/Jenkins/secrets-touching change. This file stays scoped
+to GL/POP/IM/SOP's own application-code coordination; it doesn't replace
+CM's log, it hands off to it at the deploy boundary.
+
 **Protocol** (identical to Infrastructure's/SchoolAdmissions' own):
 1. Before starting, check the Active table below. If an entry overlaps what
    you're about to do, message that session first (`ListAgents` to find it,
