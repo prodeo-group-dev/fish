@@ -58,6 +58,7 @@ detail.
 |---|---|---|---|---|
 | 0.1 | Merge + deploy POP's per-Company auth fix (`PopMembershipAuthorizer`, commit `22b8743`) | POP | — | Committed, not pushed/deployed — holding for user go-ahead |
 | 0.2 | Merge + deploy IM's per-Company auth fix (`ImMembershipAuthorizer`, [PR #6](https://github.com/prodeo-group-dev/fish-inventory-management/pull/6)) | IM | — | PR open, not merged/deployed — holding for user go-ahead |
+| 0.3 | Confirm whether SOP has the same per-Company auth bug as POP/IM, and fix if so | SOP | — | **Not yet confirmed either way** — a branch `fix/sop-per-company-write-scoping` already exists on SOP (pushed to origin) but has zero commits on it, meaning someone suspected this before today's joint audit but never actually checked or fixed it. Flagged by the GL session 2026-09-28 after independently verifying GL's own side is clean (see the "not yet waved" table below) — SOP is the one of the four still genuinely open. |
 
 These are independent of each other (different services, different repos)
 but share one root cause and one open user decision (whether/when to
@@ -128,7 +129,7 @@ separable from the accounting-correctness work above.
 | Item | Owner | Note |
 |---|---|---|
 | Real per-Company scoping for IM and POP (thread an actual `companyId` through routes/domain queries, mirroring GL's own `authorizeTenant`) | IM + POP | The Wave 0 fixes are the correct *tactical* fix given IM's/POP's own company-blind domain models today — this is the larger, multi-day "make IM/POP genuinely Company-scoped" alternative, not required to close the production bug. Only worth picking up if/when IM or POP need real per-Company data isolation for another reason. |
-| Whether GL should get its own live peer session (the way IM/POP/SOP/EA/CM currently do) | user decision | As of 2026-09-28's audit, GL had no live session and was grounded via direct code review only; a GL session has since started (`General Ledger - GL`, per `ListAgents`) — worth confirming it's now part of this coordination going forward. |
+| ~~Whether GL should get its own live peer session~~ | — | **Resolved 2026-09-28** — a GL session is now live and has independently confirmed (not just inherited from POP's read of the code) that GL's own side is clean: every `authorizeTenantFor{Write,Admin,Module,Read}` in `Auth.kt` requires a real `companyId: CompanyId` parameter with no default, and every route site checked (e.g. `RecordInventoryReceiptAndIssueRoutes.kt`) derives it from the actual request body/path, never a hardcoded env var or constant. No `*_COMPANY_ID` env var exists anywhere in GL's source. GL does not have the POP/IM bug pattern. |
 
 ---
 
@@ -139,3 +140,8 @@ separable from the accounting-correctness work above.
   0–5 above mirror that audit's §6 task list; the "not yet waved" table adds
   the two structural items flagged in its §7 that don't fit a strict
   dependency wave.
+- **2026-09-28 (GL session)**: Added 0.3 (SOP's per-Company auth bug status
+  — not yet confirmed, unlike POP/IM) after finding a pushed-but-empty
+  `fix/sop-per-company-write-scoping` branch on SOP. Resolved the "GL peer
+  session" open question by independently verifying GL's own
+  `authorizeTenantFor*` family is not affected by the same bug pattern.
