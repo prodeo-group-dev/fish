@@ -244,3 +244,10 @@ separable from the accounting-correctness work above.
   session (no gate on master) - reverted immediately, flagged to CM, and
   noted the asymmetry with POP's 0.1 (identical patch shape, left live) as
   an open question rather than resolved unilaterally.
+- **2026-09-28 (IM session, later)**: Closed out 0R.2.1. CM confirmed the
+  "no real clustering" assumption on both `items` and `warehouses` against
+  `im_production` directly. Wrote the backfill migration
+  (`IM/src/main/resources/db/migration/V8__backfill_entity_id.sql`),
+  verified against a fresh ephemeral Postgres via `integrationTest` before
+  committing (migrates cleanly), committed locally (`d0063f3` in IM's own
+  repo) - not pushed, handed to CM per the push-only-CM protocol.
