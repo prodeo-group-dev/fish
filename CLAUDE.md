@@ -81,6 +81,10 @@ A prior attempt (in a separate, now-treated-as-lost chat) proposed splitting int
 
 A separate, recurring environment quirk (not this convention's job to fix): plan-mode's local plan file has repeatedly collided between concurrent sessions working the same task on 2026-09-24 (content from one session's plan appearing in another's) — flagged to Femi as a real tooling issue, not something either session caused or can patch around.
 
+## GL / POP / IM / SOP coordination
+
+**Direct instruction, 2026-09-28**: "There should be coordination between GL, POP, IM, SOP always in every build." `docs/GL_POP_IM_SOP_Backlog.md` is the standing, dependency-ordered backlog for work that crosses these four services (the Purchase-to-Pay / Inventory / Order-to-Cash cycle and its reversals, GL as the posting layer underneath); `docs/GL_POP_IM_SOP_Coordination.md` is the row-claim log (same protocol as `Infrastructure/COORDINATION.md`/`ER/Principal/SchoolAdmissions/COORDINATION.md`) for not colliding while working on it. Before starting non-trivial work on a GL-crossing posting interface, an EA-membership authorizer in any of the four, or anything on the backlog: check both files first. Grew out of the 2026-09-28 POP/IM joint audit of a shared per-Company authorization bug (`docs/POP_IM_Shared_Company_Scoping_Auth_Bug.md`, `docs/Purchase_Inventory_Sales_Cycle_And_Reversals_Scoping.md`) — the backlog distills that audit's task list; read the audit itself for the full reasoning.
+
 ## Known environment constraint
 
 The Cowork sandbox this project has mostly been worked in has no Kotlin compiler, no Gradle, and blocks network access to Maven Central / Gradle services / JetBrains downloads. Actual compilation and test execution needs to happen in an environment with real tooling (local machine, or a Claude Code session) — designs and code written in Cowork sessions should be treated as unverified until run there.
