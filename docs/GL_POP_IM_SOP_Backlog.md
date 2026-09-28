@@ -58,7 +58,8 @@ detail.
 |---|---|---|---|---|
 | 0.1 | Merge + deploy POP's per-Company auth fix (`PopMembershipAuthorizer`, commit `22b8743`) | POP | — | Committed, not pushed/deployed — holding for user go-ahead |
 | 0.2 | Merge + deploy IM's per-Company auth fix (`ImMembershipAuthorizer`, [PR #6](https://github.com/prodeo-group-dev/fish-inventory-management/pull/6)) | IM | — | PR open, not merged/deployed — holding for user go-ahead |
-| 0.3 | Confirm whether SOP has the same per-Company auth bug as POP/IM, and fix if so | SOP | — | **Not yet confirmed either way** — a branch `fix/sop-per-company-write-scoping` already exists on SOP (pushed to origin) but has zero commits on it, meaning someone suspected this before today's joint audit but never actually checked or fixed it. Flagged by the GL session 2026-09-28 after independently verifying GL's own side is clean (see the "not yet waved" table below) — SOP is the one of the four still genuinely open. |
+| 0.3 | Confirm whether SOP has the same per-Company auth bug as POP/IM, and fix if so | SOP | — | **Confirmed a different bug, fixed** — `fix/sop-per-company-write-scoping` isn't an abandoned branch; it's PR #2, merged 2026-09-23 (it shows "zero commits" against current master only because it's already fully merged in, not because it was never finished). SOP never had POP/IM's "hardcoded companyId" shape at all - its per-Company checks already take the request's own `companyId`. It has the *other* bug instead: the shared `CallerMembership.accessLevelAt()` (present byte-for-byte identically in GL/SOP/POP/IM) returns `NONE` for an Owner-Admin whenever `companyId` is entirely absent from EA's `/me` response, instead of applying the intrinsic READ floor regardless - see 0.4. Fixed in [SOP PR #5](https://github.com/prodeo-group-dev/fish-sales-order-processing/pull/5), holding for user go-ahead like 0.1/0.2. |
+| 0.4 | Merge + deploy GL's `accessLevelAt` intrinsic-floor fix (same root cause as 0.3, found independently while diagnosing the live "Couldn't load sales" bug for Education Runtime) | GL | — | Fixed in [GL PR #53](https://github.com/prodeo-group-dev/fish-fish-gl-engine/pull/53), holding for user go-ahead like 0.1/0.2/0.3. POP/IM don't need this same fix - their 0.1/0.2 fixes already sidestep it by checking "any Company", never calling `accessLevelAt` with an absent `companyId`. |
 
 These are independent of each other (different services, different repos)
 but share one root cause and one open user decision (whether/when to
@@ -130,6 +131,7 @@ separable from the accounting-correctness work above.
 |---|---|---|
 | Real per-Company scoping for IM and POP (thread an actual `companyId` through routes/domain queries, mirroring GL's own `authorizeTenant`) | IM + POP | The Wave 0 fixes are the correct *tactical* fix given IM's/POP's own company-blind domain models today — this is the larger, multi-day "make IM/POP genuinely Company-scoped" alternative, not required to close the production bug. Only worth picking up if/when IM or POP need real per-Company data isolation for another reason. |
 | ~~Whether GL should get its own live peer session~~ | — | **Resolved 2026-09-28** — a GL session is now live and has independently confirmed (not just inherited from POP's read of the code) that GL's own side is clean: every `authorizeTenantFor{Write,Admin,Module,Read}` in `Auth.kt` requires a real `companyId: CompanyId` parameter with no default, and every route site checked (e.g. `RecordInventoryReceiptAndIssueRoutes.kt`) derives it from the actual request body/path, never a hardcoded env var or constant. No `*_COMPANY_ID` env var exists anywhere in GL's source. GL does not have the POP/IM bug pattern. |
+| **Decide**: EA's `MeRoutes.kt` silently omits any Company lacking a `CompanyNameRepository` record from an Owner-Admin's `GET /me` response, instead of including it with a placeholder name | EA + user | This is the likely *true* root cause of "Education Runtime" triggering 0.3/0.4 at all - a Company that's real and GL-known but has no EA name record (probably created via a path that bypassed `RegisterCompanyUseCase`, e.g. SchoolAdmissions' auto-provisioning) simply never appears in `companies`, which is what let the `accessLevelAt` bug (0.3/0.4) bite in the first place. Explicitly documented in EA's own code as a *deliberate* prior design choice, not an oversight - so this isn't picked up as a unilateral fix; needs a decision on whether EA should include a placeholder-named entry instead. Separately, whatever code path let Education Runtime skip `RegisterCompanyUseCase` in the first place is its own unresolved data-integrity question (SchoolAdmissions institution linkage is the leading suspect, unconfirmed). |
 
 ---
 
@@ -145,3 +147,22 @@ separable from the accounting-correctness work above.
   `fix/sop-per-company-write-scoping` branch on SOP. Resolved the "GL peer
   session" open question by independently verifying GL's own
   `authorizeTenantFor*` family is not affected by the same bug pattern.
+- **2026-09-28 (SOP session)**: Resolved 0.3 - `fix/sop-per-company-write-scoping`
+  was misread as abandoned; it's actually PR #2, already merged 2026-09-23,
+  which is why it shows no unique commits against current master. SOP does
+  not have POP/IM's "hardcoded companyId" bug shape at all. While diagnosing
+  a live "Couldn't load sales" bug for the "Education Runtime" company
+  (reported by the user via screenshot), found and fixed a *different*
+  shared bug instead: `CallerMembership.accessLevelAt()` - present
+  byte-for-byte identically in GL/SOP/POP/IM - returned `NONE` for an
+  Owner-Admin whenever the requested `companyId` was entirely absent from
+  EA's `/me` response, instead of applying the intrinsic READ floor
+  regardless. Fixed and PR'd in both GL (#53) and SOP (#5) - see the new
+  0.4. POP/IM's own Wave 0 fixes already sidestep this variant (they check
+  "any Company" rather than one specific `companyId`), so they don't need
+  it. Also flagged, not fixed: EA's `MeRoutes.kt` silently drops a Company
+  from the Owner-Admin's visible list when it has no `CompanyNameRepository`
+  record - the likely true root cause of Education Runtime triggering this
+  at all - added to the "not yet waved" table as a decision for EA + the
+  user, since it's documented as deliberate prior design, not a bug to
+  silently overwrite.

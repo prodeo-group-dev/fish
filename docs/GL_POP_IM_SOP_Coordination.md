@@ -63,7 +63,6 @@ table. It shrinks the collision window; it doesn't eliminate it.
 
 | Session | Started (UTC) | Working on | Files/areas |
 |---|---|---|---|
-| Sales Order Processing - SOP | 2026-09-28T12:00:00Z | Fixing the Owner-Admin intrinsic-floor `accessLevelAt(companyId)` bug (absent-Company case) - already fixed+PR'd in GL (#53), applying the identical fix to SOP next; also updating the backlog with this item and the EA `MeRoutes.kt` root-cause flag | GL (done, PR #53), SOP `ea_membership_gateway.kt` (in progress), `docs/GL_POP_IM_SOP_Backlog.md` |
 
 ## Format for a new row
 
