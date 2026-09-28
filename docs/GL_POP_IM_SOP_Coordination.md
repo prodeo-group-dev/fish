@@ -72,7 +72,7 @@ table. It shrinks the collision window; it doesn't eliminate it.
 
 | Session | Started (UTC) | Working on | Files/areas |
 |---|---|---|---|
-| Purchase Order Processing - POP | 2026-09-28T05:00:00Z | Scoping real per-Company data isolation for POP (backlog item 0.1R) - domain model + routes + persistence, coordinating with IM on the shared pattern before implementing | POP repo (domain, application, web, persistence); coordinating with IM's own repo |
+| Purchase Order Processing - POP | 2026-09-28T05:00:00Z | Implementing 0R.1 in dependency order - task 0R.1.1 (backfill migration) done, on feature branch/PR (#8), not yet merged; 0R.1.2 (WEB) next | POP repo (domain, application, web, persistence); coordinating with IM's own repo and CM on merge/deploy |
 
 ## Format for a new row
 
