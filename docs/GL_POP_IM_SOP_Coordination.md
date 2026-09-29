@@ -72,7 +72,7 @@ table. It shrinks the collision window; it doesn't eliminate it.
 
 | Session | Started (UTC) | Working on | Files/areas |
 |---|---|---|---|
-| Purchase Order Processing - POP | 2026-09-28T05:00:00Z | Implementing 0R.1 in dependency order - 0R.1.1/0R.1.2 done, merged+deployed by CM; 0R.1.4/0R.1.5 (repository filtering + /companies/{companyId}/... route restructuring) built and tested locally, held on a branch - must not merge/deploy until WEB's matching 0R.1.3 path rewrite is also ready, or WEB's still-flat-path calls will 404 in production | POP repo (domain, application, web, persistence); coordinating with IM's own repo and CM on merge/deploy |
+| Purchase Order Processing - POP | 2026-09-28T05:00:00Z | **Idle, waiting on WEB.** All of 0R.1 (0R.1.1-0R.1.7) is built - 0R.1.1/0R.1.2 merged+deployed; 0R.1.4/0R.1.5/0R.1.7 (repository filtering, `/companies/{companyId}/...` route restructuring, object-level write-action checks) tested and held on `feature/wave-0r-real-company-scoping-routes-and-repos` (pushed, not merged). Nothing left to build on POP's own side - blocked purely on WEB's 0R.1.3 path rewrite before any of this can go live, then 0R.1.6 (the authorizer flip) ships last. Not actively working right now; will pick 0R.1.6 back up once WEB's side lands. | POP repo (domain, application, web, persistence); coordinating with IM's own repo, WEB, and CM on merge/deploy |
 
 ## Format for a new row
 
