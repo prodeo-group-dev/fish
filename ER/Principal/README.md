@@ -1,4 +1,4 @@
-# The Principal
+# The Principal's EduSys
 
 School management product (FiSH+ER) - Nigerian EMIS school-operations layer.
 

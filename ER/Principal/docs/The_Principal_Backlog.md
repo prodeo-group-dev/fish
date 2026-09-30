@@ -1,4 +1,4 @@
-# The Principal — Product Backlog
+# The Principal's EduSys — Product Backlog
 
 **Source:** The Principal SRS (17 Sep 2026)  
 **Owner:** Policy and Strategy Initiatives CIC  
@@ -42,7 +42,7 @@ When unparked, build in this order — not by module vanity:
 
 | ID | Item | Pri | Notes |
 |----|------|-----|-------|
-| BK-PLT-1 | Multi-tenant isolation per school (NFR-CMP-3) | M | Align with FiSH GLaaS tenancy patterns; school = tenant boundary for The Principal |
+| BK-PLT-1 | Multi-tenant isolation per school (NFR-CMP-3) | M | Align with FiSH GLaaS tenancy patterns; school = tenant boundary for The Principal's EduSys |
 | BK-PLT-2 | Consume ER identity + RBAC + shared nav chrome | M | Identity+RBAC half **done 2026-09-20** (real Cognito JWT, `StaffAssignment` per-school roles) — see change log. "Shared nav chrome" half still open: no Education Runtime frontend exists in WEB yet, so the 3 new staff routes are API-only today. |
 | BK-PLT-3 | FiSH SOP outbound event bus (idempotent, event ID, timestamp) | M | All §4.2 events |
 | BK-PLT-4 | Hard rule: no direct FiSH GL writes (FR-FEE-4 / §2.5) | M | Review gate on every Fee Desk / payment PR |

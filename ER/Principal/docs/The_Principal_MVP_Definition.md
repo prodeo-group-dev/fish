@@ -1,4 +1,4 @@
-# The Principal — MVP Definition
+# The Principal's EduSys — MVP Definition
 
 **Date:** 2026-09-19
 **Grounded against:** `The_Principal_SRS.md` (17 Sep 2026), `The_Principal_Backlog.md` (tip `f42f459`, W0–W5 landed, W6 unparked), the Business Development & Roll-Out Plan's Phase 1 (Pilot & validation, Months 1–6, ~100 schools · ~40,000 students), and the second code review (2026-09-19, 8 findings, fixed on `claude-code-review` @ `b272deb`, not yet merged to `master`).

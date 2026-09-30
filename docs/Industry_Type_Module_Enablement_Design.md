@@ -1,9 +1,10 @@
 # Industry Type → Module Enablement (design-only, EA-owned)
 
 **Date:** 2026-09-20. Requested directly: business setup should ask for an
-industry type; selecting "School" brings the Education Runtime (EduSys /
-The Principal / formerly SchoolAdmissions — see `project_fish_er_edusys_roles`
-memory for the term) into that tenant's operations; industry type
+industry type; selecting "School" brings the Education Runtime (product
+name "The Principal's EduSys", formerly SchoolAdmissions — see
+`project_fish_er_edusys_roles` memory for the term) into that tenant's
+operations; industry type
 generally drives which operations-tab elements are required. **Enterprise
 Administration (EA) is named as the owner.**
 

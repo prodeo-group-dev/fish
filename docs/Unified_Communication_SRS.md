@@ -2,7 +2,7 @@
 
 **Status**: requirements documentation only, 2026-09-23. Grounded directly against real code (`EA`, `ER/Principal/Education Runtime`, `WEB`) and existing project docs — nothing invented, nothing built from this pass. Design/implementation is explicitly deferred to a separate pass, per the instruction this document was commissioned under.
 
-**Scope note on terminology**: this document calls the covered surface the "FiSH+ER-Verse" per the user's own term — the union of every FiSH module (GL/SOP/POP/IM/HR/TAX, all administered through EA) and ER's own systems (currently Education Runtime/"The Principal," under `ER/Principal/`). It is *not* a proposal to merge EA's and Education Runtime's identity models — see §7 Open Questions for why that is named as a question, not resolved here.
+**Scope note on terminology**: this document calls the covered surface the "FiSH+ER-Verse" per the user's own term — the union of every FiSH module (GL/SOP/POP/IM/HR/TAX, all administered through EA) and ER's own systems (currently Education Runtime/"The Principal's EduSys," under `ER/Principal/`). It is *not* a proposal to merge EA's and Education Runtime's identity models — see §7 Open Questions for why that is named as a question, not resolved here.
 
 ---
 

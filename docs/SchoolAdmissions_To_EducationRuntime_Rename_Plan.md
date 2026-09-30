@@ -10,10 +10,12 @@ yet"). This is the task breakdown requested as a follow-on to that scope.
   `com.theprodeogroup.schooladmissions` → `com.theprodeogroup.educationruntime`,
   submodule path `ER/Principal/SchoolAdmissions` →
   `ER/Principal/EducationRuntime`).
-- **Product name**: **Principal's EduSys** - supersedes "The Principal"
-  alone. This is a branding/copy change, not a code-identifier change (no
-  code anywhere used "The Principal" as an identifier) - tracked as its
-  own independent phase (7) below, not gating the technical rename.
+- **Product name**: **The Principal's EduSys** (corrected 2026-09-30 -
+  "The" article kept in front of the official name, not dropped) -
+  supersedes "The Principal" alone. This is a branding/copy change, not
+  a code-identifier change (no code anywhere used "The Principal" as an
+  identifier) - tracked as its own independent phase (7) below, not
+  gating the technical rename.
 - **DNS, decided 2026-09-30: keep `school-api.theprodeogroup.com` as-is.**
   No domain change, no new ACM cert, no DNS cutover/transition window -
   only the AWS resource *names* underneath it change (ECR repo, ECS
@@ -39,7 +41,7 @@ throughout, same as any other non-trivial change to this repo.
 | # | Decision | Status |
 |---|---|---|
 | 0.1 | Final repo/package name | **Decided**: `fish-education-runtime` / `com.theprodeogroup.educationruntime` |
-| 0.2 | Final product name | **Decided**: "Principal's EduSys" |
+| 0.2 | Final product name | **Decided**: "The Principal's EduSys" |
 | 0.3 | New DNS subdomain string | **Decided: no change.** `school-api.theprodeogroup.com` stays as the live endpoint - only the AWS resource names underneath it are renamed. |
 | 0.4 | Cutover strategy (DNS transition window) | **Moot** - no longer applies now that 0.3 keeps the domain unchanged. No ACM/DNS work in Phase 4 at all; EA/SOP/WEB (Phase 5) don't need any base-URL config change either, since the endpoint they call never moves. |
 | 0.5 | Whether to rename already-applied Flyway migration filenames (e.g. EA's `V16__company_school_id.sql`) | **Recommend: no** - renaming an already-run migration file is a separate, unrelated risk (Flyway tracks migrations by checksum/filename in its history table) with no real benefit; leave historical migration files alone regardless of the service's new name |
@@ -220,15 +222,17 @@ the target terminology organically.
 
 ---
 
-## Phase 7 — Product naming ("Principal's EduSys")
+## Phase 7 — Product naming ("The Principal's EduSys")
 
 Independent track - no code identifiers change from this alone (nothing
 in the code used "The Principal" as an identifier). Can run in parallel
 with any of the phases above, or entirely separately on its own timeline.
 
-| # | Task | Depends on |
-|---|---|---|
-| 7.1 | Update user-facing copy/branding wherever "The Principal" appears as a product name (WEB UI copy, docs, any pitch/marketing material) to "Principal's EduSys" | 0.2 (decided) |
+**Started 2026-09-30 (CM).**
+
+| # | Task | Depends on | Status |
+|---|---|---|---|
+| 7.1 | ~~Update user-facing copy/branding wherever "The Principal" appears as a product name (WEB UI copy, docs, any pitch/marketing material) to "The Principal's EduSys"~~ | 0.2 (decided) | **WEB done** - [PR #15](https://github.com/prodeo-group-dev/fish-gl-web/pull/15), `5198971`: the three real user-facing "connect your school record" prompts plus two dev-facing code comments. Verified live (`tsc` clean, zero console errors). **Docs partially done** - the small set of living reference docs (this plan, `CLAUDE.md`, `The_Principal_Backlog.md`, `ER/Principal/README.md`, `docs/Unified_Communication_SRS.md`, `docs/Industry_Type_Module_Enablement_Design.md`) are next. **Deliberately left as historical record, not rebranded**: `The_Principal_SRS.md` (21 occurrences - a formal, foundational requirements spec, same "point-in-time record" treatment as `ADR-001-SchoolAdmissions-Kotlin-Postgres.md` in Phase 6), `BuzzMe_Attendance_SRS_Gap_Analysis.md`, `BK-ATT-2_Mark_Code_Table_Proposal.md`. No pitch/marketing material identified in this repo to update - if any exists outside it, out of scope here. |
 
 ---
 
