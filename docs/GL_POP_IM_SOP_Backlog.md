@@ -299,3 +299,26 @@ separable from the accounting-correctness work above.
   modeled at all (already known, deliberately parked); `Customer` has a
   real, populated `entityId` that nothing checks or filters by anywhere -
   a genuinely new finding, added as 0.5, flagged to SOP directly.
+- **2026-09-30 (CM)**: Unrelated to Wave 0/0R - a platform-wide data-quality
+  fix surfaced while investigating the same SEV-1 (GL's `Jurisdiction` enum
+  closed to `UK`/`IE`/`NG`/`SL`/`LR`/`GN`/`CI` in 2026-09-19; some
+  `companies` rows still carried pre-closure free-text values, throwing
+  `IllegalArgumentException` on `Jurisdiction.valueOf()` and 500ing that
+  Company's `money-velocity`/`expense-velocity`/`sales-to-expense-ratio`
+  endpoints). Found and fixed incrementally as GL/WEB reported individual
+  crashes, then closed properly with a platform-wide audit at GL's request:
+  `SELECT id, name, jurisdiction FROM companies WHERE jurisdiction NOT IN
+  (...)` found exactly 4 bad rows total (`a0a54ea7` "QA Smoke Test Co UK",
+  `1ba889dd` "CSC limited", `8ff04119` "理容やすらぎ", `13de72e4` "xyz"),
+  all carrying the same stale `GB` value - no other free-text patterns
+  (no "Sierra Leone"/"Liberia"/etc.) turned up. Also fixed two more `GB`
+  rows found incidentally before the audit ran: `a1398b0d` "Prodeo Capital"
+  and `2ee7984b` (renamed "Prodeo Trading" at the user's direct request -
+  was a placeholder duplicate of the Tenant's own name "Prodeo Group",
+  and had no `company_names` row in EA at all, added one). All 6 affected
+  rows corrected `GB` -> `UK` via direct one-off `UPDATE`s (temporary RDS
+  public access per the established procedure, each write confirmed with
+  the user directly first, reverted immediately after). Re-ran the audit
+  query after the final batch - zero bad rows remain. No code change was
+  needed or made; the enum closure itself was correct and working as
+  designed, this was purely stale legacy data predating it.
