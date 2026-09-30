@@ -72,7 +72,6 @@ table. It shrinks the collision window; it doesn't eliminate it.
 
 | Session | Started (UTC) | Working on | Files/areas |
 |---|---|---|---|
-| Sales Order Processing - SOP | 2026-09-30T08:00:00Z | Building SOP's 0R.3 (real per-Company Customer scoping) - authorizeSopForReadAt, CustomerRepository.findAllByEntity, WEB path cutover for the 3 Customer routes | SOP: Auth.kt, CustomerRoutes.kt, repositories.kt, exposed_customer_repository.kt, Application.kt; WEB: sopCustomers.ts, SopCustomersTab.tsx, SalesTab.tsx |
 
 ## Format for a new row
 
