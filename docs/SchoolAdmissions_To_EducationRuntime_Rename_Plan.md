@@ -212,9 +212,11 @@ the target terminology organically.
 
 ## Phase 6 — Docs
 
-| # | Task | Depends on |
-|---|---|---|
-| 6.1 | Update the 15 files across `FiSH/docs/`, `CLAUDE.md`, and `ER/Principal/`'s own docs that name "SchoolAdmissions" directly, to the new name - lowest risk, do last so docs describe the final, actually-shipped state rather than a still-in-progress rename | Phases 1-5 substantially complete |
+**Done, 2026-09-30 (CM).**
+
+| # | Task | Depends on | Status |
+|---|---|---|---|
+| 6.1 | ~~Update the 15 files across `FiSH/docs/`, `CLAUDE.md`, and `ER/Principal/`'s own docs that name "SchoolAdmissions" directly, to the new name - lowest risk, do last so docs describe the final, actually-shipped state rather than a still-in-progress rename~~ | Phases 1-5 substantially complete | **Done.** 9 living reference docs updated: `docs/Event_Messaging_Architecture_Assessment.md`, `docs/GL_POP_IM_SOP_Backlog.md`, `docs/GL_POP_IM_SOP_Coordination.md`, `docs/Industry_Type_Module_Enablement_Design.md`, `docs/Per_Company_RBAC_Design.md`, `docs/Unified_Communication_SRS.md`, `docs/Unified_Communication_Use_Cases.md`, `CLAUDE.md`, `ER/Principal/docs/Timetabling_And_Lesson_Scheduling_Plan.md`, `ER/Principal/README.md` (FiSH master, direct commits - docs-only), plus `ER/Principal/EducationRuntime/README.md` ([PR #7](https://github.com/prodeo-group-dev/fish-education-runtime/pull/7), `33783da`, which also refreshed two safety claims `The_Principal_Backlog.md` already showed as stale/closed). **Deliberately left as historical record, not edited**: `ADR-001-SchoolAdmissions-Kotlin-Postgres.md` (a formal ADR - point-in-time by convention), `BuzzMe_Attendance_SRS_Gap_Analysis.md` and `SchoolAdmissions_Institution_Linkage_And_Guardian_Billing_Design.md` (both dated investigation/design logs dominated by "what was true when checked" narrative) - same treatment already applied throughout this plan's own change log and `CLAUDE.md`'s history. `ER/Principal/EducationRuntime/COORDINATION.md` needed no fix - already clean. Direct quotations of real KDoc/code comments (which Phase 1 never touched beyond the exact package string) were left exactly as quoted, not silently "corrected," so they stay accurate quotes of what the source actually says. |
 
 ---
 

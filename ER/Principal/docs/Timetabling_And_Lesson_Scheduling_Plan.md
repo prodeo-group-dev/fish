@@ -37,11 +37,11 @@ Closes O6 for real. Timetabling doesn't need this to ship; whoever eventually bu
 
 ## Coordination
 
-Three-way split: **this session (+ER)** — backend (above); **EA** — frontend timetable view (grid by teacher/room/class-section, built against Task 0's read API); **CM** — infrastructure/config management (reviewing/applying the new Flyway migrations, bundled in SchoolAdmissions' own deploy, not a separate Terraform apply; flagging if the ongoing shared-RDS connection-capacity work should factor into sizing).
+Three-way split: **this session (+ER)** — backend (above); **EA** — frontend timetable view (grid by teacher/room/class-section, built against Task 0's read API); **CM** — infrastructure/config management (reviewing/applying the new Flyway migrations, bundled in Education Runtime's own deploy, not a separate Terraform apply; flagging if the ongoing shared-RDS connection-capacity work should factor into sizing).
 
 ## Critical files
 
-- `ER/Principal/SchoolAdmissions/src/main/kotlin/.../domain/classroom/Room.kt` (new), `domain/platform/AcademicPeriod.kt` (new), `domain/staff/TeacherSubjectAssignment.kt` (new)
+- `ER/Principal/EducationRuntime/src/main/kotlin/.../domain/classroom/Room.kt` (new), `domain/platform/AcademicPeriod.kt` (new), `domain/staff/TeacherSubjectAssignment.kt` (new)
 - `.../domain/classroom/LessonSlot.kt` — Task 4's additive validation
 - `infrastructure/persistence/Tables.kt` — three new table objects
 - `infrastructure/persistence/migrations/V23__*.sql`, `V24__*.sql`, and a third for `TeacherSubjectAssignment`

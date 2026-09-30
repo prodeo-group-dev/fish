@@ -13,7 +13,7 @@ dated, cites real files, ends with a clear recommendation and honestly-flagged o
 ## 1. Current architecture, as it actually is today
 
 FiSH is eleven repos/submodules (`GL`, `SOP`, `POP`, `IM`, `HR`, `EA`, `WEB`, `common`, `Infrastructure`,
-`ER/Principal/SchoolAdmissions`, and the parent `FiSH` repo), all deployed as ECS Fargate services in a
+`ER/Principal/EducationRuntime`, and the parent `FiSH` repo), all deployed as ECS Fargate services in a
 single shared AWS region (`eu-west-2`), one Postgres database per service, deployed via a self-hosted
 Jenkins instance (one `Jenkinsfile` per repo). **Every inter-service call in this codebase today is
 synchronous HTTP.** There is no message broker, queue, or event bus anywhere in the platform. Confirmed by
@@ -55,7 +55,7 @@ A service calling another **as itself** authenticates via a dedicated Cognito se
 through `CognitoServiceAccountTokenProvider` — found as near-verbatim copies (per-repo package rename only,
 confirmed by direct comparison) in eight locations: `GL/common`, `common` (top-level), `SOP/common`,
 `POP/common`, `IM/common`, `EA/common`, `HR/src/.../infrastructure/gl/cognito_service_account_token_provider.kt`,
-and `ER/Principal/SchoolAdmissions/src/.../infrastructure/sop/CognitoServiceAccountTokenProvider.kt`. Read
+and `ER/Principal/EducationRuntime/src/.../infrastructure/sop/CognitoServiceAccountTokenProvider.kt`. Read
 `HR`'s copy end to end: it calls Cognito's `InitiateAuth` (`USER_PASSWORD_AUTH` flow) directly over HTTPS
 (no AWS SDK dependency), computes the `SECRET_HASH` by hand (HMAC-SHA256), caches the resulting ID token with
 a 2-minute refresh buffer, and exposes itself as a plain `() -> String` to match the calling gateway's
@@ -67,8 +67,8 @@ cross-service call through this provider — SOP/IM/POP/HR calling GL or each ot
 the moment Cognito's response actually included one" (2026-09-12), fixed with a dedicated lenient `Json`
 instance for decoding only that response.
 
-This pattern backs POP→IM, SOP→IM, HR→GL, POP→GL, and EA→SchoolAdmissions
-(`EA/src/main/kotlin/com/theprodeogroup/ea/infrastructure/schooladmissions/`). On the receiving side, GL's
+This pattern backs POP→IM, SOP→IM, HR→GL, POP→GL, and EA→Education Runtime
+(`EA/src/main/kotlin/com/theprodeogroup/ea/infrastructure/educationruntime/`). On the receiving side, GL's
 `AuthenticatedCaller` (`GL/src/main/kotlin/com/theprodeogroup/fish/infrastructure/web/AuthenticatedCaller.kt`)
 carries an `isServiceAccount: Boolean` flag set per named JWT provider in `Auth.kt` (`FISH_JWT_SERVICE_AUTH_NAME_IM`/
 `_HR`/`_POP`, one Ktor `jwt(...)` block per caller audience) — GL never asks EA whether a service-account
@@ -83,18 +83,18 @@ service-account pairs (POP/SOP→IM, SOP/IM/HR/POP→GL) are on this same rule a
 `FiSH/Infrastructure` (`fish-infrastructure`, relocated out of `GL/infra/terraform/` 2026-09-17 per
 `docs/Platform_Infrastructure_Extraction_Design.md`) has a `*_service_account.tf` file per caller pair
 (`pop_service_account.tf`, `sop_im_service_account.tf`, `pop_gl_service_account.tf`, `sop_service_account.tf`,
-`im_service_account.tf`, `hr_service_account.tf`, `ea_schooladmissions_service_account.tf`,
-`dpid_schooladmissions_service_account.tf`) — each provisions a Cognito app client and a
+`im_service_account.tf`, `hr_service_account.tf`, `ea_education_runtime_service_account.tf`,
+`dpid_education_runtime_service_account.tf`) — each provisions a Cognito app client and a
 `*-service@theprodeogroup.com` user, nothing message-broker-shaped. `network.tf`/`ecs.tf`/`alb.tf` describe
 one shared VPC, one shared ECS cluster, and per-service ALB target groups/listener rules — every inter-service
 "connection" in this platform is an ALB-routed HTTP call, full stop.
 
 ---
 
-## 2. The one existing event-shaped precedent: SchoolAdmissions' SOP outbox
+## 2. The one existing event-shaped precedent: Education Runtime's SOP outbox
 
 The closest thing to real event-driven architecture anywhere in the platform is
-`ER/Principal/SchoolAdmissions`'s outbound event mechanism, built incrementally across W2–W5.1
+`ER/Principal/EducationRuntime`'s outbound event mechanism, built incrementally across W2–W5.1
 (`723ccbb` "StudentEnrolled outbox" → `18456ff` "durable SOP outbox" → `0b7cf44` "deterministic SOP
 eventIds + outbox-first"). It is genuinely well-built for what it does, and genuinely narrower in scope
 than "event-driven architecture" might suggest:
@@ -117,7 +117,7 @@ than "event-driven architecture" might suggest:
   `reconcileStuckInvoices()` (`POST /schools/{schoolId}/fees/reconcile`) exists specifically to recover
   payment confirmations left stuck mid-flow.
 - **What it is not, confirmed directly**: `SopEventEnvelope.kt`'s own KDoc states plainly, "Wire shape
-  ready; no live SOP emit until W2+" — and grepping the whole `SchoolAdmissions` source tree for any
+  ready; no live SOP emit until W2+" — and grepping the whole `EducationRuntime` source tree for any
   worker, scheduler, poller, or HTTP call that drains `sop_event_outbox` and actually delivers an event to
   SOP turns up nothing. `AppFactory.kt` wires a separate `sopHttpClient` for `KtorSopCustomerGateway` (a
   different, synchronous customer-sync gateway, not the event path) but no dispatcher for the outbox
@@ -130,7 +130,7 @@ than "event-driven architecture" might suggest:
 - **Why this exists at all**: `SopEventEnvelope.kt`'s KDoc also states the actual architectural rule
   driving it — "SchoolAdmissions must NEVER write FiSH GL directly. Financial effects go only via SOP
   events (e.g. `StudentPaymentReceived`) — not a GL client." This is a bounded-context discipline
-  (SchoolAdmissions is not a GL client, SOP is the financial front door for trade/sales-shaped activity),
+  (Education Runtime is not a GL client, SOP is the financial front door for trade/sales-shaped activity),
   not a decision that async delivery specifically is required for correctness.
 
 **Accurate characterization**: this is a well-executed **outbox pattern with a still-missing relay**, not
@@ -155,7 +155,7 @@ ecosystem) are real capabilities FiSH does not have today.
 No, on the evidence gathered. Every inter-service interaction found in this codebase is a **discrete
 command or query** — "record this sale," "fetch this cash-flow report," "check this membership" — not a
 continuous flow of events multiple independent systems need to replay or reprocess. The one place an
-event *shape* actually appears (SchoolAdmissions' outbox) has exactly one intended consumer (SOP) and four
+event *shape* actually appears (Education Runtime's outbox) has exactly one intended consumer (SOP) and four
 event types, none replayed for analytics or reprocessed by a second consumer. Nothing in the codebase
 resembles clickstream/IoT/telemetry ingestion, CDC, or a need for multiple heterogeneous consumers to read
 the same event independently at their own pace. Kafka/MSK's core differentiators — partition-ordered
@@ -169,7 +169,7 @@ events** — exactly the outbox-relay gap identified in §2, and plausibly the p
 notify-both-parties flows the Unified Communication design work just scoped
 (`docs/Unified_Communication_SRS.md`/`Unified_Communication_Use_Cases.md`, both 2026-09-23). Concretely:
 
-- **The SchoolAdmissions outbox relay** is the single clearest candidate. Today the outbox table has no
+- **The Education Runtime outbox relay** is the single clearest candidate. Today the outbox table has no
   drainer. A durable queue (SQS) or event bus (EventBridge) sitting between "write to `sop_event_outbox`"
   and "POST to SOP" would give at-least-once delivery with retry/backoff and a dead-letter queue for a
   poison event, for less new operational surface than standing up Kafka for four event types and one
@@ -248,7 +248,7 @@ a real cost, not a hypothetical one.
 |---|---|---|---|
 | **Kafka (self-managed on EC2/EKS)** | No — no streaming-shaped workload exists | Highest — cluster ops, ZooKeeper/KRaft, patching, scaling, entirely new expertise for a team of ~1 | Not fit for purpose or scale |
 | **Amazon MSK** | No — same mismatch, AWS-managed doesn't change the workload shape | High — still a cluster to size, secure (SASL/SCRAM + customer-managed KMS), and monitor; genuinely less ops than self-managed, still more than the alternatives below | Solves a streaming problem FiSH doesn't have |
-| **Amazon SNS + SQS** | Partially — matches the one concrete gap found (the SchoolAdmissions outbox relay) and would fit a future approval-notification fan-out | Low — fully managed, no cluster, pay-per-use, already has a working precedent pattern in this account (SES/SNS already provisioned for Cognito) | Best-fit *if and when* the outbox relay or approval-notification work is actually prioritized |
+| **Amazon SNS + SQS** | Partially — matches the one concrete gap found (the Education Runtime outbox relay) and would fit a future approval-notification fan-out | Low — fully managed, no cluster, pay-per-use, already has a working precedent pattern in this account (SES/SNS already provisioned for Cognito) | Best-fit *if and when* the outbox relay or approval-notification work is actually prioritized |
 | **Amazon EventBridge** | Partially — same fit as SNS+SQS, plus content-based filtering/schema registry if event types multiply later | Low — fully managed, no cluster; slightly more setup than a single SQS queue for a single-consumer relay | Reasonable alternative to SNS+SQS for the same gap, marginally more suited if multiple consumer types emerge later |
 | **No change** | N/A | None | Matches the evidence: no current pain traceable to the synchronous-HTTP pattern itself, and the one real gap (outbox relay) doesn't yet need more than a scheduled job or a single SQS queue |
 
@@ -264,7 +264,7 @@ size) argues directly against taking on a new class of always-on infrastructure 
 consistent with this project's own "minimal builds" and "park, don't guess" conventions applied elsewhere
 (most recently, the RLS decision).
 
-**The one concrete, narrow exception worth flagging, not queuing**: the SchoolAdmissions SOP-event outbox
+**The one concrete, narrow exception worth flagging, not queuing**: the Education Runtime SOP-event outbox
 (§2) already has the harder half of an outbox pattern built and hardened (durable, idempotent, outbox-first
 ordering) and is missing only the relay/delivery half. If and when that gets built, it is a genuinely
 better fit for **SQS or EventBridge** than for Kafka/MSK — single consumer (SOP), low event-type count,
@@ -288,7 +288,7 @@ real SNS-vs-EventBridge comparison against the workflow's real requirements — 
 Recorded rather than answered, per this project's own convention of parking genuine unknowns instead of
 guessing:
 
-1. **Who owns draining the SchoolAdmissions outbox, and on what timeline?** The write side is done and
+1. **Who owns draining the Education Runtime outbox, and on what timeline?** The write side is done and
    hardened; the relay is not scoped anywhere in this project's docs today. Not decided here whether that
    relay should be a scheduled poll-and-POST job (simplest, no new infra), a queue-based push (SQS/EventBridge,
    per §4), or something else — this document only confirms the gap exists and names the two AWS-native

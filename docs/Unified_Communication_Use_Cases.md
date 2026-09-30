@@ -248,23 +248,23 @@
 **Status:** NOT BUILT / OPEN QUESTION — no answer assumed
 **Context:** School / group of schools
 **Actor(s):** School Staff (`ErPrincipal` via `StaffAssignment` — e.g., two teachers at the same school)
-**Preconditions:** Both parties are verified via SchoolAdmissions' `ErIdentityGateway` and hold `StaffAssignment` rows for the same `SchoolId`. Neither necessarily holds an EA `User`/`Membership`.
+**Preconditions:** Both parties are verified via Education Runtime's `ErIdentityGateway` and hold `StaffAssignment` rows for the same `SchoolId`. Neither necessarily holds an EA `User`/`Membership`.
 
 **Main Flow:** Not specified — this is precisely the open question named in `Unified_Communication_SRS.md` §7 Q2. Three unresolved candidate shapes, named but not chosen:
 1. Both teachers are somehow also EA `User`/`Membership` holders (nothing today creates this), and existing EA `Message`/`MessageAudience.Direct` is reused as-is.
-2. SchoolAdmissions grows its own, entirely separate messaging primitive, independent of EA's.
-3. A future bridged/federated identity lets one real person be recognized as both an EA Membership holder and a SchoolAdmissions `ErPrincipal`, and messaging routes through whichever system is appropriate.
+2. Education Runtime grows its own, entirely separate messaging primitive, independent of EA's.
+3. A future bridged/federated identity lets one real person be recognized as both an EA Membership holder and a Education Runtime `ErPrincipal`, and messaging routes through whichever system is appropriate.
 
 **Alternate/Failure Flows:** N/A — recorded to make the gap concrete, not to prescribe a resolution.
 
 ---
 
-## UC-COMM-15: Business Owner (EA) Communicates With School Staff (SchoolAdmissions)
+## UC-COMM-15: Business Owner (EA) Communicates With School Staff (Education Runtime)
 
 **Status:** NOT BUILT / OPEN QUESTION — no answer assumed
 **Context:** School / group of schools (and, for a multi-school Tenant, potentially spanning more than one School)
-**Actor(s):** Owner-Admin / Tenant Staff (EA side), School Staff (`ErPrincipal`, SchoolAdmissions side — e.g., a head teacher)
-**Preconditions:** The Business Owner's Tenant has at least one Company with `IndustryType.SCHOOL`, provisioned as a `School` in SchoolAdmissions (`RegisterCompanyUseCase` → `SchoolAdmissionsGateway.provisionSchool`).
+**Actor(s):** Owner-Admin / Tenant Staff (EA side), School Staff (`ErPrincipal`, Education Runtime side — e.g., a head teacher)
+**Preconditions:** The Business Owner's Tenant has at least one Company with `IndustryType.SCHOOL`, provisioned as a `School` in Education Runtime (`RegisterCompanyUseCase` → `EducationRuntimeGateway.provisionSchool`).
 
 **Main Flow:** Not specified — same underlying identity gap as UC-COMM-14, viewed from the other direction. The Business Owner today has no route to message a specific `ErPrincipal` (e.g., a named head teacher) at all: EA's `Message`/`MessageAudience` only ever addresses EA `UserId`s, and nothing links a `School`'s staff back to any addressable identity EA recognizes. The one existing cross-system link — the `School.organisationId`/`tenantId` fields recorded at provisioning time — is informational only (set once, at creation) and is not a live, queryable identity bridge.
 
@@ -295,7 +295,7 @@
 ## Open Decisions Carried Forward (unresolved, per `Unified_Communication_SRS.md` §7)
 
 1. Which "Owner-Admin" FR-COMM-04/05's approval authority actually refers to (`businessOwnerId` vs. any `Role.OWNER_ADMIN` Membership) — affects UC-COMM-07/10/11 directly.
-2. The EA/SchoolAdmissions identity-bridging question — affects UC-COMM-02, UC-COMM-04 (school context), UC-COMM-14, UC-COMM-15 directly.
+2. The EA/Education Runtime identity-bridging question — affects UC-COMM-02, UC-COMM-04 (school context), UC-COMM-14, UC-COMM-15 directly.
 3. Whether `MessageAudience.Direct`'s existing unrestricted cross-Company behavior should be tightened alongside building UC-COMM-06 through UC-COMM-09, or left as a separate, pre-existing channel.
 4. Scope of any future ad-hoc group-chat primitive (UC-COMM-02's named gap) — Company-scoped, Tenant-wide, or itself subject to a UC-COMM-06-style approval gate.
 5. Whether FR-COMM-05's Owner-Admin-only cross-tenant contact needs its own discovery/consent mechanism or should wait for `Inter_Tenant_Trade_Automation_Vision.md`'s broader trading-partner mechanism.

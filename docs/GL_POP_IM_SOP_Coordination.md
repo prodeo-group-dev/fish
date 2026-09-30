@@ -2,7 +2,7 @@
 
 **Trigger:** direct instruction, 2026-09-28 — "There should be coordination
 between GL, POP, IM, SOP always in every build." Modeled directly on
-`Infrastructure/COORDINATION.md` and `ER/Principal/SchoolAdmissions/COORDINATION.md`,
+`Infrastructure/COORDINATION.md` and `ER/Principal/EducationRuntime/COORDINATION.md`,
 which already solved this same "more than one session can independently
 pick up overlapping work" problem for their own repos — this file is the
 same protocol, scoped to the four services that sit on either side of the
@@ -41,7 +41,7 @@ as any other infra/Jenkins/secrets-touching change. This file stays scoped
 to GL/POP/IM/SOP's own application-code coordination; it doesn't replace
 CM's log, it hands off to it at the deploy boundary.
 
-**Protocol** (identical to Infrastructure's/SchoolAdmissions' own):
+**Protocol** (identical to Infrastructure's/Education Runtime's own):
 1. Before starting, check the Active table below. If an entry overlaps what
    you're about to do, message that session first (`ListAgents` to find it,
    `SendMessage` to reach it) rather than proceeding blind.

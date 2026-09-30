@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-20. Requested directly: business setup should ask for an
 industry type; selecting "School" brings the Education Runtime (EduSys /
-The Principal / SchoolAdmissions — see `project_fish_er_edusys_roles`
+The Principal / formerly SchoolAdmissions — see `project_fish_er_edusys_roles`
 memory for the term) into that tenant's operations; industry type
 generally drives which operations-tab elements are required. **Enterprise
 Administration (EA) is named as the owner.**
@@ -47,15 +47,15 @@ Checked directly against `EA/src/main/kotlin` before writing anything down:
   EA's own field, not a new column on GL's `Company` — flagged as the
   likely answer, not settled, since nobody has confirmed it directly.
 
-## The real open gap: SchoolAdmissions has no linkage to EA/GL at all
+## The real open gap: Education Runtime has no linkage to EA/GL at all
 
 This is the part worth being explicit about rather than glossing over.
 "Operations will also include the Education Runtime" reads as more than a
-WEB dashboard tab becoming visible — SchoolAdmissions' own tenancy model
-(`SchoolId`, per `ER/Principal/SchoolAdmissions/src/main/kotlin/.../SchoolId.kt`)
+WEB dashboard tab becoming visible — Education Runtime's own tenancy model
+(`SchoolId`, per `ER/Principal/EducationRuntime/src/main/kotlin/.../SchoolId.kt`)
 is completely disconnected from EA's `TenantId`/`CompanyId` today: no
 foreign key, no provisioning call, nothing. Confirmed directly (this
-session built SchoolAdmissions' AWS infrastructure 2026-09-19 and its own
+session built Education Runtime's AWS infrastructure 2026-09-19 and its own
 outbound event publisher only writes to its own local outbox table —
 no call to any sibling, EA included, exists anywhere in its code).
 
@@ -63,12 +63,12 @@ So "industry type = School → include Education Runtime" has at least two
 real components, not one:
 1. **The EA-side module-enablement mechanic** described above (adding
    `EDUCATION_RUNTIME` to `ManagedModule`, deciding how it's captured).
-2. **Actually provisioning a `SchoolId`/tenant in SchoolAdmissions** for
+2. **Actually provisioning a `SchoolId`/tenant in Education Runtime** for
    that Company when School is selected — a genuine cross-system
    orchestration call that doesn't exist in either direction today.
    `RegisterCompanyUseCase`'s own KDoc already flags "cross-system
    onboarding orchestration is explicitly out of scope this pass" for
-   the GL↔EA leg; this would be a third leg (EA→SchoolAdmissions) on top
+   the GL↔EA leg; this would be a third leg (EA→Education Runtime) on top
    of that already-deferred one.
 
 Building (1) without (2) gives a real UI toggle with nothing behind it —
@@ -86,8 +86,8 @@ assuming.
 - Does WEB need new per-industry tab-visibility logic, or does this ride
   entirely on the existing `Membership.grantedModules` mechanism once
   `EDUCATION_RUNTIME` is a real `ManagedModule` value?
-- Who calls the (currently nonexistent) EA→SchoolAdmissions provisioning
-  step, and with what — does SchoolAdmissions need its own inbound
+- Who calls the (currently nonexistent) EA→Education Runtime provisioning
+  step, and with what — does Education Runtime need its own inbound
   onboarding endpoint, or does EA's Cognito service-account pattern
   (already proven for POP→IM, SOP→IM, HR→GL, etc.) extend here too?
 
@@ -98,11 +98,11 @@ grounding, see `EA/docs/EA_Development_Backlog.md` item 10 for the full
 detail. Answers to this doc's own open questions, as actually decided:
 
 - **Scope**: "both together" was the initial direction, then re-confirmed
-  once this doc's own SchoolAdmissions-has-no-auth finding was surfaced
+  once this doc's own Education Runtime-has-no-auth finding was surfaced
   again at build time — split into two shippable phases instead of one
   combined build. Phase 1 (EA-side module enablement + WEB) is done.
-  Phase 2 (SchoolAdmissions `School` aggregate + real Cognito auth + the
-  actual EA→SchoolAdmissions provisioning call) is deliberately deferred,
+  Phase 2 (Education Runtime `School` aggregate + real Cognito auth + the
+  actual EA→Education Runtime provisioning call) is deliberately deferred,
   not scoped further than this doc's own §"the real open gap".
 - **`industryType` ownership**: confirmed EA's own field, not GL's, per
   this doc's own reasoning - now `IndustryType` (`domain/tenancy/industry_type.kt`),
@@ -113,10 +113,10 @@ detail. Answers to this doc's own open questions, as actually decided:
   this doc predicted - `EDUCATION_RUNTIME` is a real `ManagedModule` value
   now, and `BusinessOperationsScreen.tsx`'s existing per-module gating
   needed no new mechanism.
-- **Who calls SchoolAdmissions provisioning**: still unanswered - that's
+- **Who calls Education Runtime provisioning**: still unanswered - that's
   Phase 2, not attempted here.
 
 Phase 2 remains open, with this doc's own "real open gap" section still
-the accurate starting point for it: SchoolAdmissions has no `School`
+the accurate starting point for it: Education Runtime has no `School`
 aggregate/table and no real authentication (only `StubErIdentityGateway`),
 confirmed unchanged as of Phase 1's build.
