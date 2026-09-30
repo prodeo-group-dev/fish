@@ -131,6 +131,29 @@ shape at the same time - that's not this).
 | 5.2 | **SOP**: update `ea_dtos.kt`/`ea_membership_gateway.kt` comments referencing the old name; `Auth.kt`, `VerifiedIdentity.kt`; rename test file `SchoolAdmissionsServiceJwtSupport.kt` → `EducationRuntimeServiceJwtSupport.kt` | 2.1 |
 | 5.3 | **WEB**: rename `api/schoolAdmissions.ts` → `api/educationRuntime.ts`; update imports in `AdmissionsTab.tsx`, `StudentManagementConsole.tsx`, `TimetableGrid.tsx`, `me.ts` (`config.ts`'s API base URL constant value is unchanged - only rename it if its own identifier name references "school") | 2.1 |
 
+**Confirmed clean, 2026-09-30: GL, HR, POP, and IM need zero changes.**
+The original scoping grep (exact strings) found no matches in any of the
+four; POP and IM each independently re-ran a broader, case-insensitive
+sweep (`school`/`admissions`/`principal`/`education-runtime` and
+variants, not just exact strings) across their own `src`, `Jenkinsfile`,
+docs, and gradle files and confirmed every hit was a false positive -
+spot-checked directly, not just taken on their word:
+- A historical Jenkinsfile comment attributing a shared Docker
+  container-naming bug fix to "SchoolAdmissions' PR #3" (both POP and IM
+  have this identical comment) - narrative only, no functional link.
+- `EaCompanySummaryDto.schoolId` (POP/IM's own copy) - EA's generic
+  Company-metadata field, populated for any School-type Company
+  regardless of provisioning source; an opaque passthrough, never a
+  direct call to the SchoolAdmissions service.
+- Ktor's own `io.ktor.server.auth.Principal` framework class - pure
+  string coincidence with "principal" the word, unrelated to The
+  Principal product.
+
+Worth noting: IM's own `Auth.kt` KDoc (written 2026-09-29, unrelated to
+this rename) already says "Education Runtime" rather than
+"SchoolAdmissions" when describing a scenario - one spot already using
+the target terminology organically.
+
 ---
 
 ## Phase 6 — Docs
