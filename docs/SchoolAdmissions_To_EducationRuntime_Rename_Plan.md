@@ -53,13 +53,43 @@ Entirely within the target repo. No deploy, no DNS change, no consumer
 impact - the service's own HTTP surface and behavior are unchanged, only
 its internal Kotlin package names and build identifiers.
 
-| # | Task | Depends on |
-|---|---|---|
-| 1.1 | Rename package directory `com/theprodeogroup/schooladmissions/` → `.../educationruntime/` across all 126 `.kt` files (10 sub-packages: `application`, `domain.{admissions,assessment,attendance,billing,classroom,curriculum,fees,platform,staff}`, `infrastructure`) - update every file's own `package`/`import` lines | 0.1 |
-| 1.2 | `settings.gradle.kts`: `rootProject.name` → `fish-education-runtime` | 0.1 |
-| 1.3 | `build.gradle.kts`: `group` → `com.theprodeogroup.educationruntime`, `mainClass` → the moved `ApplicationKt` | 1.1 |
-| 1.4 | Repo's own `README.md`/`COORDINATION.md` - update self-references | 1.1 |
-| 1.5 | Full test suite run (`./gradlew test`) to confirm the rename didn't break anything - purely mechanical, but 126 files is enough surface area to verify, not assume | 1.1-1.4 |
+| # | Task | Depends on | Status |
+|---|---|---|---|
+| 1.1 | ~~Rename package directory `com/theprodeogroup/schooladmissions/` → `.../educationruntime/` across all 126 `.kt` files (10 sub-packages: `application`, `domain.{admissions,assessment,attendance,billing,classroom,curriculum,fees,platform,staff}`, `infrastructure`) - update every file's own `package`/`import` lines~~ | 0.1 | **Done.** `git mv` on each of the 3 source-set directories (main/test/integrationTest) + a scoped find/replace on the exact `com.theprodeogroup.schooladmissions` string, nothing else touched. Confirmed zero remaining occurrences afterward. |
+| 1.2 | ~~`settings.gradle.kts`: `rootProject.name` → `fish-education-runtime`~~ | 0.1 | **Done.** |
+| 1.3 | ~~`build.gradle.kts`: `group` → `com.theprodeogroup.educationruntime`, `mainClass` → the moved `ApplicationKt`~~ | 1.1 | **Done.** |
+| 1.4 | ~~Repo's own `README.md`/`COORDINATION.md` - update self-references~~ | 1.1 | **Done** (README only - COORDINATION.md needed no self-reference fix, just the usual row-claim). README explicitly notes the repo/path/GitHub name stay `SchoolAdmissions`/`fish-school-admissions` until Phase 2. |
+| 1.5 | ~~Full test suite run (`./gradlew test`) to confirm the rename didn't break anything~~ | 1.1-1.4 | **Done - green.** |
+
+**Two same-repo couplings found and fixed during 1.1-1.4 that the plan
+didn't originally call out** (neither is cross-repo or infra, so both
+stayed in scope for Phase 1 rather than getting parked):
+- `Dockerfile` hardcoded the shadowJar output filename
+  (`fish-school-admissions-all.jar`), which is derived from
+  `rootProject.name` - renaming 1.2 without fixing this would have broken
+  the Docker build outright. Fixed in the same commit, plus the
+  Dockerfile's own internal Linux username (`schooladmissions` →
+  `educationruntime`, container-internal only, no external coupling).
+- Nothing else - the rest of the mechanical rename had no other
+  surprises.
+
+**Real Phase 3 scope gap found, NOT fixed here (correctly out of scope
+for a pure package rename):** the whole family of `SCHOOLADMISSIONS_*`
+runtime environment variable names this app reads via `System.getenv()`
+- `STORE`, `AUTH_MODE`, `DB_HOST`/`PORT`/`NAME`/`USER`/`PASSWORD`,
+`SOP_BASE_URL`, `SOP_COGNITO_REGION`, `SOP_SERVICE_ACCOUNT_CLIENT_ID`/
+`_USERNAME`/`_PASSWORD` (`DatabaseConfig.kt`, `AppFactory.kt`) - confirmed
+these are still set with the exact same literal names by Infrastructure's
+real production ECS task definition (`education_runtime.tf`, Phase 4
+deliberately left them unchanged too, consistent with this finding).
+Phase 3's original text ("CI Postgres env var names... `EDUCATIONRUNTIME_DB_*`")
+undersold this - it's not CI-only, and it's not just the DB vars. **If
+Phase 3 is ever picked up, the Kotlin `System.getenv()` call sites and
+Infrastructure's ECS task definition environment block must change in the
+same coordinated release** - renaming only one side would silently break
+production (the app would fall back to `STORE=memory` or fail closed on
+a required var). Left both sides exactly as-is for now; no urgency, not
+blocking anything else in this plan.
 
 **Not in this phase**: `Jenkinsfile` identifiers (Phase 3) and anything
 in other repos (Phase 5) - those depend on the GitHub rename (Phase 2)
