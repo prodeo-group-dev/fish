@@ -177,11 +177,13 @@ an actual URL change would require (contrast POP's own WEB cutover,
 `ceb4dc1`, which genuinely did need EA/SOP/WEB to agree on a new URL
 shape at the same time - that's not this).
 
-| # | Task | Depends on |
-|---|---|---|
-| 5.1 | **EA**: rename `infrastructure/schooladmissions/` package → `infrastructure/educationruntime/` (`ktor_school_admissions_gateway.kt`, `school_admissions_gateway.kt`); update `RegisterCompanyUseCase.kt`, `repositories.kt` (naming only, logic unchanged); update `Dtos.kt` comments; rename/update the 3 touched test files | 2.1 (repo renamed, so references make sense) |
-| 5.2 | **SOP**: update `ea_dtos.kt`/`ea_membership_gateway.kt` comments referencing the old name; `Auth.kt`, `VerifiedIdentity.kt`; rename test file `SchoolAdmissionsServiceJwtSupport.kt` → `EducationRuntimeServiceJwtSupport.kt` | 2.1 |
-| 5.3 | **WEB**: rename `api/schoolAdmissions.ts` → `api/educationRuntime.ts`; update imports in `AdmissionsTab.tsx`, `StudentManagementConsole.tsx`, `TimetableGrid.tsx`, `me.ts` (`config.ts`'s API base URL constant value is unchanged - only rename it if its own identifier name references "school") | 2.1 |
+**Done, 2026-09-30 (CM) - all three PRs reviewed, tested, and merged.**
+
+| # | Task | Depends on | Status |
+|---|---|---|---|
+| 5.1 | ~~**EA**: rename `infrastructure/schooladmissions/` package → `infrastructure/educationruntime/` (`ktor_school_admissions_gateway.kt`, `school_admissions_gateway.kt`); update `RegisterCompanyUseCase.kt`, `repositories.kt` (naming only, logic unchanged); update `Dtos.kt` comments; rename/update the 3 touched test files~~ | 2.1 (repo renamed, so references make sense) | **Done**, [PR #6](https://github.com/prodeo-group-dev/fish-enterprise-administration/pull/6) (`1b01149`). Also renamed `SchoolAdmissionsGateway`/`KtorSchoolAdmissionsGateway`/`FakeSchoolAdmissionsGateway` classes and local variable names, not just the package - full test suite green. Left `EA_SCHOOLADMISSIONS_*` env var names (set by `ea.tf`) unchanged - same coupling principle as Phases 1/3. |
+| 5.2 | ~~**SOP**: update `ea_dtos.kt`/`ea_membership_gateway.kt` comments referencing the old name; `Auth.kt`, `VerifiedIdentity.kt`; rename test file `SchoolAdmissionsServiceJwtSupport.kt` → `EducationRuntimeServiceJwtSupport.kt`~~ | 2.1 | **Done**, [PR #8](https://github.com/prodeo-group-dev/fish-sales-order-processing/pull/8) (`a486a7b`). Also renamed `SOP_JWT_SERVICE_AUTH_NAME_SCHOOLADMISSIONS`/`buildJwksServiceVerifierForSchoolAdmissions` (internal identifiers, no external coupling) - full test suite green. Left `SOP_JWT_SERVICE_AUDIENCE_SCHOOLADMISSIONS` env var name (set by `sop.tf`) unchanged. Branched independently of the held Wave 0R.3 cutover PR - different code regions, no collision. |
+| 5.3 | ~~**WEB**: rename `api/schoolAdmissions.ts` → `api/educationRuntime.ts`; update imports in `AdmissionsTab.tsx`, `StudentManagementConsole.tsx`, `TimetableGrid.tsx`, `me.ts` (`config.ts`'s API base URL constant value is unchanged - only rename it if its own identifier name references "school")~~ | 2.1 | **Done**, [PR #14](https://github.com/prodeo-group-dev/fish-gl-web/pull/14) (`4ebfad6`). `SCHOOL_ADMISSIONS_API_BASE_URL` → `EDUCATION_RUNTIME_API_BASE_URL` renamed too (its `VITE_*` override is local-dev-only, no CI/production coupling) - fallback URL value unchanged. Also touched `FeesBillingTab.tsx` (not originally listed, same import). `tsc`/build/live console check all clean - this repo has no CI configured at all (confirmed, pre-existing gap). |
 
 **Confirmed clean, 2026-09-30: GL, HR, POP, and IM need zero changes.**
 The original scoping grep (exact strings) found no matches in any of the
