@@ -72,7 +72,6 @@ table. It shrinks the collision window; it doesn't eliminate it.
 
 | Session | Started (UTC) | Working on | Files/areas |
 |---|---|---|---|
-| Sales Order Processing - SOP | 2026-09-30T09:00:00Z | **BLOCKED, not actively working** - Wave 0R.3 (SOP Customer per-Company scoping) is code-complete and held (SOP `df7aba0` on `feature/wave-0r3-customer-company-scoping`, WEB `1babe06` on `feature/sop-customer-company-scoping-cutover`), waiting only on item 0R.3.1's backfill migration. That itself is blocked on a read-only production RDS check that needs Femi's direct go-ahead to CM, in CM's own conversation - not something any peer session (including this one) can authorize on his behalf. Registered here so anyone checking this log sees the real blocker rather than assuming it's still in progress or safe to pick up. | `docs/GL_POP_IM_SOP_Backlog.md` item 0R.3.1; SOP/WEB feature branches above |
 
 ## Format for a new row
 
