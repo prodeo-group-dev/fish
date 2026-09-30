@@ -99,11 +99,13 @@ and/or new infra (Phase 4) existing first.
 
 ## Phase 2 — GitHub repo rename
 
-| # | Task | Depends on |
-|---|---|---|
-| 2.1 | Rename `fish-school-admissions` → `fish-education-runtime` on GitHub (auto-redirects old clone/fetch URLs, low risk) | Phase 1 complete and merged |
-| 2.2 | `FiSH/.gitmodules`: submodule `path` and `url` updated to `ER/Principal/EducationRuntime` / the new repo URL | 2.1 |
-| 2.3 | Every existing local checkout of `FiSH/` needs `git submodule sync` + re-init after 2.2 lands - worth a note in the PR/commit, not just silently breaking other sessions' checkouts | 2.2 |
+**Done, 2026-09-30 (CM).**
+
+| # | Task | Depends on | Status |
+|---|---|---|---|
+| 2.1 | ~~Rename `fish-school-admissions` → `fish-education-runtime` on GitHub (auto-redirects old clone/fetch URLs, low risk)~~ | Phase 1 complete and merged | **Done.** `prodeo-group-dev/fish-education-runtime`, confirmed via `gh api` that the old name now resolves to the new `full_name` (redirect working). |
+| 2.2 | ~~`FiSH/.gitmodules`: submodule `path` and `url` updated to `ER/Principal/EducationRuntime` / the new repo URL~~ | 2.1 | **Done**, `ce6dd34` on FiSH master - `git mv ER/Principal/SchoolAdmissions ER/Principal/EducationRuntime` (pure rename, gitlink SHA unchanged) + `.gitmodules` section/url updated. This checkout's own nested `.git` (a plain directory, not git's internal `.git/modules/` layout) had its `origin` remote manually repointed to the new URL and verified reachable (`git fetch`) before committing. |
+| 2.3 | Every existing local checkout of `FiSH/` needs `git submodule sync` + re-init after 2.2 lands - worth a note in the PR/commit, not just silently breaking other sessions' checkouts | 2.2 | **Done** - noted in `ce6dd34`'s commit message; CM also messaged SOP and `+ER Education` directly since this project's checkouts use plain nested `.git` dirs rather than git's submodule internals, so `git submodule sync` alone isn't sufficient - each session's own checkout needs `cd ER/Principal/EducationRuntime && git remote set-url origin https://github.com/prodeo-group-dev/fish-education-runtime.git` (or a fresh clone at the new path) after pulling FiSH's new master. |
 
 ---
 
