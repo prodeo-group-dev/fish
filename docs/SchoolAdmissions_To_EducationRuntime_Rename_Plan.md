@@ -84,6 +84,26 @@ and/or new infra (Phase 4) existing first.
 | 3.1 | `Jenkinsfile`: `ECR_REPOSITORY`, `ECS_SERVICE`, `ECS_TASK_DEFINITION_FAMILY`, `ECS_CONTAINER_NAME`, Docker image tags (`fish-school-admissions:ci` → `fish-education-runtime:ci`), CI Postgres env var names (`SCHOOLADMISSIONS_DB_*` → `EDUCATIONRUNTIME_DB_*`) | Phase 4 (the underlying AWS resources are renamed in place via `terraform state mv`, not newly created - but this still must land in the same change as Phase 4, since the Jenkinsfile's names must match whatever the renamed resources are actually called) |
 | 3.2 | Jenkins' own job configuration (the job itself, not just the in-repo `Jenkinsfile`) - CM's territory, same as any Jenkins naming change | 3.1, CM |
 
+**Correction found during Phase 4's actual execution, 2026-09-30, parked rather than fixed (direct instruction - not a live problem yet):**
+this task's premise ("the Jenkinsfile's names must match whatever the renamed
+resources are actually called") is wrong. Phase 4 only renamed Terraform
+*identifiers* via `state mv` - the literal AWS-side name/family strings
+(ECR repo name, ECS service name, task family, IAM role names, log group
+name, security group name) are still `fish-school-admissions`-styled and
+were deliberately left untouched, since all of those are `ForceNew`
+attributes in the AWS provider and literally renaming them would force
+destroy+recreate on a live production service (real downtime, real risk of
+losing the live DB password secret) - which would violate 4.1's own
+explicit "no destroy" requirement. Confirmed empirically: a scoped
+`terraform plan` across all 40 renamed resources returned "No changes."
+**So when Phase 3.1 is actually picked up: `ECR_REPOSITORY`/`ECS_SERVICE`/
+`ECS_TASK_DEFINITION_FAMILY`/`ECS_CONTAINER_NAME` should keep pointing at
+the SAME literal AWS names as today (still `fish-school-admissions`-styled)
+- only rename Jenkinsfile identifiers/variable names if desired for
+readability, never the string values that must match real AWS resource
+names.** Docker image tags and CI Postgres env var names are unaffected by
+this correction (those aren't AWS resource identities).
+
 ---
 
 ## Phase 4 — Infrastructure (Terraform) - highest risk, CM-owned
