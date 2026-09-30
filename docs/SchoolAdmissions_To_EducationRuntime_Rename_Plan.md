@@ -248,3 +248,30 @@ infra-touching phases.
 - **Needs CM specifically**: Phase 3.2 (Jenkins job config), all of Phase 4 (Terraform resource renames via `state mv`), and the actual push/deploy of every phase per the platform's "only CM pushes" convention.
 - **Phase 5 (EA/SOP/WEB) is now low-risk and independently deployable per-repo** - simplified by 0.3, since no base URL/config ever changes, only identifiers.
 - **Genuinely independent of the rest**: Phase 7 (product naming) - can happen any time, including right now.
+
+---
+
+## Phase 8 — Literal AWS/DB resource name strings (deferred to a planned downtime window)
+
+**Not started. Direct instruction, 2026-09-30**: "We will fix during
+downtime." Phases 1-7 deliberately left every literal, ForceNew-shaped
+AWS/DB resource name string unchanged (`schooladmissions_production` the
+Postgres database name itself, the ECR repo name, IAM role names, the
+CloudWatch log group, the security group, the ECS service name/task
+family - see Phase 4's own reasoning) because renaming any of them
+in-place forces destroy-and-recreate or, for the database specifically,
+requires the service to stop querying it entirely during the rename
+(`ALTER DATABASE ... RENAME TO ...` needs zero active connections) - a
+real, deliberate downtime window, not something to schedule incidentally
+alongside other work.
+
+| # | Task | Depends on |
+|---|---|---|
+| 8.1 | Rename the Postgres database itself: `schooladmissions_production` → (name TBD, e.g. `education_runtime_production`) | A planned downtime window |
+| 8.2 | Update `SCHOOLADMISSIONS_DB_NAME`/the Terraform variable supplying it to match - same coordinated-change requirement already flagged for the whole `SCHOOLADMISSIONS_*` env var family in Phases 1/3/5 | 8.1 |
+| 8.3 | Decide whether to also rename the other literal AWS resource names left unchanged in Phase 4 (ECR repo, ECS service/task family, IAM roles, log group, security group) in the same window, or leave those - unlike the database name, none of these are visible to a human operator day-to-day, so there's less pressure to fix them | Not decided - park until the downtime window is actually being planned |
+
+No target date set. Revisit when a downtime window is being scheduled -
+worth checking whether this coincides with the eventual Development→Live
+security-hardening pass (see `project_development_to_live_switch`
+memory) rather than being a separate outage.
