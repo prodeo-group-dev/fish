@@ -275,3 +275,10 @@ No target date set. Revisit when a downtime window is being scheduled -
 worth checking whether this coincides with the eventual Development→Live
 security-hardening pass (see `project_development_to_live_switch`
 memory) rather than being a separate outage.
+
+**Tracked centrally, not just here**: this item now lives in
+`docs/Downtime_Maintenance_Backlog.md` alongside other unrelated
+deferred-to-downtime fixes (starting with GL's own legacy
+`fish_production` database name) - check that doc for the full,
+up-to-date list rather than assuming this phase is the only thing
+deferred.
