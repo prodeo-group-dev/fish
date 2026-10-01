@@ -72,6 +72,7 @@ table. It shrinks the collision window; it doesn't eliminate it.
 
 | Session | Started (UTC) | Working on | Files/areas |
 |---|---|---|---|
+| Sales Order Processing - SOP | 2026-10-01T00:00:00Z | Picking up backlog Wave 3.1 (SOP->IM Returns Inwards inventory-value crossing) per next-dependency-ordered-item instruction, 2026-10-01 — **BLOCKED on IM's Wave 2.1** (`RecordGoodsReceiptUseCase` generalization: caller-overridable `contraAccountId` + generic reference field), not yet started per the backlog; confirming current status directly with IM. Picking up unblocked Wave 5 (RMA doc generation / returns reporting) in SOP in the meantime, not idling on this block. | SOP: `ReceiveReturnedGoodsUseCase`, a new `ImGateway.recordGoodsReceipt`-equivalent call (pending 2.1); IM: `RecordGoodsReceiptUseCase` |
 
 ## Format for a new row
 
