@@ -1,6 +1,6 @@
 # The Principal's EduSys — Product Backlog
 
-**Source:** The Principal SRS (17 Sep 2026)  
+**Source:** The Principal SRS (17 Sep 2026); superseded/extended 2026-10-01 by `docs/FiSH-ER-Education-Runtime-Technical-Req-Spec-and-Use-Cases-v0.1.md` (230 requirements, 14 use cases, source-of-truth going forward) — see `docs/Education_Runtime_MVP_Definition.md` for the real-code-vs-spec gap analysis this produced  
 **Owner:** Policy and Strategy Initiatives CIC  
 **Platform:** FiSH+ER (school EMIS, Nigeria)  
 **Project folder:** `C:\Users\femif\Claude\Projects\FiSH\ER\Principal`  
@@ -198,6 +198,10 @@ Subject-by-subject curriculum / learning roadmap for each class/year. **Not** LM
 | BK-CMP-2 | FR-CMP-4 | RBAC on sensitive fields across all modules (API-enforced) | M | **Done 2026-09-21** (`34f591c`). Grep-driven audit of every `safeguardingFlags`/`medicalNotes` touch-point. Real gap found and closed: `listStudents()` had no `ErPrincipal` parameter and applied no masking at all, unlike `getStudent()` — unused by any route today (not a live leak) but a landmine for the next roster-view route. False alarm ruled out after reading the actual consumer: `studentsByExternalRef()`'s two callers (CSV import, admissions enrol) are both already gated correctly and never serialize its raw values to a response — left as-is, just documented as internal-only. |
 | BK-CMP-3 | FR-CMP-2 | Critical alerts: attendance, safeguarding, census-validation | M | BK-ATT-5, BK-CMP-1 |
 | BK-CMP-4 | FR-CMP-3 | Government census exports in mandated format | M | **BLK:** format spec (Open #4) |
+| BK-CMP-5 | ER-SAF-004 (v0.1 spec) | Gate and visitor log: name, phone, ID reference, purpose, person visited, time in/out | M | Not started. MVP-scoped per the v0.1 spec. Offline-capable per the spec (BK-NFR-8). |
+| BK-CMP-6 | ER-SAF-005 (v0.1 spec) | Pickup verification at the gate against authorised pickup persons, optional one-time SMS code; unauthorised attempts logged and alerted | M | Not started. **Blocked on BK-CON-6** (authorised pickup persons don't exist as a record yet) and BK-NOT (SMS code delivery). |
+| BK-CMP-7 | ER-SAF-008 (v0.1 spec) | Missing student/absconding workflow: alert to principal/CPFP/parents, resolution tracking | S | Not started. |
+| BK-CMP-8 | ER-SAF-009 (v0.1 spec) | Suspensions and expulsions: dates, reasons, approvals, parent notification | S | Not started. |
 
 ---
 
@@ -212,6 +216,91 @@ Subject-by-subject curriculum / learning roadmap for each class/year. **Not** LM
 | BK-NFR-5 | NFR-SEC-4 | Encryption at rest and in transit | NFR | W0 |
 | BK-NFR-6 | §6.4 | WCAG 2.1 AA + high-contrast mode | NFR | Ongoing |
 | BK-NFR-7 | NFR-CMP-2 | Scale path to 5k schools / 1M students (AWS) | NFR | Architecture; not Year-1 gate |
+| BK-NFR-8 | NFR-OFF-001 to 007 (v0.1 spec) | Real offline-first: encrypted local store, delta sync, per-entity conflict resolution, resumable uploads, pre-allocated offline receipt-number ranges | NFR | **Not built at all** - confirmed by reading the code: `AttendanceService.kt`'s own `OfflineAttendanceSync` interface has a literal `NoOpOfflineAttendanceSync` implementation, explicitly flagged in its own KDoc as deferred. The single biggest gap against the v0.1 spec's MVP scope - see `docs/Education_Runtime_MVP_Definition.md` §3. **Open, not decided**: whether full offline-first is genuinely required before the first real pilot, or whether an online-only pilot is acceptable while this gets built against real connectivity data from that pilot - a product call, not parked here as settled either way. |
+| BK-NFR-9 | NFR-PRV-001 to 010 (v0.1 spec) | Children's-data privacy apparatus: lawful-basis recording, consent capture/withdrawal with age-verification, DPIA support, data-subject-request handling, retention/deletion schedules | NFR | **Not built.** RBAC/audit/safeguarding-masking are comparatively strong (BK-CMP-1/2, field-level masking already live), but none of the NDPA 2023/GAID 2025 consent-and-DPIA machinery exists yet. Real gap for any Nigeria go-live, not yet scoped into rows - needs its own design pass once counsel input (per the spec's own Open Question 2/NFR-PRV-002) is available. |
+
+---
+
+## Epic 10 — Staff Records (BK-STF, v0.1 spec §4.2)
+
+New domain - confirmed by reading the code that `StaffAssignment` is RBAC-only (subjectId/roles/status, no profile fields). MVP-scoped per the v0.1 spec's own §10.1 roadmap ("ER-STF (core)").
+
+| ID | Spec ID | Item | Pri | Deps / blockers |
+|----|---------|------|-----|-----------------|
+| BK-STF-1 | ER-STF-001 | Staff profile: name, staff number, roles, subjects, arms, department, campus, contact, next of kin, start/exit dates | M | Not started. Additive to `StaffAssignment`, not a replacement - that stays the RBAC record. |
+| BK-STF-2 | ER-STF-002 | Employment summary (type, dates); pay/salary data explicitly excluded (payroll out of scope platform-wide) | M | Not started. BK-STF-1. |
+| BK-STF-3 | ER-STF-003 | Qualifications and professional registration (TRCN/NTC/etc.) with expiry dates | M | Not started. Per-country registration body names are config, not hardcoded - matches this project's own jurisdiction-config precedent (tax/currency docs). |
+| BK-STF-4 | ER-STF-004 | Vetting and safety checks: identity verification, references, police clearance, guarantor, child-protection training. Restricted to authorised roles. | M | Not started. Real safeguarding-adjacent sensitivity - should reuse `canAccessSafeguarding()`-style gating, not a new permission model. |
+| BK-STF-5 | ER-STF-005 | Staff vetting/check status report (missing or expired items) | M | Not started. BK-STF-4. |
+| BK-STF-6 | ER-STF-006 | Reminders for expiring registrations/checks/contracts | S | Not started. Depends on a notification mechanism - see BK-NOT. |
+| BK-STF-7 | ER-STF-007 | Staff data for ministry/census returns | S | Not started. Phase 2 per spec (census export is Phase 2 generally). |
+
+---
+
+## Epic 11 — Parent/Guardian Contacts (BK-CON, v0.1 spec §4.7)
+
+Expands the existing thin `Guardian` (embedded in `StudentProfile`: name/phone/email/relationship/subjectId only) into the full contact model the spec requires. MVP-scoped. **Blocks** Epic 8's pickup-verification rows below.
+
+| ID | Spec ID | Item | Pri | Deps / blockers |
+|----|---------|------|-----|-----------------|
+| BK-CON-1 | ER-CON-001 | Multiple contacts per student, each linkable to several students (siblings) | M | Not started. Real design question: does this replace the embedded `Guardian` list or sit alongside it (the embedded list is already referenced by `GuardianAccount`/SOP billing - BK-FEE-5). Needs a design pass, not guessed. |
+| BK-CON-2 | ER-CON-002 | Multiple phone numbers per contact, international format validation, primary/WhatsApp flags | M | Not started. BK-CON-1. |
+| BK-CON-3 | ER-CON-003 | Emergency contact priority order | M | Not started. BK-CON-1. |
+| BK-CON-4 | ER-CON-004 | Legal guardian/custody status and fee payer/sponsor designation | M | Not started. Fee-payer designation directly feeds the FIN-INT/SOP billing identity (Epic 13). |
+| BK-CON-5 | ER-CON-005 | Court orders and contact restrictions: prominent warning, CPFP/principal-only visibility, blocks information release and pickup | M | Not started. Direct extension of the existing safeguarding-masking pattern (BK-CMP-1/2). |
+| BK-CON-6 | ER-CON-006 | Authorised pickup persons per student (name, relationship, phone, photo, ID reference) | M | Not started. **Blocks Epic 8's pickup-verification row.** |
+| BK-CON-7 | ER-CON-007 | Communication preferences: channel, language, opt-out of non-essential messages | M | Not started. Feeds BK-NOT. |
+| BK-CON-8 | ER-CON-008 | Record consents (photos, trips, data processing) with date/method/who gave consent | M | Not started. Feeds BK-NFR-9 (privacy apparatus). |
+
+---
+
+## Epic 12 — Document Storage (BK-DOC, v0.1 spec §4.11)
+
+New domain - confirmed zero existing document/file model anywhere in the codebase (only a bare `photoUrl` string reference on `StudentProfile`). MVP-scoped ("core").
+
+| ID | Spec ID | Item | Pri | Deps / blockers |
+|----|---------|------|-----|-----------------|
+| BK-DOC-1 | ER-DOC-001 | Attach documents to student/staff/contact records, configurable types | M | Not started. Real infra decision needed: object storage (S3) wiring, not yet present anywhere in this service. |
+| BK-DOC-2 | ER-DOC-002 | Version documents, keep previous versions | M | Not started. BK-DOC-1. |
+| BK-DOC-3 | ER-DOC-003 | Retention tag per document type, configurable retention rules, disposal review list | M | Not started. Feeds BK-NFR-9. |
+| BK-DOC-4 | ER-DOC-004 | File type allow-list, configurable size limit, mobile-upload compression | M | Not started. BK-DOC-1. |
+| BK-DOC-5 | ER-DOC-005 | Malware scanning on upload, quarantine, uploader alert | M | Not started. Real infra decision (AWS has a managed scanning option) - not yet researched, park don't guess. |
+| BK-DOC-6 | ER-DOC-006 | Documents inherit record permissions plus a sensitivity level per type | M | Not started. Direct extension of existing masking pattern. |
+| BK-DOC-7 | ER-DOC-007 | Generate transcripts/testimonials/transfer letters with verification QR codes | S | Not started. Phase 2-leaning per spec's own roadmap language, kept here since it's listed MVP-adjacent. |
+| BK-DOC-8 | ER-DOC-008 | Mobile-camera document capture with offline queueing | S | Not started. Depends on BK-NFR-8 (offline-first). |
+
+---
+
+## Epic 13 — FiSH Core Integration / FIN-INT (BK-FIN, v0.1 spec §2.4-2.6, §4.16)
+
+**The architectural decision from `docs/Education_Runtime_MVP_Definition.md` §1, made 2026-10-01**: "FiSH core" for this contract is **SOP, extended** - not a new GL/AR layer, consistent with the Ecosystem Extraction precedent (GL stays generic) and the Guardian-as-Customer bet already made (BK-FEE-5). The real work is migrating invoice issuance and payment-confirmation out of Education Runtime's own `FeeService` (today's system of record: `issueInvoice`, `confirmPaymentStub`, its own `FeeInvoice` rows) into SOP, narrowing `FeeService` down to fee rules + clearance policy only. MVP-scoped per the spec's own "ER-FEE with FIN-INT core (001-014, 017)" line.
+
+| ID | Spec ID | Item | Pri | Deps / blockers |
+|----|---------|------|-----|-----------------|
+| BK-FIN-1 | FIN-INT-001/017 | Tenant mapping: ER school/campus ↔ SOP entity, shared identity/SSO (role mapping ER Bursar ↔ SOP-side role) | M | Not started. Foundational - everything else in this epic depends on it. |
+| BK-FIN-2 | FIN-INT-002/003 | `StudentEnrolled`/`StudentUpdated`/`StudentStatusChanged`/`FeePayerChanged` → SOP creates/links/updates/closes the billing-equivalent (`Customer`) record, idempotent on student id | M | Not started. Extends the existing lazy `GuardianAccount.customerId` link (BK-FEE-5) into the full event-driven contract. |
+| BK-FIN-3 | FIN-INT-004 | `FeeScheduleChanged` → SOP creates/updates billing items and prices, versioned, immutable once published | M | Not started. |
+| BK-FIN-4 | FIN-INT-005 | `BillingRunRequested` (term start or manual, with dry-run) → SOP generates invoices in bulk, returns `InvoiceIssued` | M | Not started. **This is the real migration**: `FeeService.issueInvoice` today creates `FeeInvoice` rows locally - this moves that system-of-record into SOP. |
+| BK-FIN-5 | FIN-INT-006/009 | SOP publishes `PaymentReceived`/`PaymentReversed`/`AccountBalanceChanged` → ER updates fee status and re-evaluates clearance (ER-FEE-008) using SOP's balance as the single source of truth | M | Not started. Replaces `FeeService.confirmPaymentStub`'s local confirmation. |
+| BK-FIN-6 | FIN-INT-008 | `WaiverApproved`/refund requests → SOP posts discounts/credit notes/refunds to mapped accounts | M | Not started. |
+| BK-FIN-7 | FIN-INT-010 | Pass-through fees (exam registration, PTA) post to liability accounts, not revenue | M | Not started. Real GL chart-of-accounts mapping decision needed (§2.7 of the spec is illustrative only). |
+| BK-FIN-8 | FIN-INT-011 | Delivery guarantees: transactional outbox, at-least-once, idempotency keys, per-account ordering, retry/backoff, DLQ, replay | M | Partially covered - `OutboxSopEventPublisher`/`SopEventEnvelope` already exist and are used platform-wide; needs confirming they satisfy per-account ordering and DLQ/replay specifically, not assumed. |
+| BK-FIN-9 | FIN-INT-012 | Daily reconciliation job: ER vs. SOP (billing accounts, invoices, payments, balances), discrepancies raised to Bursar/support | M | Not started. |
+| BK-FIN-10 | FIN-INT-013 | Offline cash receipting: pre-allocated receipt-number ranges to registered devices, posted on sync, duplicate/gap detection | M | Not started. Depends on BK-NFR-8 (offline-first) - can't be built meaningfully before that's resolved. |
+| BK-FIN-11 | FIN-INT-014 | Contract versioning: backward-compatible schemas, ≥6 months deprecation notice, contract tests in CI | M | Not started. |
+
+---
+
+## Epic 14 — Notifications & Messaging (BK-NOT, v0.1 spec §4.14)
+
+MVP-scoped slice: SMS only (spec's own §10.1 says "ER-NOT (SMS)" for MVP; WhatsApp is Phase 2).
+
+| ID | Spec ID | Item | Pri | Deps / blockers |
+|----|---------|------|-----|-----------------|
+| BK-NOT-1 | ER-NOT-001 | Send SMS through a configurable gateway, with delivery status and cost tracking | M | **Not started, known external blocker**: SNS/Pinpoint SMS was explored and parked - the AWS account isn't subscribed for SMS sending. Not an engineering gap, an account-provisioning one - see `project_sns_pinpoint_sms_parked`. |
+| BK-NOT-2 | ER-NOT-004 | Message templates with merge fields, multi-language, bulk by level/arm/house/fee-status | M | Not started. BK-NOT-1. |
+| BK-NOT-3 | ER-NOT-005 | No sensitive personal data in SMS/WhatsApp bodies - results/fees sent as a secure link or short summary | M | Not started. A real constraint to design in from the start, not bolted on later. |
+| BK-NOT-4 | ER-NOT-007 | Staff alerts (absence thresholds, overdue exeat, expiring checks) with role-based routing; safeguarding alerts go only to the CPFP group | M | Not started. Direct extension of the existing safeguarding-routing pattern. |
 
 ---
 
@@ -228,12 +317,13 @@ Subject-by-subject curriculum / learning roadmap for each class/year. **Not** LM
 
 ---
 
-## Explicitly out of backlog (per SRS)
+## Explicitly out of backlog (per SRS / v0.1 spec)
 
 - FiSH GL posting rules / CoA (FiSH SRS)
 - ER identity/admin implementation (ER SRS)
 - LMS / rich course content delivery (curriculum *structure* + learning roadmap is Epic 5b, later — not content hosting)
 - RoI VAT MVP work (separate FiSH track — current WIP priority)
+- **Added 2026-10-01, per the v0.1 spec's own Phase 2/3 roadmap (§10.1) — not added as backlog rows now, see `docs/Education_Runtime_MVP_Definition.md` §4 for the full reasoning**: Boarding/Hostel (ER-BRD), full External Exams beyond MVP scope (ER-EXM), WhatsApp messaging, multi-country packs beyond Nigeria (Sierra Leone/Liberia/Guinea/Côte d'Ivoire/Ghana/Gambia — these connect to the already-extensive Mano River tax/currency docs at the FiSH top level, a different dimension, not yet reconciled), the UK pack (Appendix B), custom report builder/dashboards, student self-service portal.
 
 ---
 
@@ -245,6 +335,8 @@ Subject-by-subject curriculum / learning roadmap for each class/year. **Not** LM
 | Should (S) | 6 |
 | Could (C) | 0 in SRS |
 | Blocked Musts pending O1–O4 | SPI/TPI, attendance codes, exam formats, census, payments, notifications |
+
+**Note, 2026-10-01**: this table reflects the original 17 Sep SRS only, not the new v0.1 spec's much larger scope (164 Must/57 Should/9 Could/230 total) - see that doc's own Appendix A for the authoritative, up-to-date traceability summary rather than recomputing a merged count here.
 
 ## Frontend work tracked elsewhere (not duplicated here)
 
@@ -258,6 +350,7 @@ Per the BK-PLT-2 precedent (2026-09-21): this backlog tracks backend items owned
 
 | Date | Change |
 |------|--------|
+| 2026-10-01 | **Integrated the new v0.1 Technical Requirements Spec & Use Cases doc** (230 requirements, 14 use cases, Nigeria-reference with Mano River/Ghana/Gambia packs) - copied into the repo (`docs/FiSH-ER-Education-Runtime-Technical-Req-Spec-and-Use-Cases-v0.1.md`), and wrote `docs/Education_Runtime_MVP_Definition.md` cross-tabbing the spec's own §10.1 MVP scope against actual code state (confirmed by reading code, not assumed). Made one real architectural call, not parked: the spec's "FiSH core" (owning invoicing/payments/receipting/ledger) maps onto **SOP, extended**, not a new GL/AR layer - consistent with the Ecosystem Extraction precedent and the Guardian-as-Customer bet already made (BK-FEE-5); the real gap is migrating invoice/payment system-of-record out of `FeeService` into SOP, scoped as new Epic 13 (BK-FIN). Added four new MVP-scoped epics: Epic 10 Staff Records (BK-STF, zero existing staff-profile model confirmed), Epic 11 Parent/Guardian Contacts (BK-CON, expands the thin embedded `Guardian`), Epic 12 Document Storage (BK-DOC, zero existing document model confirmed), Epic 13 FiSH Core Integration/FIN-INT (BK-FIN). Added gate/visitor-log and pickup-verification rows to Compliance Centre (BK-CMP-5-8, pickup verification blocked on BK-CON-6). Added two new NFR rows: BK-NFR-8 (offline-first - confirmed a literal `NoOpOfflineAttendanceSync` stub exists, explicitly flagged in-code as deferred; **left genuinely open, not decided**, whether full offline-first is required before the first real pilot) and BK-NFR-9 (children's-data privacy/consent apparatus, NDPA/GAID). Explicitly deferred to Phase 2/3 per the spec's own roadmap, not added as rows: Boarding, full Exams, WhatsApp, multi-country beyond Nigeria, UK pack, custom dashboards, student self-service. |
 | 2026-10-01 | Added a "Department structure (Finance / The Registry / Education Operations)" overlay section, per Femi's direct instruction: FiSH+ER organizes every vertical's runtime into the same three departments (Finance/Administration/Operations generically; Finance/The Registry/Education Operations for a school), confirmed as WEB's actual tab labels too (no "School" prefix on any of the three - relayed to the WEB session the same day). Grouping only - no Epic renamed or renumbered. Flagged one real open question the grouping surfaced: BK-FEE-6 (gate service consumption on fee status) is Finance-initiated but Education-Operations-effecting, a genuine cross-department design question for whenever it's picked up. |
 | 2026-10-01 | Per Femi's direct instruction ("Everyone should check their dependency ordered product backlog and start"), reviewed the full backlog against actual code before picking anything: found BK-REG-2 (audit trail) and BK-REG-3 (safeguarding masking) were already built - confirmed by reading `StudentAuditEntry`/`auditFor()`/the audit route for the former, `getStudent()`/`listStudents()`'s masking for the latter - but never marked Done, so corrected both rows. Picked up BK-REG-4's export half as the next genuinely open, unblocked, dependency-ready Must item (`fish-education-runtime` `ba2dfbd`, branch `feature/bk-reg-4-csv-export`): new `StudentCsvExport.toCsv()` mirrors `StudentCsvImport`'s header exactly, `GET /schools/{schoolId}/students/csv`, gated the same as import. No peer dependency to register - pure application-layer work in a repo this session already owns. 301 unit tests pass (7 new), zero regressions. Not yet a PR - awaiting CM to push the branch. Also fixed a repeat of the BK-CLS-10 coordination lesson pre-emptively: cleared the COORDINATION.md claim directly on master this time, not bundled into the feature branch. |
 | 2026-09-30 | BK-CLS-10 confirmed live - CM verified the real task-definition (`:43`) runs image `sha-55da4da216a9ccf81863e24053594a4c9e682958`, old task fully drained, `GET /health` returns `ok`. Worth recording precisely: an earlier "rollout COMPLETED" signal briefly pointed at task-def `:42`, which turned out to still be the prior COORDINATION.md-only commit (`3c9f403`) - Jenkins' known executor contention meant that build queued and finished *after* PR #5's merge, so rollout timing alone would have been misleading; the real `:43` deploy for `55da4da` landed about 4 minutes later, only confirmed by checking the actual image SHA. **The entire Timetabling & Lesson Scheduling episode is now genuinely done end to end** - BK-CLS-1/2/4-10, BK-ADM-6, BK-FEE-7/8, all built, reviewed, merged, and live. |
