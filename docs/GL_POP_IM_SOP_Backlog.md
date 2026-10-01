@@ -241,6 +241,7 @@ separable from the accounting-correctness work above.
 | WEB: a Membership holder on one Tenant has no UI path to also start their own separate new Tenant, while keeping the existing Membership | WEB + EA | Surfaced 2026-09-29 via a false-alarm cross-tenant "breach" report that turned out to be intended behavior (a User can hold concurrent Memberships across Tenants) colliding with a missing feature. `GET /me`'s `tenants` array and `CompanyPickerScreen` already support this structurally; the only gap is the "+ start your own Tenant" entry point. Needs EA to confirm `OnboardTenantUseCase`/`RegisterCompanyUseCase` don't assume a brand-new User with zero existing Memberships before WEB builds the entry point. Not started - claimed in Coordination log, confirming with EA first. |
 | WEB: no self-service way to provision/link a School (SchoolAdmissions) for a Company that predates EA's registration-time auto-provisioning flow | WEB + EA | Surfaced 2026-09-30 - "Prodeo Capital" had no linked `schoolId`, and the only known fix is manually re-calling `POST /tenants/{tenantId}/company-registration` with `industryType: SCHOOL` (confirmed safe/idempotent by EA), which nothing in the UI surfaces or explains. Not started. |
 | IM has no reservation/commitment concept at all - `quantityOnHand` exists, but nothing tracks "committed against an open Sales Order," so EA's UC-BO07 "Monitor Inventory Levels" can't report allocated-vs-available stock | IM + SOP | Flagged by EA 2026-10-01 while reassessing its own backlog (`EA_Development_Backlog.md` item 05's UC-BO table) - genuinely IM/SOP's to prioritize, not EA's to build. **Confirmed independently from SOP's own side too**: `CreateSalesOrderUseCase`/`CheckInventoryAvailabilityUseCase` both explicitly document `allocatedQuantity` as always zero, same root gap. Not scoped or decided here; a real design question (what triggers a reservation - SalesOrder creation, aval confirmation, fulfilment? does it live on `Item` or a new aggregate?) worth its own discussion before picking anything. |
+| IM has no bulk "items currently low on stock" route - only `GET /items/{id}/inventory-levels` (per-item) | IM | Direct user instruction, relayed via EA, 2026-10-01: this capability belongs inside IM, not composed at EA's layer via N+1 (same shape as the Approvals Queue N+1 gaps already flagged elsewhere). Verified directly - no bulk route exists. Suggested shape (EA's, not decided): `GET /companies/{companyId}/items/low-stock`, same per-Company pattern `adjustments/pending` already uses, returning items where `ReplenishmentPolicy.evaluate()` flags `lowStock = true`, skipping items with no policy configured (same unconfigured-vs-not-low distinction `inventory-levels` already makes). Not built yet. |
 
 ---
 
@@ -369,6 +370,11 @@ separable from the accounting-correctness work above.
   possible implication for 4.4 (may collapse into "no separate IM build" if
   Repairable posts the same crossing as Resaleable) pending SOP's
   confirmation. No code changes - decisions/investigation only.
+- **2026-10-01 (IM session)**: Added a new "not yet waved" item (bulk
+  low-stock listing) - direct user instruction via EA, who found the gap
+  while scoping its own UC-BO03 work and was told this capability belongs
+  in IM, not an EA-composed N+1 workaround. Verified directly: only
+  `GET /items/{id}/inventory-levels` (per-item) exists; no bulk route.
 - **2026-10-01 (IM session, incident)**: SOP found - while scoping an
   unrelated task - that PR #7's route restructuring broke every POP/SOP
   service-account call into IM (`/items/{id}/receive`/`/items/{id}/issue`
