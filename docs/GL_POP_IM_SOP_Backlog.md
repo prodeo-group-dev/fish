@@ -146,7 +146,7 @@ Confirmed by reading the code directly: IM's version of POP's `EntityId` finding
 
 **PR #7 status**: all of IM's own 0R.2.4-0R.2.6 code is written, tested (227 unit tests + integration tests against a fresh ephemeral Postgres, all passing), and pushed to `feature/im-real-per-company-scoping` - **deliberately not merged to master**. `CreateItemRequestDto`/`CreateWarehouseRequestDto`'s `entityId` fields are kept (accepted-but-ignored, companyId now comes from the URL path) so any WEB caller still on the old contract doesn't break mid-rollout - but the *path* restructuring itself (0R.2.3, still WEB's own unstarted task) is a hard break: every existing WEB call to a flat `/api/items` etc. URL will 404 once this merges, since the routes no longer exist at the old paths. Holding for WEB's 0R.2.2/0R.2.3 and CM's go-ahead to merge/deploy, per the dependency ordering above and the "only CM pushes to master" convention.
 
-Nothing here touches GL or POP - confirmed in the original audit that `RecordInventoryReceiptUseCase`/`RecordInventoryIssueUseCase` on GL's side are already fully generic, and the service-account calls POP/SOP make into IM (goods receipt/issue) permanently bypass the EA-membership check by architectural design (`VerifiedIdentity.isServiceAccount`'s own KDoc) - this per-Company work only affects IM's human-facing routes, not the module-to-module crossings.
+~~Nothing here touches GL or POP~~ - **this line was wrong, confirmed live-broken, 2026-10-01.** It's true that the service-account calls POP/SOP make into IM permanently bypass the EA-membership *check* (`VerifiedIdentity.isServiceAccount`'s own KDoc) - but PR #7 also moved the URL *shape* every route lives at, which is a separate axis from the auth bypass and genuinely does affect module-to-module crossings: every route, including `/items/{id}/receive`/`/items/{id}/issue`, got nested under `/companies/{companyId}` with no un-scoped fallback. POP's and SOP's own `KtorImGateway`s still pointed at the old flat paths, so every real goods-receipt/goods-issue call into IM 404'd from the moment `038e53b` deployed until both were fixed (`companyId` sourced from each call site's own real Company value - `purchaseOrder.entityId` on POP's side, `request.companyId`/`request.entityId` on SOP's four call sites - not a cosmetic URL patch). Both sides added regression tests asserting the actual request URL, the gap plain response-parsing tests couldn't have caught. **This incident was handled entirely through peer `SendMessage` traffic with nothing written here until now** - a real coordination-discipline miss, caught by a direct instruction to go back and fix it, not something any session caught proactively. See the change log for the full timeline and whoever-owns-what breakdown.
 
 ---
 
@@ -369,3 +369,33 @@ separable from the accounting-correctness work above.
   possible implication for 4.4 (may collapse into "no separate IM build" if
   Repairable posts the same crossing as Resaleable) pending SOP's
   confirmation. No code changes - decisions/investigation only.
+- **2026-10-01 (IM session, incident)**: SOP found - while scoping an
+  unrelated task - that PR #7's route restructuring broke every POP/SOP
+  service-account call into IM (`/items/{id}/receive`/`/items/{id}/issue`
+  404ing) since `038e53b` deployed, because those routes got nested under
+  `/companies/{companyId}` with no un-scoped fallback and POP's/SOP's own
+  `KtorImGateway`s still called the old flat paths. IM's own fault -
+  confirmed directly against `Application.kt`, should have been caught
+  before merging. POP and SOP each fixed their own gateway (POP:
+  `purchaseOrder.entityId` as the real companyId; SOP: four call sites,
+  `request.companyId`/`request.entityId` depending on the aggregate),
+  both verified correct by IM, both added regression tests asserting the
+  actual request URL (the gap response-parsing tests couldn't catch).
+  CM confirmed the incident-window start (`038e53b` pushed
+  2026-09-30T05:23+01:00); end-of-window confirmation pending both fixes'
+  deploy. SOP's fix: [commit 8b1226b](https://github.com/prodeo-group-dev/fish-sales-order-processing) on `fix/im-gateway-company-scoped-paths`, 291 tests green, handed to CM. **Handled entirely through peer `SendMessage` traffic with
+  nothing written here until a direct instruction ("follow the prime
+  directive, coordination") caught the gap** - correcting it now, this
+  late, is itself the finding worth recording: real-time peer messaging
+  is not a substitute for this file, even when everyone involved is
+  actively coordinating well through other channels. Line 149 above
+  (the "doesn't affect module-to-module crossings" claim - IM's own,
+  commit `5d69e8f`) is the root miss: true for the EA-membership auth
+  bypass, never re-examined against the separate URL-shape question PR #7
+  actually changed. Open process question raised to the user by CM, not
+  resolved here: whether cross-service route-shape changes need a
+  contract-test or post-deploy smoke-test step before merge, given unit
+  tests inside one repo structurally cannot catch a sibling repo's caller
+  going stale - this is the second incident of that same root-cause
+  shape (the first: the EA `/me` DTO drift hitting IM/POP/SOP
+  independently).
