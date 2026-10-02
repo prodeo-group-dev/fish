@@ -77,7 +77,6 @@ table. It shrinks the collision window; it doesn't eliminate it.
 
 
 
-| FiSH+ER WEB | 2026-10-02T02:00:00Z | Recording the user's CUR.0.1 decision (hold all five currencies, no onboarding yet) in `GL_POP_IM_SOP_Backlog.md` - doc only, no code. | docs/GL_POP_IM_SOP_Backlog.md |
 
 ## Format for a new row
 
