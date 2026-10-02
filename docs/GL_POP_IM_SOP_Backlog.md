@@ -242,6 +242,12 @@ separable from the accounting-correctness work above.
 | WEB: no self-service way to provision/link a School (SchoolAdmissions) for a Company that predates EA's registration-time auto-provisioning flow | WEB + EA | Surfaced 2026-09-30 - "Prodeo Capital" had no linked `schoolId`, and the only known fix is manually re-calling `POST /tenants/{tenantId}/company-registration` with `industryType: SCHOOL` (confirmed safe/idempotent by EA), which nothing in the UI surfaces or explains. Not started. |
 | IM has no reservation/commitment concept at all - `quantityOnHand` exists, but nothing tracks "committed against an open Sales Order," so EA's UC-BO07 "Monitor Inventory Levels" can't report allocated-vs-available stock | IM + SOP | Flagged by EA 2026-10-01 while reassessing its own backlog (`EA_Development_Backlog.md` item 05's UC-BO table) - genuinely IM/SOP's to prioritize, not EA's to build. **Confirmed independently from SOP's own side too**: `CreateSalesOrderUseCase`/`CheckInventoryAvailabilityUseCase` both explicitly document `allocatedQuantity` as always zero, same root gap. Not scoped or decided here; a real design question (what triggers a reservation - SalesOrder creation, aval confirmation, fulfilment? does it live on `Item` or a new aggregate?) worth its own discussion before picking anything. |
 | IM has no bulk "items currently low on stock" route - only `GET /items/{id}/inventory-levels` (per-item) | IM | Direct user instruction, relayed via EA, 2026-10-01: this capability belongs inside IM, not composed at EA's layer via N+1 (same shape as the Approvals Queue N+1 gaps already flagged elsewhere). Verified directly - no bulk route exists. Suggested shape (EA's, not decided): `GET /companies/{companyId}/items/low-stock`, same per-Company pattern `adjustments/pending` already uses, returning items where `ReplenishmentPolicy.evaluate()` flags `lowStock = true`, skipping items with no policy configured (same unconfigured-vs-not-low distinction `inventory-levels` already makes). Not built yet. |
+| No event bus exists anywhere on the platform - every GL-crossing call today (SOP↔GL, POP/SOP↔IM, SchoolAdmissions↔SOP) is synchronous HTTP. A new local spec (`FiSH-ER-Education-Runtime-Technical-Req-Spec-and-Use-Cases-v0.1.md`, gleaned 2026-10-01, not yet in this repo) formally specifies FIN-INT as an event-driven contract instead (outbox pattern, at-least-once delivery, idempotency keys, per-account ordering, dead-letter queue + replay, 6-month deprecation notice on schema changes) | GL + SOP | Not a correction to anything already built - a genuine architectural question for whoever next extends GL/SOP's integration surface (The Principal/SchoolAdmissions' own fee-billing work is the most likely next caller). Build toward the event-driven contract, or keep today's synchronous pattern and treat this spec's FIN-INT section as aspirational - undecided, not started. |
+| Currency conflict, flagged not resolved: the same spec's ER-FEE-007 requires per-school multi-currency billing (NGN, GHS, SLE, LRD, USD, GMD, GNF, XOF) - this collides with the existing Mano River decision (`docs/SL/SL_Tax_And_Currency_Settings.md`, 2026-08-22) that FiSH only recognises `SLE`, with LRD/GNF/XOF explicitly `onboarded: false` in `Money`/`Company.baseCurrency` | GL + user (decision) | NGN/GHS/GMD aren't even covered by the existing SLE-only decision either way (it only ever named the four Mano River currencies). If Nigeria/Ghana/Gambia schools are genuinely in this spec's own phasing (§10.1: Nigeria MVP, Ghana/Gambia phase 3), the current `Money` type can't bill in any of their real currencies today. Recording as a real cross-document conflict per the standing "park, don't guess" convention, not silently reconciling it - needs a decision on which currencies actually onboard and when. |
+| Pass-through liability posting pattern for third-party fee collections (exam registration fees, PTA collections) - the same spec's CoA mapping (§2.7) routes these to a liability account, never revenue, a posting shape distinct from every fee-item mapping GL's CoA-mapping mechanism currently handles | GL | Not yet checked against GL's actual code whether the existing CoA-mapping mechanism (built for VAT/tax lines) can already express "post this item to a configured liability account instead of revenue," or whether that's a real gap. Relevant once The Principal/SchoolAdmissions' own Fee Desk work reaches exam-fee/PTA-collection billing (`BK-FEE-6`/Epic 6 in `ER/Principal/docs/The_Principal_Backlog.md`). |
+| Offline cash receipt-number-range allocation - no mechanism exists for FiSH to allocate a block of receipt numbers to an unregistered/offline device so it can issue provisional receipts without connectivity, confirmed on sync | GL + SOP | FIN-INT-013 in the same spec. A concrete, net-new capability gap in `Receipt`/`Payment` - relevant to The Principal/SchoolAdmissions' own offline-first requirement (`BK-PLT-6`) once on-device fee receipting is built there. Not scoped. |
+| FIN-INT-017 role mapping (ER Bursar ↔ FiSH AR clerk, and other school-specific roles like Registrar/CPFP/Form Master) - EA's Role/Membership model has no school-specific role vocabulary today | EA | Same spec, §3.2/§4.16. The Principal's own `StaffAssignment` store already has its own parallel role set (`TEACHER`/`REGISTRAR`/`SCHOOL_ADMIN`/etc., per `The_Principal_Backlog.md`'s 2026-09-20 change-log entry noting "EA's own `Role` enum has nothing matching these") - whether that stays a separate ER-owned vocabulary EA never needs to know about, or needs an explicit mapping onto EA's own Role/Membership model for billing-role purposes, is undecided. |
+| GL's `AccountsReceivableAging` (domain/sales/accounts_receivable_aging.kt) has no HTTP route exposing it at all - confirmed by grep across GL's `infrastructure/web`, only `ComputeCustomerBalancesUseCase`/`CustomerBalancesRoutes` exist | GL | Surfaced 2026-10-01/02 by SOP while scoping its own sales-performance report - checked GL's code directly before deciding not to duplicate aging logic in SOP (GL already owns it, ledger-based, zero `Customer` dependency), then confirmed GL itself has nothing serving it over HTTP. Small, well-scoped gap (the computation exists and is tested; it just needs a route + DTO, same shape as `CustomerBalancesRoutes`) - not actioned since it's outside SOP's repo and no GL session was live at the time. |
 
 ---
 
@@ -404,3 +410,29 @@ separable from the accounting-correctness work above.
   going stale - this is the second incident of that same root-cause
   shape (the first: the EA `/me` DTO drift hitting IM/POP/SOP
   independently).
+- **2026-10-01 (WEB session)**: Per direct user instruction ("Glean from
+  here to add to your backlog"), read a new local spec file
+  (`C:\Users\femif\Downloads\FiSH-ER-Education-Runtime-Technical-Req-Spec-and-Use-Cases-v0.1.md`,
+  230 requirements, not yet committed to this repo) and added five GL/SOP/EA
+  cross-cutting items to the "not yet waved" table above: the missing
+  event-bus architecture the spec's own FIN-INT contract assumes, a real
+  currency conflict between the spec's required multi-currency school
+  billing and the existing SLE-only Mano River decision (flagged, not
+  resolved), a pass-through-liability CoA posting pattern GL hasn't been
+  checked against, the offline cash receipt-number-range gap, and an EA
+  role-mapping question. The ER-specific (non-GL-crossing) findings from
+  the same document - new named markets (Ghana, The Gambia), the UK-later
+  variant, and the formal FIN-INT event/API list refining Epic 0's existing
+  generic rows - were logged instead in `ER/Principal/docs/The_Principal_Backlog.md`,
+  per this document's own scope note that ER/EducationRuntime work belongs
+  there. No code changed - documentation only.
+- **2026-10-02 (SOP session)**: Built and deployed SOP's own sales
+  performance report (`GenerateSalesPerformanceReportUseCase`,
+  `GET /companies/{companyId}/sales-performance` - commit `412033a`,
+  merged/deployed by CM, PR #12). Routine single-service work, no
+  coordination row needed per this log's own carve-out. While scoping
+  it, confirmed GL already owns Accounts Receivable aging
+  (`AccountsReceivableAging`) and deliberately did not duplicate it in
+  SOP - but found GL has no HTTP route exposing that computation at
+  all. Added to the "not yet waved" table above for whenever a GL
+  session is live; not actioned here since it's outside SOP's repo.
