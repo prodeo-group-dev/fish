@@ -52,3 +52,41 @@ Added to `The_Principal_Backlog.md`:
 - **BK-NOT (Notifications)** — new epic for SMS, noting the existing SNS-subscription blocker.
 
 **Explicitly deferred to Phase 2/3, not added to the MVP-scoped backlog now** — matching the spec's own §10.1 roadmap and this project's "minimal builds" convention (don't build backlog detail for scope that isn't next): Boarding/Hostel (ER-BRD), full External Exams (ER-EXM, beyond what Phase 2 needs), WhatsApp messaging, multi-country packs beyond Nigeria (Sierra Leone/Liberia/Guinea/Côte d'Ivoire/Ghana/Gambia — note these connect to the already-extensive Mano River tax/currency docs at the FiSH top level, a *different* dimension, not yet reconciled), UK pack (Appendix B), custom report builder/dashboards, student self-service portal.
+
+## 5. Minimum viable development level — floor vs. enhancement (2026-10-02)
+
+Per Femi's platform-wide instruction: the smallest real, working slice of Education Runtime that could *actually go live*, not full backlog completion. **Floor** = structurally cannot launch without it. **Enhancement** = valuable, real, but doesn't block a first go-live. This is a stricter bar than §1–4's "MVP per the v0.1 spec" — several things the spec itself calls MVP-scoped (Staff Records, full Contacts, Document Storage, FIN-INT, SMS) turn out to be enhancement, not floor, once the question is "smallest viable," not "spec-compliant."
+
+### Floor
+
+| Capability | Why it's floor | State |
+|---|---|---|
+| Student enrolment | A school cannot operate without knowing who its students are. | **Built** (`StudentProfile`, `AdmissionsService`). |
+| Class/section structure + timetable | Needed to know which class a student is in and who teaches it - everything else (attendance, grades) keys off this. | **Built** (the Timetabling episode, BK-CLS-1–10). |
+| Daily attendance | A core, daily, non-optional operational record for any school. | **Built online** (BK-ATT-1/2/4/6). Local-first sync Tasks 1–2 (`RegisteredDevice`, the attendance change-log) now underway. |
+| Grade entry + a way for it to reach someone | A school's whole point includes telling a guardian how their child is doing, even in the thinnest possible form. | **Built** (grade entry/publish, BK-ASS-1–4) - though *delivery* to a guardian has no real channel yet (no portal, no SMS - see below). |
+| Staff identity/RBAC | Someone has to be able to log in and do any of the above, scoped correctly. | **Built** (`StaffAssignment`, Cognito JWT auth). |
+| Fee invoicing + payment recording, in *some* real form | A school has to be able to charge and collect fees to operate - this is non-negotiable even if the exact mechanism isn't ideal yet. | **Built, but architecturally unresolved** - see the FIN-INT tension below. |
+| **A frontend** | Every one of the above is API-only. No school staff member can run a school over raw HTTP calls. | **Not built, anywhere, for Education Runtime** - this is the single most load-bearing gap of all, more so than any remaining backend epic, and it's not this repo's to build (WEB's domain). |
+
+### Enhancement (valuable, real, not blocking a first go-live)
+
+- **Staff Records (BK-STF)** - needed to manage HR-adjacent staff data (qualifications, vetting), but not to *run* the floor's academic/attendance/fee loop day to day.
+- **Full Parent/Guardian Contacts (BK-CON)** - the existing thin `Guardian` (name/phone/email/relationship) is enough to know who to bill and notify; the richer custody/pickup/consent model matters for safeguarding maturity, not for a first pilot's core loop.
+- **Document Storage (BK-DOC)** - valuable, but a school can run its core loop with physical files in the interim, same as most schools already do today.
+- **Gate/visitor log + pickup verification (ER-SAF-004/005)** - real safeguarding value, but the actual *floor* safeguarding need (restricted-access control on sensitive records) is already built (BK-CMP-1/2); gate/pickup digitizes an existing manual process most schools already run some version of.
+- **SMS (BK-NOT)** - valuable at scale, but a single pilot school's parent communication can run on phone calls/printed notices for a genuinely first pilot.
+- **Report card PDF generation, promotion workflow, SPI/TPI** - valuable, but SPI/TPI is correctly BLK on O1 regardless, and the other two can be manual/ad hoc for a single pilot cohort without breaking the core loop.
+- **Boarding, full Exams, multi-country, WhatsApp, UK pack** - already correctly deferred to Phase 2/3 (§4).
+
+### The one real, unresolved tension this analysis surfaces: offline-first vs. "smallest viable"
+
+§3 decided offline-first/local-first is a **Phase-0 prerequisite**, not a late-stage feature, specifically because unreliable power/connectivity is this market's baseline operating condition, not an edge case ("We are talking about Africa"). That doesn't fit cleanly into either the Floor or Enhancement bucket above, and I'm not silently resolving it here:
+
+- If taken literally, §3's decision puts the *entire client* in the Floor bucket in its local-first form - an online-only client, even a minimal one, risks simply not working at a real pilot school with genuinely unreliable connectivity, which would make "ship the floor capabilities above, online-only" **not actually viable** despite every individual capability being built.
+- But Local-First Sync Tasks 1–2 (`RegisteredDevice`, the attendance change-log) are real, in-progress work, not yet complete across even the attendance workflow, let alone grades/admissions/fees. Waiting for the *full* local-first build-out before any pilot could ship would itself violate "smallest viable slice," the instruction this whole section exists to answer.
+- **This needs Femi's call, not mine to pick**: either (a) the first real pilot happens at a specific school with *confirmed* adequate connectivity, making online-only acceptable for that one pilot while local-first finishes in parallel, or (b) no pilot ships until local-first covers at minimum the attendance workflow (the single most-cited offline-blocking use case in the spec). Both are defensible; picking silently isn't.
+
+### The other real, unresolved tension: "ledger-grade from day one" vs. the FIN-INT migration not being done
+
+The v0.1 spec names this as design priority #3 explicitly: fees should be "ledger-grade from day one." Today, a fee invoice issued and a payment recorded by `FeeService` live *only* in Education Runtime's own tables - they never reach SOP or GL. For an internal pilot with no real money, this is fine. For a pilot with a real school's real fees, "ledger-grade from day one" and "the FIN-INT/SOP migration (Epic 13) isn't built yet" are in direct tension. Same framing as above: this is a real go/no-go question for whoever approves a specific pilot, not something to wave through as "good enough" from this doc alone.
