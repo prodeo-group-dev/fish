@@ -247,7 +247,7 @@ separable from the accounting-correctness work above.
 | Pass-through liability posting pattern for third-party fee collections (exam registration fees, PTA collections) - the same spec's CoA mapping (§2.7) routes these to a liability account, never revenue, a posting shape distinct from every fee-item mapping GL's CoA-mapping mechanism currently handles | GL | Not yet checked against GL's actual code whether the existing CoA-mapping mechanism (built for VAT/tax lines) can already express "post this item to a configured liability account instead of revenue," or whether that's a real gap. Relevant once The Principal/SchoolAdmissions' own Fee Desk work reaches exam-fee/PTA-collection billing (`BK-FEE-6`/Epic 6 in `ER/Principal/docs/The_Principal_Backlog.md`). |
 | Offline cash receipt-number-range allocation - no mechanism exists for FiSH to allocate a block of receipt numbers to an unregistered/offline device so it can issue provisional receipts without connectivity, confirmed on sync | GL + SOP | FIN-INT-013 in the same spec. A concrete, net-new capability gap in `Receipt`/`Payment` - relevant to The Principal/SchoolAdmissions' own offline-first requirement (`BK-PLT-6`) once on-device fee receipting is built there. Not scoped. |
 | FIN-INT-017 role mapping (ER Bursar ↔ FiSH AR clerk, and other school-specific roles like Registrar/CPFP/Form Master) - EA's Role/Membership model has no school-specific role vocabulary today | EA | Same spec, §3.2/§4.16. The Principal's own `StaffAssignment` store already has its own parallel role set (`TEACHER`/`REGISTRAR`/`SCHOOL_ADMIN`/etc., per `The_Principal_Backlog.md`'s 2026-09-20 change-log entry noting "EA's own `Role` enum has nothing matching these") - whether that stays a separate ER-owned vocabulary EA never needs to know about, or needs an explicit mapping onto EA's own Role/Membership model for billing-role purposes, is undecided. |
-| GL's `AccountsReceivableAging` (domain/sales/accounts_receivable_aging.kt) has no HTTP route exposing it at all - confirmed by grep across GL's `infrastructure/web`, only `ComputeCustomerBalancesUseCase`/`CustomerBalancesRoutes` exist | GL | Surfaced 2026-10-01/02 by SOP while scoping its own sales-performance report - checked GL's code directly before deciding not to duplicate aging logic in SOP (GL already owns it, ledger-based, zero `Customer` dependency), then confirmed GL itself has nothing serving it over HTTP. Small, well-scoped gap (the computation exists and is tested; it just needs a route + DTO, same shape as `CustomerBalancesRoutes`) - not actioned since it's outside SOP's repo and no GL session was live at the time. |
+| ~~GL's `AccountsReceivableAging` (domain/sales/accounts_receivable_aging.kt) has no HTTP route exposing it at all~~ | GL | **Resolved 2026-10-02** - new `ComputeAccountsReceivableAgingUseCase` + `POST /companies/{companyId}/accounts-receivable-aging` (GL commit `d29ce6d`, local, handed to CM), mirroring `ComputeCustomerBalancesUseCase`/`CustomerBalancesRoutes`'s exact shape and returning the full `AgingBucketAmount` breakdown instead of just the scalar total. Additive only - the existing `customer-balances` endpoint is unchanged. 9 new tests (5 use-case, 4 route), full suite green. **AP's identical gap not yet closed** - `AccountsPayableAging`/`ComputeVendorBalancesUseCase` has the same scalar-only shape; same fix would apply, not built in this pass (out of scope - only the flagged AR gap was actioned). |
 
 ---
 
@@ -436,3 +436,12 @@ separable from the accounting-correctness work above.
   SOP - but found GL has no HTTP route exposing that computation at
   all. Added to the "not yet waved" table above for whenever a GL
   session is live; not actioned here since it's outside SOP's repo.
+- **2026-10-02 (GL session)**: Closed the gap SOP flagged above - new
+  `ComputeAccountsReceivableAgingUseCase` + `POST /companies/{companyId}/accounts-receivable-aging`
+  (commit `d29ce6d`, local, handed to CM), returning the full bucketed
+  breakdown `ComputeCustomerBalancesUseCase` collapses to a scalar.
+  Claimed this log's row before starting (GL's first ever, per IM's
+  2026-10-01 finding that GL had never claimed one despite qualifying
+  work) and released it on completion. AP's identical gap
+  (`AccountsPayableAging`/`ComputeVendorBalancesUseCase`) left open,
+  not actioned in this pass.
