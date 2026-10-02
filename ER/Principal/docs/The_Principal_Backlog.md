@@ -55,6 +55,63 @@ The split follows the same content principle already established for WEB (`[[pro
 
 ---
 
+## New source document gleaned, 2026-10-01: FiSH+ER Education Runtime Technical Req Spec v0.1
+
+A new, much more detailed spec (`FiSH-ER-Education-Runtime-Technical-Req-Spec-and-Use-Cases-v0.1.md`,
+230 requirements, 14 use cases, local file not yet committed to this repo)
+arrived per direct instruction ("Glean from here to add to your backlog").
+It's broader than The Principal SRS this backlog is built from — Nigeria
+plus Sierra Leone/Liberia/Guinea/Côte d'Ivoire (Phase 2) plus **two markets
+not previously named anywhere in this backlog or in FiSH's own country
+docs: Ghana and The Gambia** (Phase 3), plus a UK-later variant (Appendix
+B, Years 7–13/JCQ exam mapping). Nothing here is built against this new
+document yet — it's a source to reconcile against The Principal's own SRS
+and existing Epics, not a replacement for either.
+
+Concrete, non-duplicate findings worth recording against this backlog's
+existing structure:
+
+- **BK-PLT-3 (FiSH SOP outbound event bus)** — the new spec's §2.5/§4.16
+  gives a full, named event list (`StudentEnrolled`, `StudentUpdated`,
+  `StudentStatusChanged`, `FeePayerChanged`, `FeeScheduleChanged`,
+  `BillingRunRequested`, `InvoiceIssued`, `PaymentReceived`/`Reversed`,
+  `AccountBalanceChanged`, `WaiverApproved`, `RefundRequested`/`Issued`,
+  `ExamFeeRegistered`, `ClearanceStatusChanged`) plus delivery guarantees
+  (outbox, idempotency keys, per-account ordering, DLQ + replay, 6-month
+  schema-deprecation notice) well beyond this row's current one-line
+  description. Worth reading before BK-PLT-3 is actually built, not
+  before — the GL/SOP side of whether this project adopts an event bus at
+  all vs. stays with today's synchronous HTTP pattern is logged as a
+  genuinely open question in `docs/GL_POP_IM_SOP_Backlog.md`'s "not yet
+  waved" table, not decided here.
+- **BK-FEE-6 (gate service on fee status) / Epic 6 generally** — the new
+  spec's §2.7 CoA mapping treats exam-registration fees and PTA collections
+  as pass-through **liability** postings, never revenue — a distinct
+  posting shape from ordinary tuition. Flagged to GL's own backlog (same
+  file as above) rather than resolved here, since CoA posting rules are
+  explicitly out of this backlog's own scope (see "Explicitly out of
+  backlog" below).
+- **BK-PLT-6 (offline-first sync)** — the new spec's FIN-INT-013 names a
+  specific mechanism this backlog doesn't yet have: FiSH allocating
+  pre-reserved receipt-number ranges to a registered offline device so a
+  Bursar can issue provisional cash receipts without connectivity,
+  reconciled and confirmed on sync. Relevant once Fee Desk (Epic 6) grows
+  an offline cash-receipting feature — also logged to GL's backlog, since
+  the receipt-numbering mechanism itself is GL/SOP's to own.
+- **Chart-of-accounts mapping, revenue recognition, and the FIN-INT API
+  list (§2.6/§2.7)** stay explicitly out of this backlog's scope per the
+  existing "Explicitly out of backlog" section below — logged instead to
+  `docs/GL_POP_IM_SOP_Backlog.md`.
+- **Currency**: the new spec assumes per-school multi-currency billing
+  (NGN/GHS/SLE/LRD/USD/GMD/GNF/XOF) — a real, unresolved conflict with
+  FiSH's existing SLE-only Mano River currency decision, logged as a
+  flagged (not resolved) conflict in GL's own backlog, not decided here.
+
+Nothing above changes any existing row's status or priority — this is a
+cross-reference pass, not a re-scope.
+
+---
+
 ## Epic 0 — Platform & architecture (cross-cutting)
 
 | ID | Item | Pri | Notes |
