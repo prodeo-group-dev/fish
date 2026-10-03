@@ -60,7 +60,11 @@ This also answers the data-ownership question for every future data source Omniv
 
 **Persistence**: none required for the data this extraction actually moves (health checks are stateless; tenant-overview and messages are read-through to EA). If a later phase needs Omniview-owned state (e.g. acknowledged alerts, an operator's own saved filters), that's a new, scoped decision at that time — not assumed now, per this project's own "minimal builds" discipline.
 
-**Web UI**: bundled into the new backend repo as a thin served frontend, not a new separate frontend repo. The current `/operator` page is a single page with two tabs — standing up a whole second Vite/React/WEB-shaped repo for that is more infrastructure than the current UI justifies. Revisit if Omniview's own UI grows enough to need WEB's own tooling (shadcn, the Tailwind/brand theme system, etc.).
+**Web UI — corrected 2026-10-03, this section was simply wrong.** It originally called for a new, bundled frontend in Omniview's own backend repo, reasoning that nothing existed yet. That premise was false: `fish-gl-web`'s `OperatorSupportInboxPage.tsx` (reached at `/operator`) already **is** Omniview's UI, built 2026-09-13 through 09-19 — sign-in (`X-Operator-Token`, zero Cognito), `PlatformHealthStrip`, `TenantsOverview`, `OperatorInbox` messaging, all four of this document's own use cases already live. Caught by the FiSH+ER WEB session checking the actual code rather than taking this document's framing at face value — flagged per "Coordination is the prime directive."
+
+Also resolves the new platform-wide front-end-coordination convention (all UI work routes through the WEB session) cleanly: the UI already lives where that convention wants it, no exception needed, nothing to migrate. `App.tsx`'s `isOperatorPath` check renders it standalone before `AuthProvider` even mounts — the same isolation `SupplierPortalPage`'s `?token=` bypass already uses, so there's no Tenant-facing entanglement to worry about either.
+
+**What this actually changes**: no new frontend build. Once Omniview's backend routes exist (Wave 2 of the backlog), the only WEB-side change is swapping `api/operatorSupport.ts`'s `EA_API_BASE_URL` constant to Omniview's own base URL, keeping the same token header — "a small, mechanical change, not a rebuild," per WEB's own assessment. Coordinated via a claimed row in `WEB/COORDINATION.md` when that's ready to start, not before — the backend routes have to exist first.
 
 ---
 
