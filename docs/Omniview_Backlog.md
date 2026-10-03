@@ -44,16 +44,16 @@ section for the full reasoning.
 
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
-| 1.1 | Port `PlatformHealthGateway`/`KtorPlatformHealthGateway` from EA into Omniview, unchanged in behavior (FR-OV-1 through FR-OV-5) | Omniview | 0.2 | Not started |
-| 1.2 | `GET /operator-health` route serving it (route naming per SRS §7.1) | Omniview | 1.1 | Not started |
-| 1.3 | Port the existing gateway test suite (GL X-Request-Id case, 2xx/non-2xx, timeout, unconfigured-URL cases — already written and passing in EA, straightforward port) | Omniview | 1.1 | Not started |
+| 1.1 | Port `PlatformHealthGateway`/`KtorPlatformHealthGateway` from EA into Omniview, unchanged in behavior (FR-OV-1 through FR-OV-5) | Omniview | 0.2 | **Done, 2026-10-03** — one real fix beyond a straight port: GL's configured health URL needed a trailing slash (`.../api/`), confirmed live by CM — CloudFront's `/api/*` path_pattern only matches with the literal slash, a bare `.../api` falls through to the default S3 behavior (403, no X-Request-Id) and reports a healthy GL as down |
+| 1.2 | `GET /operator-health` route serving it (route naming per SRS §7.1) | Omniview | 1.1 | **Done, 2026-10-03** |
+| 1.3 | Port the existing gateway test suite (GL X-Request-Id case, 2xx/non-2xx, timeout, unconfigured-URL cases — already written and passing in EA, straightforward port) | Omniview | 1.1 | **Done, 2026-10-03** — 6/6 passing, plus a live smoke test against all 5 production services (not just mocked HTTP) confirming the GL fix actually works. Committed on `feature/omniview-wave1-platform-health` (`69cec12`), handed to CM for push/PR/deploy per the platform convention — not pushed by this session |
 
 ## Wave 2 — platform overview + messaging backend (EA stays unchanged — pure proxy)
 
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
-| 2.1 | Backend route accepting the operator's token and proxying `GET /operator/tenants` to EA (UC-OV-2, FR-OV-6/7/8) | Omniview | 1.2 | Not started — **depends on EA's route staying stable; zero EA-side change needed per DDD §1** |
-| 2.2 | Backend routes proxying EA's `GET /operator/support-threads` + `POST .../messages` (UC-OV-3, FR-OV-9/10/11) | Omniview | 1.2 | Not started — **same EA-stability dependency as 2.1** |
+| 2.1 | Backend route accepting the operator's token and proxying `GET /operator/tenants` to EA (UC-OV-2, FR-OV-6/7/8) | Omniview | 1.2 | **Done, 2026-10-03** — byte-for-byte relay (status+body verbatim), not a typed DTO decode, so there's no EA-response-shape to keep in sync |
+| 2.2 | Backend routes proxying EA's `GET /operator/support-threads` + `POST .../messages` (UC-OV-3, FR-OV-9/10/11) | Omniview | 1.2 | **Done, 2026-10-03** — same byte-for-byte relay shape as 2.1. Committed on `feature/omniview-wave2-tenant-overview-messaging` (`8b87e4f`), handed to CM for push/PR/deploy — not pushed by this session. One real bug caught by a live smoke test against production (not just mocked tests): EA mounts `/operator/*` under `route("/api") { ... }` in its own `Application.kt`, which neither operator route file's own KDoc mentions — the proxy initially called the bare un-prefixed paths and got EA's own real 404 back. Fixed to call `/api/operator/...`; re-verified live (tokenless request now returns EA's real 401 body through the proxy) |
 
 ## Wave 3 — Omniview stands up its own frontend, full migration (depends on Wave 2 + CM's build/serving infra)
 
