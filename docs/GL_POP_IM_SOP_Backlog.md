@@ -537,3 +537,44 @@ So the real shape of this problem is: **a policy decision (which currencies, whe
   The "Multi-currency conflict detail" section is now fully resolved:
   CUR.0.1-0.4 all decided, CUR.1.2 built and tested, CUR.1.1/1.3/1.4
   deliberately parked, CUR.1.5 still open (low priority).
+- **2026-10-03 (GL session)**: Renamed GL's `Creditor` domain class to
+  `Supplier`, per a decision confirmed with Femi and relayed via WEB
+  while it was building the AR/AP aging screens. `domain/purchasing/creditor.kt`'s
+  own KDoc already framed itself as "the Debtor side"'s mirror but named
+  its class after the *state* word (Creditor) instead of the
+  *relationship* word (matching `customer.kt`'s own Customer/Debtor
+  pattern, verified directly before acting) - and POP/SOP/WEB already
+  call the same real-world entity "Supplier" everywhere a human sees
+  it, with "Vendor" as a third synonym live in GL's own route/DTO
+  names until now. Done as one full, consistent pass (domain class,
+  repositories, use cases, routes, wire field names, route path) rather
+  than a staged rollout, since Femi put every other peer session on
+  hold until this landed and was tested - no benefit to a mixed interim
+  state with nobody calling the old shape concurrently. GL commit
+  `7d7c79e`, local, handed to CM. Full suite green (compile + test, 0
+  failures).
+
+  **Wire shape change, needs POP/WEB lockstep before CM deploys**:
+  - Route `POST /companies/{companyId}/vendor-balances` ->
+    `/supplier-balances`.
+  - JSON field `vendorId` -> `supplierId` in
+    `RecordSupplierObligationRequestDto`/`RecordSupplierPaymentRequestDto`
+    (bodies POP POSTs to `/purchasing/record-obligation`/`/record-payment`).
+  - JSON field `creditorIds`/`creditorId` -> `supplierIds`/`supplierId`
+    in `ComputeSupplierBalancesRequestDto`/`SupplierBalanceDto`/
+    `ComputeAccountsPayableAgingRequestDto`/`SupplierAgingDto` (WEB's
+    `agingReports.ts` consumes these).
+
+  **Deliberately left unchanged**: the physical Postgres table name
+  stays `"creditors"` (`SuppliersTable`'s `Table("creditors")`) - a
+  live table rename is its own separate ForceNew-shaped risk, deferred
+  to `docs/Downtime_Maintenance_Backlog.md`, same treatment as the
+  Education Runtime rename's AWS/DB resource names. `DimensionType.VENDOR`
+  also stays unchanged - it tags already-posted `JournalLine.dimensions`
+  data, a different risk category from the in-process class/DTO renames
+  (renaming it would change the persisted dimension key for any journal
+  line tagged before this rename).
+
+  POP and WEB were both notified directly with this exact before/after
+  shape ahead of the rename landing, per "coordination is the prime
+  directive" - not left to discover it from the diff.
