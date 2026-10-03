@@ -39,8 +39,9 @@ platform-wide. Internal tooling only; never client-facing, the same
 "strictly for management and support" boundary the original operator
 overview inside EA was built under.
 
-**What Omniview is not:** a second system of record for anything.
-Every sibling service keeps owning its own data; Omniview calls out
+**What Omniview is not:** a second system of record for any *other service's* data.
+Omniview owns exactly one domain of its own: Prodeo Capital's product-support
+tickets (§3.5, added 2026-10-04). Every sibling service keeps owning its own data; Omniview calls out
 and aggregates/presents, never absorbs. It is also explicitly not
 (yet) a financial-data or deep business-data surface — see §3.4 and
 the DDD design's own staged-phase framing.
@@ -99,13 +100,24 @@ flowchart TD
 ```
 
 Every arrow out of Omniview is read-only, **by design, not just today**:
-Omniview may read from FiSH but never writes back (Femi's direct
-decision, 2026-10-04). It issues only `GET` requests to any service; no
-`POST`/`PUT`/`PATCH`/`DELETE` path to EA or any other sibling exists or
-may be added (NFR-OV-5). An earlier draft carried one exception, the
-operator's support-thread reply (FR-OV-10); that is withdrawn. No sibling service
-calls *into* Omniview — it has no callers, only a browser-facing
-operator and outbound calls to everyone else.
+Omniview may read from FiSH but never writes back into another service
+(Femi's direct decision, 2026-10-04). It issues only `GET` requests to
+any sibling; no `POST`/`PUT`/`PATCH`/`DELETE` path to EA or any other
+sibling exists or may be added (NFR-OV-5). The earlier plan for the
+operator to reply by writing into EA (FR-OV-10) is superseded.
+
+**Product support is Omniview's own (Femi, 2026-10-04):** a chat started
+inside FiSH by a tenant's Owner Admin is ticketed in Omniview (only the
+Owner Admin raises a ticket; Femi, 2026-10-04) and answered
+by a Prodeo Capital operator from Omniview (§3.5). That data is
+Omniview's own, in Omniview's own database, so it is not a write into
+another service. It also gives Omniview its first *callers*: FiSH's chat
+reaches Omniview to raise a ticket and to read replies back.
+
+**EA is not Omniview.** EA is the *tenancy's* own mini-Omniview: the
+communication between a tenant's owner and staff continues in EA,
+unchanged. Product support to Prodeo Capital is a separate channel and
+lives in Omniview.
 
 ### 2.2 Product Functions (Summary)
 
@@ -113,14 +125,15 @@ operator and outbound calls to everyone else.
 |---|---|
 | Platform Health | At-a-glance reachability for GL/POP/SOP/IM/HR |
 | Platform Overview | Every Tenant's onboarding/KYB/support status at once |
-| Operator Messaging | Read-only view of Tenant support threads, operator side. Replying is not done from Omniview (see FR-OV-10, withdrawn) |
+| Operator Messaging (interim) | Read-only view of EA's existing operator threads, until Product Support replaces it |
+| Product Support (draft) | Tickets raised from inside FiSH by a tenant's Owner Admin are owned by Omniview and answered by Prodeo operators from it (§3.5) |
 | Console | Sign-in (operator token entry), layout hosting the above |
 
 ### 2.3 User Classes and Characteristics
 
 | User class | Description | Technical proficiency |
 |---|---|---|
-| Platform operator | Prodeo's own management/support staff; views cross-tenant, cross-service status; reads support threads (replies are sent elsewhere, not from Omniview) | Moderate — internal staff, not a general public user |
+| Platform operator | Prodeo's own management/support staff; views cross-tenant, cross-service status; triages and answers product-support tickets (§3.5, draft) | Moderate — internal staff, not a general public user |
 
 There is exactly one user class. Unlike every client-facing FiSH/ER
 product, Omniview has no Tenant-side user at all — that's the whole
@@ -135,7 +148,7 @@ point of the EA/Omniview split (§1.2; *"EA is for each tenancy"*).
 
 ### 2.5 Design and Implementation Constraints
 
-- **Never a second system of record.** Every requirement in §3 is read-through to a sibling's own data; Omniview persists nothing of another service's domain state (§4).
+- **Never a second system of record for another service's data.** Every requirement in §3 except §3.5 is read-through to a sibling's own data; Omniview persists nothing of another service's domain state (§4). The one thing it persists is its own product-support tickets (§3.5), which no other service owns.
 - **No new auth mechanism.** Reuses EA's existing operator-token bridge end-to-end — resolved 2026-10-03 after a real design correction (a service-account approach was proposed, then withdrawn once it was shown to undo per-operator attribution; see DDD design §1).
 - **No EA-side code changes required.** EA's existing `/operator/*` routes are called as-is.
 - Must not introduce any new financial/revenue/transaction data surface — the same boundary the original operator overview inside EA was built under.
@@ -176,7 +189,7 @@ Should, C = Could).
 | ID | Requirement | Priority |
 |---|---|---|
 | FR-OV-9 | System shall list every Tenant's operator-thread messages, grouped by Tenant, most recent first | M |
-| FR-OV-10 | ~~System shall let the operator reply within a Tenant's thread~~ **WITHDRAWN 2026-10-04** (Femi: Omniview reads from FiSH, never writes back). ID retained for traceability; Omniview shall not send replies | W |
+| FR-OV-10 | ~~System shall let the operator reply within a Tenant's thread~~ **SUPERSEDED 2026-10-04.** Replies are never written into EA. Product-support replies live in Omniview's own ticket store (FR-OV-S3). ID retained for traceability | S |
 | FR-OV-11 | System shall source thread data via EA's existing `GET /operator/support-threads` only, forwarding the operator's own token — Omniview holds no message data of its own and issues no write to EA | M |
 
 ### 3.4 Explicitly Out of Scope
@@ -195,6 +208,31 @@ These are named here only so a future SRS revision has an explicit
 anchor point — building either without a fresh design pass is
 out of scope for this document.
 
+### 3.5 Product Support Ticketing (DRAFT, 2026-10-04 — needs its own SPUTO pass before any build)
+
+Direction from Femi: *"Omniview is where tenant support will live. The
+chat initiated from inside FiSH by a tenant or an employee will be
+ticketed for response and responded to from the Omniview side."* Also:
+*"EA is a mini-Omniview for the tenancy. That communication must
+continue. However product support must come to Prodeo Capital."*
+Clarified by Femi in the same exchange: *"Only the Owner Admin raises a
+call to the Omniview"*; the "tenant or an employee" wording in the first
+quote is superseded by this.
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-OV-S1 | A chat started inside FiSH by a tenant's Owner Admin shall create a support ticket owned by Omniview. **Only the Owner Admin raises a ticket; employees do not** (Femi, 2026-10-04) | Draft |
+| FR-OV-S2 | A Prodeo operator shall triage and answer tickets from Omniview | Draft |
+| FR-OV-S3 | Tickets and replies shall be stored in Omniview's own database, never written into EA or any other FiSH service (NFR-OV-5) | Draft |
+| FR-OV-S4 | The person who raised a ticket shall see the replies in the FiSH chat, read back from Omniview | Draft |
+| FR-OV-S5 | EA's tenancy-internal communication (owner and staff of one tenant) shall be unchanged and not conflated with product support: two separate channels | Draft |
+| FR-OV-S6 | Disposition of EA's existing operator-thread messages (migrate history, or leave as legacy) is OPEN; see §7.1 | Open |
+
+Decided: only a tenant's Owner Admin raises tickets (Femi, 2026-10-04).
+Not designed yet: ticket states and ownership, authentication of the
+Owner Admin caller, notifications, retention
+and privacy, and SLAs. Those are the SPUTO pass's job; none are assumed here.
+
 ---
 
 ## 4. Data Requirements
@@ -205,14 +243,17 @@ concerns — **never** another service's domain data:
 | Data | Owned by | Omniview's relationship |
 |---|---|---|
 | Tenant/Membership/KYB status | EA | Read-through, via API call, never cached beyond the request/response |
-| Support/operator messages | EA | Read-through only, via API call. No write-through (reply withdrawn 2026-10-04) |
+| Existing operator-thread messages | EA | Read-through only, via API call, interim. No write-through; disposition open (FR-OV-S6) |
+| Product-support tickets and replies | **Omniview** | Omniview-owned, in its own database (§3.5, draft) |
 | Service health | N/A (derived) | Computed fresh on each request, not stored |
 | Operator token | Operator's own browser (entered at sign-in) | Held client-side for the session, forwarded per-request — see §7.1 for the open question on exactly how |
 
-No database is required for the scope in this document. If a future
-phase needs Omniview-owned state (an acknowledged-alert flag, a saved
-filter), that is a new, separately-scoped decision — not assumed here,
-per this project's own "minimal builds" discipline.
+**Omniview-owned data (new 2026-10-04):** product-support tickets and
+replies (§3.5) live in Omniview's own database, so Omniview is no longer
+stateless. This is the only data Omniview owns; everything else stays
+read-through. Any further Omniview-owned state (an acknowledged-alert flag,
+a saved filter) is still a separate, scoped decision, per this project's
+"minimal builds" discipline.
 
 ---
 
@@ -226,8 +267,11 @@ per this project's own "minimal builds" discipline.
 | POP, SOP, IM, HR `/health` | Outbound | Health (FR-OV-1/3/4) |
 | Omniview's own `/operator-health`, `/operator-overview`, `/operator-messages` (naming TBD, see §7.2) | Inbound | The browser console's own calls to its backend |
 
-No service calls *into* Omniview (§2.1) — there is no inbound
-interface for siblings to integrate against.
+Omniview now has one inbound interface (new 2026-10-04, draft): FiSH's
+chat reaches Omniview to raise a ticket and to read replies back
+(FR-OV-S1/S4). Whether that goes through WEB, EA, or directly, and how the
+caller is authenticated, is open (§7.1). No other service calls into
+Omniview.
 
 ---
 
@@ -239,7 +283,7 @@ interface for siblings to integrate against.
 | NFR-OV-2 | Per-operator action attribution and individual token revocation shall be preserved end-to-end for every EA-calling capability — the explicit reason the service-account approach was rejected (DDD design §1) |
 | NFR-OV-3 | No EA-side route, auth mechanism, or schema change required to ship this — a constraint, not just a nicety, agreed directly with the EA-fork session |
 | NFR-OV-4 | No new financial/business data of any kind surfaced in this release (§3.4) |
-| NFR-OV-5 | Omniview shall be strictly read-only toward every FiSH service: its outbound gateways issue only `GET`, and no write method (`POST`/`PUT`/`PATCH`/`DELETE`) to any sibling shall exist in its code. Verified by a test asserting the gateways expose no write operation, and enforced in review. Added 2026-10-04 on Femi's direct decision |
+| NFR-OV-5 | Omniview shall be strictly read-only toward every other FiSH service: its outbound gateways issue only `GET`, and no write method (`POST`/`PUT`/`PATCH`/`DELETE`) to any sibling shall exist in its code. Its only writes are to its own support-ticket database (§3.5). Verified by a test asserting the gateways expose no write operation, and enforced in review. Added 2026-10-04 on Femi's direct decision |
 | NFR-OV-5 | Deployed the same way every sibling is (ECS/Fargate, Jenkins CI/CD) — no bespoke infrastructure |
 
 ---
@@ -249,7 +293,8 @@ interface for siblings to integrate against.
 ### 7.1 Open Issues / TBDs
 
 - **How an operator's EA token gets into Omniview.** Candidate (not yet built): Omniview's own sign-in gate asks for the same EA operator token directly, mirroring WEB's existing pattern — one more hop on the existing "bridge until real identities exist" mechanism, not a new one. See DDD design §4.3.
-- **Whether operator-messaging's underlying data should eventually move to Omniview outright**, now that messaging is inherently cross-tenant. Flagged, not decided (DDD design §4.4).
+- **Disposition of EA's existing operator-thread messages** (FR-OV-S6): migrate history into Omniview, or leave as legacy. Not decided. EA's tenancy-internal communication is unaffected either way.
+- **Product-support ticketing design (§3.5):** ticket model and states, how an Owner Admin caller authenticates into Omniview (Cognito directly, or proxied through WEB/EA), whether the chat widget calls Omniview directly or via WEB/EA, notifications, retention, privacy and data residency, SLAs. Needs its own SPUTO pass.
 - **Exact Omniview-side route names** for the browser-facing API (§5's "naming TBD") — not yet designed; see the Use Case document's own flows for the shape these need to support.
 
 ### 7.2 Traceability to the DDD Design

@@ -60,7 +60,7 @@ open item (exact entry mechanism).
 
 ## UC-OV-3: Operator reads a Tenant's support thread (read-only)
 
-> **Revised 2026-10-04:** the reply steps were removed. Omniview never writes back to FiSH (Femi's direct decision). Replying to a Tenant is done from WEB's operator page / EA, not from Omniview.
+> **Revised 2026-10-04:** the reply steps were removed: Omniview never writes into another FiSH service (Femi's direct decision). This use case is the interim read-only view of EA's existing operator threads. Product-support replies are Omniview's own tickets (UC-OV-5/6, draft).
 
 **Actor:** Operator
 **Preconditions:** Signed in (UC-OV-1).
@@ -80,7 +80,41 @@ arriving from UC-OV-2 by clicking a Tenant's support-activity count.
 
 **Postconditions:** No state changes anywhere (NFR-OV-5). The read is attributable to the specific operator via their forwarded token (NFR-OV-2).
 
-**Traces to:** FR-OV-9, FR-OV-11. (FR-OV-10, the reply, is withdrawn.)
+**Traces to:** FR-OV-9, FR-OV-11. (FR-OV-10, the reply into EA, is superseded.)
+
+---
+
+## UC-OV-5 (DRAFT, 2026-10-04): A tenant's Owner Admin raises a support ticket from inside FiSH
+
+> Draft only. Needs its own SPUTO pass; authentication, ticket states and the exact route are open (SRS §7.1).
+
+**Actor:** The tenant's Owner Admin (a FiSH user, not an operator). Only the Owner Admin raises tickets; employees do not (Femi, 2026-10-04)
+**Trigger:** The Owner Admin starts a chat for product help inside FiSH.
+
+**Main flow:**
+1. The chat reaches Omniview and creates a ticket owned by Omniview (FR-OV-S1).
+2. Omniview stores it in its own database (FR-OV-S3).
+3. When an operator replies (UC-OV-6), the FiSH chat reads the reply back from Omniview and shows it to the user (FR-OV-S4).
+
+**Postconditions:** A ticket exists in Omniview only. Nothing is written into EA or any other service. EA's tenancy-internal communication is unaffected (FR-OV-S5).
+
+**Traces to:** FR-OV-S1, S3, S4, S5.
+
+---
+
+## UC-OV-6 (DRAFT, 2026-10-04): Operator answers a support ticket
+
+**Actor:** Operator
+**Preconditions:** Signed in (UC-OV-1).
+
+**Main flow:**
+1. Omniview lists open tickets across tenants.
+2. The operator opens one, reads it and replies.
+3. Omniview stores the reply in its own database (FR-OV-S3). No call is made to EA or any other service.
+
+**Postconditions:** The reply is visible to the original user in the FiSH chat (UC-OV-5 step 3).
+
+**Traces to:** FR-OV-S2, S3.
 
 ---
 
@@ -118,5 +152,7 @@ one view that keeps working even if EA is the service that's down).
 |---|---|---|---|
 | UC-OV-1 | Sign in | Operator | Indirectly (token validated on first real call) |
 | UC-OV-2 | Platform-wide tenant overview | Operator | Yes |
-| UC-OV-3 | Read support threads (read-only; reply withdrawn 2026-10-04) | Operator | Yes |
+| UC-OV-3 | Read EA's existing operator threads (interim, read-only) | Operator | Yes |
 | UC-OV-4 | Platform health | Operator | No |
+| UC-OV-5 | Raise a support ticket from inside FiSH (draft) | Tenant Owner Admin | No |
+| UC-OV-6 | Answer a support ticket (draft) | Operator | No |

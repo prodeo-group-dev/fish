@@ -2,7 +2,9 @@
 
 > **ALL OMNIVIEW WORK SUSPENDED, 2026-10-04 (Femi's direct instruction).** Do not resume, apply `omniview.tf`, or deploy until Femi says so. State at suspension: code merged to `fish-er-omniview` master (`41ed5ff`), Terraform merged but never applied, nothing live.
 >
-> **Design principle added 2026-10-04 (Femi): Omniview is strictly read-only toward FiSH.** It reads, it never writes back. The operator reply (FR-OV-10 / UC-OV-3 steps 5-8) is withdrawn; see item 3.6 for the code that must come out when work resumes.
+> **Design principle added 2026-10-04 (Femi): Omniview is strictly read-only toward every other FiSH service.** It reads, it never writes into another service. The operator reply into EA (FR-OV-10) is superseded; see 3.6 for the code that must come out.
+>
+> **New direction, same day (Femi): Omniview is where product support lives.** A chat started inside FiSH by a tenant's Owner Admin (only the Owner Admin raises one) becomes a ticket owned by Omniview, answered from Omniview, in Omniview's own database (so no longer stateless, and it gets its first inbound callers). EA is not Omniview: EA's tenancy-internal communication continues unchanged. See SRS §3.5 and Wave 7 below. Item 0.5 ("no RDS") is no longer accurate once this is built.
 
 **Status:** living document, 2026-10-03. The dependency-ordered task
 list for standing up Omniview per `docs/Omniview_Extraction_DDD_Design.md`,
@@ -67,8 +69,8 @@ section for the full reasoning.
 | 3.2 | WEB hands over `OperatorSupportInboxPage.tsx` + `api/operatorSupport.ts` content | WEB | 3.1 | Not started — **coordinated handover, WEB's own message offered this directly** |
 | 3.3 | Port the component into Omniview's new frontend, repointed at Omniview's own backend routes (2.1/2.2 + the Wave 1 health route) instead of EA's — expected close to verbatim per WEB's own assessment (already isolated from the Tenant app shell, no Cognito dependency) | Omniview | 3.2 | Not started |
 | 3.4 | Deploy and verify all four use cases (UC-OV-1 through 4) against Omniview in production, side-by-side with WEB's still-live `/operator`, for at least one real operating cycle | Omniview | 3.3 | Not started |
-| 3.5 | WEB removes its own `/operator` route, in the same coordinated window as 3.4's verification — not speculatively early, per WEB's own stated sequencing | WEB | 3.4 | Not started — **claim a row in `WEB/COORDINATION.md`; coordinate the exact cutover window directly with WEB, don't act unilaterally.** **OPEN, revised 2026-10-04:** because Omniview no longer replies, operators still need WEB's `/operator` page (or EA) to answer Tenants, so this item can no longer remove the page unconditionally. Femi to decide whether WEB's `/operator` stays as the reply surface. |
-| 3.6 | **New 2026-10-04.** Remove Omniview's write path: the `POST .../support-thread/messages` proxy in `OperatorMessagesRoutes` (backend), `replyToSupportThread` and the reply box in the ported `OperatorSupportInboxPage` (frontend), and their tests; add a test asserting the outbound gateways expose no write method (NFR-OV-5) | Omniview | — | Not started — **suspended with all Omniview work, 2026-10-04.** Already merged in `41ed5ff`, so it must be removed, not just avoided |
+| 3.5 | WEB removes its own `/operator` route, in the same coordinated window as 3.4's verification — not speculatively early, per WEB's own stated sequencing | WEB | 3.4 | Not started — **claim a row in `WEB/COORDINATION.md`; coordinate the exact cutover window directly with WEB, don't act unilaterally.** **GATED, revised 2026-10-04:** Omniview will answer tenants through its own tickets (Wave 7), so WEB's `/operator` page cannot be removed until Wave 7 exists. Until then it stays as the only reply surface. |
+| 3.6 | **New 2026-10-04.** Remove Omniview's write path: the `POST .../support-thread/messages` proxy in `OperatorMessagesRoutes` (backend), `replyToSupportThread` and the reply box in the ported `OperatorSupportInboxPage` (frontend), and their tests; add a test asserting the outbound gateways expose no write method (NFR-OV-5) | Omniview | — | Not started — **suspended with all Omniview work, 2026-10-04.** Already merged in `41ed5ff`, so it must be removed, not just avoided. It writes into EA, which is exactly what is ruled out; the replacement is Omniview's own tickets (Wave 7), not this route |
 
 ## Wave 4 — cleanup (depends on Wave 3 being verified)
 
@@ -82,6 +84,12 @@ fully independent implementation, not a proxy.
 |---|---|---|---|---|
 | 4.1 | Remove `PlatformHealthGateway`/`OperatorPlatformHealthRoutes` from EA — the one piece that's genuinely dead once Omniview's own version is live and WEB's cut over | EA-fork | 3.5 | Not started — **EA-fork's own call, their checkout** |
 | 4.2 | Update `FiSH/CLAUDE.md` and any stale docs still describing EA's `/operator` or WEB's `/operator` as the live operator console | Omniview or CM | 3.5 | Not started |
+
+## Wave 7 — product-support ticketing (new 2026-10-04, NOT scoped)
+
+| # | Item | Owner | Depends on | Status |
+|---|---|---|---|---|
+| 7.0 | Full SPUTO pass for product-support ticketing (SRS §3.5): ticket model and states, caller authentication, how FiSH's chat reaches Omniview, notifications, retention and privacy, disposition of EA's existing operator threads. Nothing is built before this | Omniview + Femi | — | Not started. **Suspended with all Omniview work, 2026-10-04** |
 
 ## Wave 5 — future, explicitly out of scope for this backlog
 
