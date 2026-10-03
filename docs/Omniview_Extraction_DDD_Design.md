@@ -66,9 +66,9 @@ This also answers the data-ownership question for every future data source Omniv
 
 ## 4. Open questions — parked, not guessed
 
-1. **Repo name and package.** Every existing sibling follows `fish-<name>`/`<Name>/`/`com.theprodeogroup.<name>` (`fish-enterprise-administration`/`EA`/`com.theprodeogroup.ea`). Omniview is different in kind — it's not a FiSH-specific service, it spans FiSH **and** ER (and this session's own display name is already "FiSH+ER OmniView," not "FiSH Omniview"). Candidate: repo `fish-er-omniview` or `omniview` (no `fish-` prefix, since it isn't one), local folder `Omniview/`, package `com.theprodeogroup.omniview`. Not picked yet — flagging for Femi/CM rather than guessing, since a repo name is expensive to change once Jenkins/Terraform/DNS reference it.
+1. **Resolved 2026-10-03 by Femi — repo `fish-er-omniview`.** Local folder `Omniview/`, package `com.theprodeogroup.omniview`, following the same `fish-<name>`/`<Name>/`/`com.theprodeogroup.<name>` shape every sibling uses, with `er` marking that it spans FiSH and ER rather than being FiSH-only.
 
-2. **Domain.** Every service gets `<name>-api.theprodeogroup.com`; this one's operator-facing, not machine-facing, so it may want a plain `omniview.theprodeogroup.com` instead — same reasoning Jenkins (`jenkins.theprodeogroup.com`, no `-api`) already got.
+2. **Resolved 2026-10-03 by Femi — domain `omniview.theprodeogroup.com`.** No `-api` suffix, matching Jenkins' own bare-domain treatment as an operator-facing (not machine-facing) surface.
 
 3. **Resolved 2026-10-03 — no EA-side route repurposing needed.** EA's existing operator routes stay exactly as they are (same `authorizeOperator()` gate, same paths); Omniview's backend calls them directly, forwarding the operator's own token. The one small remaining open item: how that token gets *into* Omniview in the first place. Simplest candidate, not yet built: Omniview's own sign-in gate (mirroring WEB's existing operator-token entry pattern) asks for the same EA token — one more hop on the existing "bridge until real identities exist" mechanism, not a new one.
 
