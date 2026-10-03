@@ -28,3 +28,6 @@
 [submodule "ER/Principal/EducationRuntime"]
 	path = ER/Principal/EducationRuntime
 	url = https://github.com/prodeo-group-dev/fish-education-runtime.git
+[submodule "Omniview"]
+	path = Omniview
+	url = https://github.com/prodeo-group-dev/fish-er-omniview.git
