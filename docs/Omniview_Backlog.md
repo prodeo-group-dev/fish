@@ -25,7 +25,7 @@ dependency must list it explicitly, not just the most salient one.
 | 0.4 | Jenkinsfile (build/test/deploy pipeline, mirroring an existing sibling's) | CM | 0.2 | **Written; blocked on Jenkins GitHub-scanning PAT not yet scoped to this repo — Femi's own action, in progress** |
 | 0.5 | Terraform: ECS/ALB/ACM for `omniview.theprodeogroup.com`, no RDS (no persistence required — SRS §4) | CM | 0.1 | Not started |
 | 0.6 | Wire `fish-er-omniview` as a submodule of top-level `FiSH/`, update `.gitmodules` and `CLAUDE.md`'s repo table | CM | 0.2 | **Done** |
-| 0.7 | **New 2026-10-03**: frontend build + serving for the migrated UI (Wave 3) — Vite/React build step, served via Ktor `staticResources` from the same ECS deployment (no separate CloudFront/S3, per DDD design §3's "no bespoke infrastructure" default — confirm or override) | CM | 0.2 | Not started — **not needed until Wave 2 is done, flagging early per the prime directive, not urgent** |
+| 0.7 | **New 2026-10-03**: frontend build + serving for the migrated UI (Wave 3) — Vite/React build step, served via Ktor `staticResources` from the same ECS deployment (no separate CloudFront/S3, per DDD design §3's "no bespoke infrastructure" default — confirm or override) | CM | 0.2 | **Confirmed, 2026-10-03: default accepted, no override.** A single-operator internal tool has no case for CloudFront/S3's edge-caching/CDN benefits - Ktor `staticResources` off the same ECS task Omniview already runs is simplest and matches the DDD design's own stated default. Nothing in Waves 1/2's build changed this calculus. Unblocks 3.1/3.2 - Wave 0's actual Terraform (0.5, ECS/ALB/ACM) is still a separate later step, not required just to confirm this shape. |
 
 **Corrected 2026-10-03, then corrected again same day by Femi directly**:
 `fish-gl-web`'s `OperatorSupportInboxPage.tsx` already implements all
@@ -59,7 +59,7 @@ section for the full reasoning.
 
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
-| 3.1 | Confirm Omniview's frontend build/serving shape (0.7 — Ktor `staticResources` default, or CM overrides) | CM | 2.1, 2.2, 0.7 | Not started |
+| 3.1 | Confirm Omniview's frontend build/serving shape (0.7 — Ktor `staticResources` default, or CM overrides) | CM | 2.1, 2.2, 0.7 | **Done, 2026-10-03** — same decision as 0.7 above, Wave 2 being done is what made this ripe to confirm. Unblocks 3.2 (WEB's handover). |
 | 3.2 | WEB hands over `OperatorSupportInboxPage.tsx` + `api/operatorSupport.ts` content | WEB | 3.1 | Not started — **coordinated handover, WEB's own message offered this directly** |
 | 3.3 | Port the component into Omniview's new frontend, repointed at Omniview's own backend routes (2.1/2.2 + the Wave 1 health route) instead of EA's — expected close to verbatim per WEB's own assessment (already isolated from the Tenant app shell, no Cognito dependency) | Omniview | 3.2 | Not started |
 | 3.4 | Deploy and verify all four use cases (UC-OV-1 through 4) against Omniview in production, side-by-side with WEB's still-live `/operator`, for at least one real operating cycle | Omniview | 3.3 | Not started |
