@@ -47,7 +47,7 @@ the DDD design's own staged-phase framing.
 
 In scope for this SRS: the three capabilities that exist today inside
 EA and are being extracted out (platform health, cross-tenant
-overview, operator messaging), plus the console itself (sign-in,
+overview, read-only operator messaging), plus the console itself (sign-in,
 layout). Out of scope: any new data source beyond what already exists
 (ER/Education Runtime status, GL financial signals — both explicitly
 future work, not designed here).
@@ -98,7 +98,12 @@ flowchart TD
   OV -->|public, unauthenticated| HR[HR /health]
 ```
 
-Every arrow out of Omniview is read-only today. No sibling service
+Every arrow out of Omniview is read-only, **by design, not just today**:
+Omniview may read from FiSH but never writes back (Femi's direct
+decision, 2026-10-04). It issues only `GET` requests to any service; no
+`POST`/`PUT`/`PATCH`/`DELETE` path to EA or any other sibling exists or
+may be added (NFR-OV-5). An earlier draft carried one exception, the
+operator's support-thread reply (FR-OV-10); that is withdrawn. No sibling service
 calls *into* Omniview — it has no callers, only a browser-facing
 operator and outbound calls to everyone else.
 
@@ -108,14 +113,14 @@ operator and outbound calls to everyone else.
 |---|---|
 | Platform Health | At-a-glance reachability for GL/POP/SOP/IM/HR |
 | Platform Overview | Every Tenant's onboarding/KYB/support status at once |
-| Operator Messaging | Read and reply to Tenant support threads, operator side |
+| Operator Messaging | Read-only view of Tenant support threads, operator side. Replying is not done from Omniview (see FR-OV-10, withdrawn) |
 | Console | Sign-in (operator token entry), layout hosting the above |
 
 ### 2.3 User Classes and Characteristics
 
 | User class | Description | Technical proficiency |
 |---|---|---|
-| Platform operator | Prodeo's own management/support staff; views cross-tenant, cross-service status; replies to support threads | Moderate — internal staff, not a general public user |
+| Platform operator | Prodeo's own management/support staff; views cross-tenant, cross-service status; reads support threads (replies are sent elsewhere, not from Omniview) | Moderate — internal staff, not a general public user |
 
 There is exactly one user class. Unlike every client-facing FiSH/ER
 product, Omniview has no Tenant-side user at all — that's the whole
@@ -166,13 +171,13 @@ Should, C = Could).
 | FR-OV-7 | System shall source this data by calling EA's existing `GET /operator/tenants`, forwarding the operator's own token — never by querying EA's database directly or duplicating its schema | M |
 | FR-OV-8 | System shall display no revenue, transaction, or other financial/business data in this view | M |
 
-### 3.3 Operator Messaging
+### 3.3 Operator Messaging (read-only)
 
 | ID | Requirement | Priority |
 |---|---|---|
 | FR-OV-9 | System shall list every Tenant's operator-thread messages, grouped by Tenant, most recent first | M |
-| FR-OV-10 | System shall let the operator reply within a Tenant's thread | M |
-| FR-OV-11 | System shall source and persist this via EA's existing operator-messages routes, forwarding the operator's own token — Omniview holds no message data of its own | M |
+| FR-OV-10 | ~~System shall let the operator reply within a Tenant's thread~~ **WITHDRAWN 2026-10-04** (Femi: Omniview reads from FiSH, never writes back). ID retained for traceability; Omniview shall not send replies | W |
+| FR-OV-11 | System shall source thread data via EA's existing `GET /operator/support-threads` only, forwarding the operator's own token — Omniview holds no message data of its own and issues no write to EA | M |
 
 ### 3.4 Explicitly Out of Scope
 
@@ -200,7 +205,7 @@ concerns — **never** another service's domain data:
 | Data | Owned by | Omniview's relationship |
 |---|---|---|
 | Tenant/Membership/KYB status | EA | Read-through, via API call, never cached beyond the request/response |
-| Support/operator messages | EA | Read-through and write-through (reply), via API call |
+| Support/operator messages | EA | Read-through only, via API call. No write-through (reply withdrawn 2026-10-04) |
 | Service health | N/A (derived) | Computed fresh on each request, not stored |
 | Operator token | Operator's own browser (entered at sign-in) | Held client-side for the session, forwarded per-request — see §7.1 for the open question on exactly how |
 
@@ -216,7 +221,7 @@ per this project's own "minimal builds" discipline.
 | Interface | Direction | Purpose |
 |---|---|---|
 | EA `/operator/tenants` | Outbound | Platform overview (FR-OV-6/7) |
-| EA `/operator/support-threads`, `/operator/tenants/{id}/support-thread/messages` | Outbound | Operator messaging (FR-OV-9/10/11) |
+| EA `GET /operator/support-threads` | Outbound (read-only) | Operator messaging (FR-OV-9/11). `POST /operator/tenants/{id}/support-thread/messages` is **not** used by Omniview (FR-OV-10 withdrawn) |
 | GL `/api` (root, `X-Request-Id`-based check) | Outbound | Health (FR-OV-2) |
 | POP, SOP, IM, HR `/health` | Outbound | Health (FR-OV-1/3/4) |
 | Omniview's own `/operator-health`, `/operator-overview`, `/operator-messages` (naming TBD, see §7.2) | Inbound | The browser console's own calls to its backend |
@@ -234,6 +239,7 @@ interface for siblings to integrate against.
 | NFR-OV-2 | Per-operator action attribution and individual token revocation shall be preserved end-to-end for every EA-calling capability — the explicit reason the service-account approach was rejected (DDD design §1) |
 | NFR-OV-3 | No EA-side route, auth mechanism, or schema change required to ship this — a constraint, not just a nicety, agreed directly with the EA-fork session |
 | NFR-OV-4 | No new financial/business data of any kind surfaced in this release (§3.4) |
+| NFR-OV-5 | Omniview shall be strictly read-only toward every FiSH service: its outbound gateways issue only `GET`, and no write method (`POST`/`PUT`/`PATCH`/`DELETE`) to any sibling shall exist in its code. Verified by a test asserting the gateways expose no write operation, and enforced in review. Added 2026-10-04 on Femi's direct decision |
 | NFR-OV-5 | Deployed the same way every sibling is (ECS/Fargate, Jenkins CI/CD) — no bespoke infrastructure |
 
 ---

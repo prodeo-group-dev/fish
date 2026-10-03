@@ -1,5 +1,9 @@
 # Omniview Backlog — Task Breakdown & Dependency Order
 
+> **ALL OMNIVIEW WORK SUSPENDED, 2026-10-04 (Femi's direct instruction).** Do not resume, apply `omniview.tf`, or deploy until Femi says so. State at suspension: code merged to `fish-er-omniview` master (`41ed5ff`), Terraform merged but never applied, nothing live.
+>
+> **Design principle added 2026-10-04 (Femi): Omniview is strictly read-only toward FiSH.** It reads, it never writes back. The operator reply (FR-OV-10 / UC-OV-3 steps 5-8) is withdrawn; see item 3.6 for the code that must come out when work resumes.
+
 **Status:** living document, 2026-10-03. The dependency-ordered task
 list for standing up Omniview per `docs/Omniview_Extraction_DDD_Design.md`,
 `docs/Omniview_Software_Requirements_Specification.md`, and
@@ -53,7 +57,7 @@ section for the full reasoning.
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
 | 2.1 | Backend route accepting the operator's token and proxying `GET /operator/tenants` to EA (UC-OV-2, FR-OV-6/7/8) | Omniview | 1.2 | **Done, 2026-10-03** — byte-for-byte relay (status+body verbatim), not a typed DTO decode, so there's no EA-response-shape to keep in sync |
-| 2.2 | Backend routes proxying EA's `GET /operator/support-threads` + `POST .../messages` (UC-OV-3, FR-OV-9/10/11) | Omniview | 1.2 | **Done, 2026-10-03** — same byte-for-byte relay shape as 2.1. Committed on `feature/omniview-wave2-tenant-overview-messaging` (`4a79d12`, amended from `8b87e4f` after CM's review — see below), handed to CM for push/PR/deploy — not pushed by this session. Two real bugs caught, neither by mocked tests alone: (1) live smoke test against production — EA mounts `/operator/*` under `route("/api") { ... }` in its own `Application.kt`, which neither operator route file's own KDoc mentions; fixed to call `/api/operator/...`, reverified live. (2) CM's own code review caught raw string interpolation building malformed JSON on a `"`/`\` in an exception message; the kotlinx.serialization fix for *that* then surfaced a third, more subtle bug — `encodeDefaults` being false by default silently dropped the `"error"` field entirely — caught by this commit's own new regression test before CM re-reviewed |
+| 2.2 | Backend routes proxying EA's `GET /operator/support-threads` + `POST .../messages` (UC-OV-3, FR-OV-9/10/11) | Omniview | 1.2 | **Done, 2026-10-03; the `POST` half is now SUPERSEDED (2026-10-04) — Omniview is read-only, see 3.6.** — same byte-for-byte relay shape as 2.1. Committed on `feature/omniview-wave2-tenant-overview-messaging` (`4a79d12`, amended from `8b87e4f` after CM's review — see below), handed to CM for push/PR/deploy — not pushed by this session. Two real bugs caught, neither by mocked tests alone: (1) live smoke test against production — EA mounts `/operator/*` under `route("/api") { ... }` in its own `Application.kt`, which neither operator route file's own KDoc mentions; fixed to call `/api/operator/...`, reverified live. (2) CM's own code review caught raw string interpolation building malformed JSON on a `"`/`\` in an exception message; the kotlinx.serialization fix for *that* then surfaced a third, more subtle bug — `encodeDefaults` being false by default silently dropped the `"error"` field entirely — caught by this commit's own new regression test before CM re-reviewed |
 
 ## Wave 3 — Omniview stands up its own frontend, full migration (depends on Wave 2 + CM's build/serving infra)
 
@@ -63,7 +67,8 @@ section for the full reasoning.
 | 3.2 | WEB hands over `OperatorSupportInboxPage.tsx` + `api/operatorSupport.ts` content | WEB | 3.1 | Not started — **coordinated handover, WEB's own message offered this directly** |
 | 3.3 | Port the component into Omniview's new frontend, repointed at Omniview's own backend routes (2.1/2.2 + the Wave 1 health route) instead of EA's — expected close to verbatim per WEB's own assessment (already isolated from the Tenant app shell, no Cognito dependency) | Omniview | 3.2 | Not started |
 | 3.4 | Deploy and verify all four use cases (UC-OV-1 through 4) against Omniview in production, side-by-side with WEB's still-live `/operator`, for at least one real operating cycle | Omniview | 3.3 | Not started |
-| 3.5 | WEB removes its own `/operator` route, in the same coordinated window as 3.4's verification — not speculatively early, per WEB's own stated sequencing | WEB | 3.4 | Not started — **claim a row in `WEB/COORDINATION.md`; coordinate the exact cutover window directly with WEB, don't act unilaterally** |
+| 3.5 | WEB removes its own `/operator` route, in the same coordinated window as 3.4's verification — not speculatively early, per WEB's own stated sequencing | WEB | 3.4 | Not started — **claim a row in `WEB/COORDINATION.md`; coordinate the exact cutover window directly with WEB, don't act unilaterally.** **OPEN, revised 2026-10-04:** because Omniview no longer replies, operators still need WEB's `/operator` page (or EA) to answer Tenants, so this item can no longer remove the page unconditionally. Femi to decide whether WEB's `/operator` stays as the reply surface. |
+| 3.6 | **New 2026-10-04.** Remove Omniview's write path: the `POST .../support-thread/messages` proxy in `OperatorMessagesRoutes` (backend), `replyToSupportThread` and the reply box in the ported `OperatorSupportInboxPage` (frontend), and their tests; add a test asserting the outbound gateways expose no write method (NFR-OV-5) | Omniview | — | Not started — **suspended with all Omniview work, 2026-10-04.** Already merged in `41ed5ff`, so it must be removed, not just avoided |
 
 ## Wave 4 — cleanup (depends on Wave 3 being verified)
 

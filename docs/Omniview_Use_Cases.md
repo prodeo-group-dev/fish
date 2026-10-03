@@ -58,7 +58,9 @@ open item (exact entry mechanism).
 
 ---
 
-## UC-OV-3: Operator reads and replies to a Tenant's support thread
+## UC-OV-3: Operator reads a Tenant's support thread (read-only)
+
+> **Revised 2026-10-04:** the reply steps were removed. Omniview never writes back to FiSH (Femi's direct decision). Replying to a Tenant is done from WEB's operator page / EA, not from Omniview.
 
 **Actor:** Operator
 **Preconditions:** Signed in (UC-OV-1).
@@ -70,18 +72,15 @@ arriving from UC-OV-2 by clicking a Tenant's support-activity count.
 2. EA returns every Tenant's operator-thread messages.
 3. Omniview groups by Tenant, sorted by most recent activity, and highlights threads awaiting an operator reply.
 4. Operator selects a Tenant's thread and reads the full message history.
-5. Operator types a reply and submits.
-6. Omniview's backend calls EA's `POST /operator/tenants/{tenantId}/support-thread/messages`, forwarding the token and the reply body.
-7. EA persists the message (its own `MessageRepository`/`SendMessageUseCase`, `MessageAudience.OperatorThread`) and returns it.
-8. Omniview appends the new message to the thread view immediately, without waiting for the next poll cycle.
+5. Omniview refreshes the thread list on its next poll cycle. The operator who wants to answer does so outside Omniview.
 
-**Alternate flow — send fails:**
-- 6a. The call to EA fails (network, 401/403, 5xx).
-- 6b. Omniview shows an inline error on the reply box, preserves the operator's drafted text (doesn't clear the input), so nothing typed is lost.
+**Alternate flow — read fails:**
+- 1a. The call to EA fails (network, 401/403, 5xx).
+- 1b. Omniview shows an inline error on the thread list and keeps the last successfully loaded data visible.
 
-**Postconditions:** Reply is persisted in EA exactly as if sent through EA's own operator page; attributable to the specific operator via their forwarded token (NFR-OV-2).
+**Postconditions:** No state changes anywhere (NFR-OV-5). The read is attributable to the specific operator via their forwarded token (NFR-OV-2).
 
-**Traces to:** FR-OV-9, FR-OV-10, FR-OV-11.
+**Traces to:** FR-OV-9, FR-OV-11. (FR-OV-10, the reply, is withdrawn.)
 
 ---
 
@@ -119,5 +118,5 @@ one view that keeps working even if EA is the service that's down).
 |---|---|---|---|
 | UC-OV-1 | Sign in | Operator | Indirectly (token validated on first real call) |
 | UC-OV-2 | Platform-wide tenant overview | Operator | Yes |
-| UC-OV-3 | Read/reply to support threads | Operator | Yes |
+| UC-OV-3 | Read support threads (read-only; reply withdrawn 2026-10-04) | Operator | Yes |
 | UC-OV-4 | Platform health | Operator | No |
