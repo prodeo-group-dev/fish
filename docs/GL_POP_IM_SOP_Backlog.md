@@ -564,6 +564,12 @@ So the real shape of this problem is: **a policy decision (which currencies, whe
     in `ComputeSupplierBalancesRequestDto`/`SupplierBalanceDto`/
     `ComputeAccountsPayableAgingRequestDto`/`SupplierAgingDto` (WEB's
     `agingReports.ts` consumes these).
+  - JSON field `vendorReference` -> `supplierReference` in
+    `CreateFixedAssetRequestDto` (the `ON_ACCOUNT` funding method's
+    audit-note field) - **found by CM reviewing the full diff, not in
+    GL's or this change log's own original summary**; WEB's
+    `api/fixedAssets.ts`/`FixedAssetRegister.tsx` send this field today,
+    a third independent call site beyond the two GL originally flagged.
 
   **Deliberately left unchanged**: the physical Postgres table name
   stays `"creditors"` (`SuppliersTable`'s `Table("creditors")`) - a
