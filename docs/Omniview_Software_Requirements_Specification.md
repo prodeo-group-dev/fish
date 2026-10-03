@@ -103,8 +103,21 @@ Every arrow out of Omniview is read-only, **by design, not just today**:
 Omniview may read from FiSH but never writes back into another service
 (Femi's direct decision, 2026-10-04). It issues only `GET` requests to
 any sibling; no `POST`/`PUT`/`PATCH`/`DELETE` path to EA or any other
-sibling exists or may be added (NFR-OV-5). The earlier plan for the
+sibling exists or may be added (NFR-OV-6). The earlier plan for the
 operator to reply by writing into EA (FR-OV-10) is superseded.
+
+**It is not Omniview's business to write into any tenancy's data**
+(Femi, 2026-10-04). Nothing in a tenancy is ever altered by Omniview:
+not KYB status, not messages, not staff, not the ledger. A ticket may
+carry a tenant ID as a reference, but that is Omniview's own record, not
+a change to the tenancy. Two consequences:
+
+- **FiSH pulls, Omniview never pushes.** FiSH's chat calls Omniview to
+  raise a ticket and reads the replies back from Omniview. Omniview
+  never pushes a reply or a notification into a tenant's side.
+- **Resolving a ticket changes only Omniview's own record.** Any change a
+  ticket calls for in a tenancy is made by whoever owns that data, never
+  by Omniview.
 
 **Product support is Omniview's own (Femi, 2026-10-04):** a chat started
 inside FiSH by a tenant's Owner Admin is ticketed in Omniview (only the
@@ -223,9 +236,10 @@ quote is superseded by this.
 |---|---|---|
 | FR-OV-S1 | A chat started inside FiSH by a tenant's Owner Admin shall create a support ticket owned by Omniview. **Only the Owner Admin raises a ticket; employees do not** (Femi, 2026-10-04) | Draft |
 | FR-OV-S2 | A Prodeo operator shall triage and answer tickets from Omniview | Draft |
-| FR-OV-S3 | Tickets and replies shall be stored in Omniview's own database, never written into EA or any other FiSH service (NFR-OV-5) | Draft |
-| FR-OV-S4 | The person who raised a ticket shall see the replies in the FiSH chat, read back from Omniview | Draft |
+| FR-OV-S3 | Tickets and replies shall be stored in Omniview's own database, never written into EA or any other FiSH service (NFR-OV-6) | Draft |
+| FR-OV-S4 | The person who raised a ticket shall see the replies in the FiSH chat, read back from Omniview. FiSH pulls the reply; Omniview never pushes a reply or notification into FiSH or any tenancy | Draft |
 | FR-OV-S5 | EA's tenancy-internal communication (owner and staff of one tenant) shall be unchanged and not conflated with product support: two separate channels | Draft |
+| FR-OV-S7 | Closing or resolving a ticket shall change only Omniview's own ticket record. Any change a ticket calls for in a tenancy's data is made by the service that owns it, never by Omniview | Draft |
 | FR-OV-S6 | Disposition of EA's existing operator-thread messages (migrate history, or leave as legacy) is OPEN; see §7.1 | Open |
 
 Decided: only a tenant's Owner Admin raises tickets (Femi, 2026-10-04).
@@ -283,7 +297,7 @@ Omniview.
 | NFR-OV-2 | Per-operator action attribution and individual token revocation shall be preserved end-to-end for every EA-calling capability — the explicit reason the service-account approach was rejected (DDD design §1) |
 | NFR-OV-3 | No EA-side route, auth mechanism, or schema change required to ship this — a constraint, not just a nicety, agreed directly with the EA-fork session |
 | NFR-OV-4 | No new financial/business data of any kind surfaced in this release (§3.4) |
-| NFR-OV-5 | Omniview shall be strictly read-only toward every other FiSH service: its outbound gateways issue only `GET`, and no write method (`POST`/`PUT`/`PATCH`/`DELETE`) to any sibling shall exist in its code. Its only writes are to its own support-ticket database (§3.5). Verified by a test asserting the gateways expose no write operation, and enforced in review. Added 2026-10-04 on Femi's direct decision |
+| NFR-OV-6 | Omniview shall be strictly read-only toward every other FiSH service: its outbound gateways issue only `GET`, and no write method (`POST`/`PUT`/`PATCH`/`DELETE`) to any sibling shall exist in its code. Its only writes are to its own support-ticket database (§3.5). Omniview shall never write into any tenancy's data (Femi: it is not its business); a ticket may reference a tenant ID, nothing in a tenancy is altered. Verified by a test asserting the gateways expose no write operation, and enforced in review. Added 2026-10-04 on Femi's direct decision |
 | NFR-OV-5 | Deployed the same way every sibling is (ECS/Fargate, Jenkins CI/CD) — no bespoke infrastructure |
 
 ---
