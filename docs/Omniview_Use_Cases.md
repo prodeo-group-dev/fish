@@ -78,7 +78,7 @@ arriving from UC-OV-2 by clicking a Tenant's support-activity count.
 - 1a. The call to EA fails (network, 401/403, 5xx).
 - 1b. Omniview shows an inline error on the thread list and keeps the last successfully loaded data visible.
 
-**Postconditions:** No state changes anywhere (NFR-OV-5). The read is attributable to the specific operator via their forwarded token (NFR-OV-2).
+**Postconditions:** No state changes anywhere (NFR-OV-6). The read is attributable to the specific operator via their forwarded token (NFR-OV-2).
 
 **Traces to:** FR-OV-9, FR-OV-11. (FR-OV-10, the reply into EA, is superseded.)
 
@@ -94,7 +94,7 @@ arriving from UC-OV-2 by clicking a Tenant's support-activity count.
 **Main flow:**
 1. The chat reaches Omniview and creates a ticket owned by Omniview (FR-OV-S1).
 2. Omniview stores it in its own database (FR-OV-S3).
-3. When an operator replies (UC-OV-6), the FiSH chat reads the reply back from Omniview and shows it to the user (FR-OV-S4).
+3. When an operator replies (UC-OV-6), the FiSH chat pulls the reply from Omniview and shows it to the user (FR-OV-S4). Omniview never pushes a reply or notification into FiSH.
 
 **Postconditions:** A ticket exists in Omniview only. Nothing is written into EA or any other service. EA's tenancy-internal communication is unaffected (FR-OV-S5).
 
@@ -111,10 +111,11 @@ arriving from UC-OV-2 by clicking a Tenant's support-activity count.
 1. Omniview lists open tickets across tenants.
 2. The operator opens one, reads it and replies.
 3. Omniview stores the reply in its own database (FR-OV-S3). No call is made to EA or any other service.
+4. Closing the ticket updates only Omniview's own record (FR-OV-S7). Any change the ticket calls for in a tenancy is made by the service that owns that data, not by Omniview.
 
 **Postconditions:** The reply is visible to the original user in the FiSH chat (UC-OV-5 step 3).
 
-**Traces to:** FR-OV-S2, S3.
+**Traces to:** FR-OV-S2, S3, S7.
 
 ---
 
