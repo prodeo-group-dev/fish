@@ -38,6 +38,10 @@ Depends on Task 6. First entity needing the full provisional-ID reconciliation p
 
 No current peer session owns building the actual Android/PWA client that will consume this contract. This plan builds the server side only; **flagging to Femi that the client itself needs an owner assigned at some point** — not decided here, not assumed to be WEB's scope just because WEB is the other FiSH+ER-adjacent session, since a native offline-first Android app is a different skill/stack from WEB's current React PWA work.
 
+## One known gap, documented not fixed (Task 4, code review 2026-10-03)
+
+`SyncPushLedger.find` returning null and `SyncPushLedger.record` actually persisting are not atomic — two genuinely simultaneous retries of the identical `clientOpId` (a flaky client's own retry-on-timeout, not two different principals, since the batch-level device/principal gate already rules that case out) could both pass the `find() == null` check before either records, each independently evaluating the conflict check. Closing this properly needs a "claim the clientOpId first" two-phase ledger — a real change to `SyncPushLedger`'s contract, not a one-line fix — and wasn't built now given how narrow the window actually is. The damage is bounded in the meantime: `AttendanceService.pushOne` catches the store's own natural-key uniqueness violation (the real backstop that still prevents two divergent rows) and converts it to a clean per-op `REJECTED` rather than letting it blow up the whole batch response. Revisit if this ever shows up for real, or before extending the pattern to `GradeEntry`/`StudentProfile` (Tasks 6/7), where a push op is a *create* rather than a natural-key upsert and the race's shape may differ.
+
 ## Verification
 
 Each task gets unit tests against the in-memory store (matching every other build in this codebase) plus a real-Postgres integration test for the new `RegisteredDeviceStore`/the new sequence column. Task 5's end-to-end test is the actual proof the sync contract works, not just that each piece compiles in isolation.
