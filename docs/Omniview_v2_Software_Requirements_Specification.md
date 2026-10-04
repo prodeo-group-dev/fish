@@ -519,7 +519,7 @@ WEB's earlier points are covered. Seven gaps, three of which touch Omniview's ow
 
 1. **Ticket summary has no label, so the list needs one request per ticket.** Settled in EA's Draft 2: the summary carries `subject`, derived by Omniview from the first message (at most 80 UTF-16 code units); the `preview` proposed earlier is dropped. A free-text subject chosen by the user remains the alternative under D5.
 2. **`Retry-After` is unreadable cross-origin** without `Access-Control-Expose-Headers`. Put `retryAfterSeconds` in the 429 body as well (Omniview does so for `quota_exceeded`; EA for `rate_limited`).
-3. **The messages cursor returns the oldest 100, with no way to get the latest, and no truncation signal.** Add `limit`, a `before` cursor (older) alongside `after` (newer), and `hasMore` on the list and message responses.
+3. **The messages cursor returned the oldest 100, with no way to get the latest, and no truncation signal.** Settled in EA's Draft 2 and kept the same here: the route defaults to the **latest** page, with `before` (older) or `after` (newer), not both; responses stay **bare arrays** and **a page shorter than the limit means there is no more**, matching the legacy baseline WEB already reads, so there is **no `hasMore` wrapper**; the ticket list returns at most 50 and a response of exactly 50 may be clipped, so the widget shows "the 50 most recent" (paging is deferred).
 4. **Same key, different body, and the dedupe window:** `409 idempotency_key_reused`; window 24 hours (FR-OV-S20).
 5. **A reply on a CLOSED ticket:** D38.
 6. **Create should also return the first message:** `POST /internal/tickets` returns `{ticket, message}` (EA's Draft 2).
@@ -561,3 +561,5 @@ Every case fails closed, and nothing is ever served in place of a figure.
 | 6 | Omniview's identity is not configured, or a human token is presented | Nobody operational: the route group is not registered (503) or answers 401; CM sees a configuration error at deploy time (8B.9b) | n/a | CM sets the audience |
 
 Not covered here: whether anyone is actively watching the logs. That is D39, the passive-monitor design. GL guarantees only that every failure writes one fixed-format log line carrying no values, so a monitor can alert on it (FR-OV-M26).
+
+**Names must not drift between this SRS and EA's contract (agreed 2026-10-04):** the idempotency error is `idempotency_key_reused` (EA's Draft 2 name, adopted here); the closed-ticket reply is `ticket_closed`; the length unit is UTF-16 code units. Where a name differs, EA's contract governs route shapes and codes.
