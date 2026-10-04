@@ -73,6 +73,7 @@ table. It shrinks the collision window; it doesn't eliminate it.
 | Session | Started (UTC) | Working on | Files/areas |
 |---|---|---|---|
 | FiSH+ER WEB | 2026-10-01T02:30:00Z | Picking up the "start your own Tenant while staying staff elsewhere" backlog item (not yet waved - see the "not yet waved" table) per next-dependency-ordered-item instruction, 2026-10-01 — **BLOCKED on EA confirming `OnboardTenantUseCase`/`RegisterCompanyUseCase` don't assume a brand-new User with zero existing Memberships.** Not yet started on the WEB side; confirming with EA first before building the `CompanyPickerScreen`/`TenantDashboard` entry point. | WEB: `CompanyPickerScreen.tsx`/`TenantDashboard.tsx` (new entry point, TBD exact shape); EA: `OnboardTenantUseCase`/`RegisterCompanyUseCase` (readiness confirmation only, no known change needed yet) |
+| Enterprise Administration - EA (registered by CM on its behalf, EA does not touch shared checkouts) | 2026-10-04 | Writing EA's Omniview v2 route-contract doc (ticket relay routes, two separate consent records, GL-only consenting-tenants route). DESIGN ONLY, nothing built. Depends on peers: OmniView (private API + SRS wording), GL (consenting-set call shape, D22), WEB (widget contract), CM (Cognito app client for EA->Omniview, EA_JWT_SERVICE_AUDIENCE_GL wiring, private path). | EA repo only: new file docs/Omniview_v2_EA_Route_Contracts.md on a local branch; no shared docs edited by EA |
 
 
 
