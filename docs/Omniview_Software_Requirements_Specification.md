@@ -262,6 +262,7 @@ non-identifying reports**. Read-only throughout (NFR-OV-6).
 | FR-OV-M4 | Every report is available for the whole market and for a segment | **Decided** (Femi: "both") |
 | FR-OV-M5 | All fiat currencies are translated into gold value; **gold is the base currency for Prodeo Capital's market analysis** | **Decided** (Femi) |
 | FR-OV-M6 | Every published figure obeys NFR-OV-7 (non-identification), with no exceptions | **Sacrosanct** (Femi) |
+| FR-OV-M7 | Every market report shall carry a visible label stating that it is **unaudited** and compiled from tenants' own books. Prodeo Capital is engaged as accountants, not auditors, and gives no audit assurance on these figures. The label shall also show the gold rate and date used (FR-OV-M5) | **Decided** (Femi, 2026-10-04) |
 
 **Open, not assumed:**
 - *What counts as "debt"* for the debt-to-equity ratio (borrowings only, or interest-bearing items more broadly), and which balance-sheet lines make up "liabilities" and "shareholders' funds".

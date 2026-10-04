@@ -131,11 +131,11 @@ arriving from UC-OV-2 by clicking a Tenant's support-activity count.
 2. Omniview obtains the aggregates: tenant count, staff count, aggregate shareholders' funds, and both leverage ratios (liabilities to equity, debt to equity), each as a ratio of aggregate totals.
 3. Omniview translates every fiat figure into gold value and shows the rate used (FR-OV-M5).
 4. Any figure covering fewer tenants than the minimum is suppressed, including where it could be derived by subtracting one figure from another (NFR-OV-7).
-5. Omniview renders the report.
+5. Omniview renders the report with a visible label: unaudited, compiled from tenants' own books, no audit assurance, plus the gold rate and date used (FR-OV-M7).
 
 **Postconditions:** Only aggregates are shown. No per-tenant figure is exposed anywhere. Nothing is written into any tenancy (NFR-OV-6).
 
-**Traces to:** FR-OV-M1 to M6, NFR-OV-6, NFR-OV-7.
+**Traces to:** FR-OV-M1 to M7, NFR-OV-6, NFR-OV-7.
 
 ---
 
