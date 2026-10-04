@@ -54,3 +54,9 @@ From WEB's feasibility view (SRS section 12.1). WEB builds only against real, de
 - **H. Compatibility and cutover.** New routes are additive; the existing support-thread routes stay until the widget has moved; contract-breaking changes use the lockstep pattern (field diff, coordinated window); state what happens to existing operator-thread history for the Owner Admin (D1/D2, FR-OV-S18); CORS allows WEB's origin with `Authorization` and GET/POST (FR-OV-S23).
 
 Also open, asked of EA earlier in this document: whether a ticket may carry the `companyId` the user was working in as context (D5, optional).
+
+## Answered by EA, 2026-10-04 (corrections and open items)
+
+EA's feasibility view is recorded in SRS section 12.3. Corrections to this document: use **403** for `consent_required` (not 409); idempotency is **at-least-once with the key**, since a timeout may have landed; the authoritative quota and the unread marker live in **Omniview**, EA enforcing size and burst and passing Omniview's 429 through; the consenting-tenants route needs a **service-principal validator** because EA's GL provider slot has the human validator today. Open: the consent boundary rule (D33), new-ticket alerting (D34), staff counting detail (D15/D24). **EA offers to own the route-contract doc once Femi confirms D3.**
+
+**Security requirement (EA, 2026-10-04):** the consenting-tenants route group is authenticated by the GL provider **only**, with a service-principal validator, and **fails closed** when the GL audience is unset (not registered, or 503). EA's current `glServiceVerifier ?: verifier` would otherwise make it callable by any tenant user. Written into SRS NFR-OV-14.
