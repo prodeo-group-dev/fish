@@ -1,0 +1,138 @@
+# Omniview v2 — Backlog (Tasks, Dependency-Ordered)
+
+**Status:** draft, 2026-10-04. The **T** and **O** steps of the second
+SPUTO. **Planning only: build, Terraform apply and deploy stay suspended
+until Femi says otherwise**, so every build row below is *Not started —
+suspended*. Companions:
+`docs/Omniview_v2_Software_Requirements_Specification.md` (`FR-OV-*`,
+`NFR-OV-*`, decisions `D1`–`D20`), `docs/Omniview_v2_Use_Cases.md`.
+This document **fleshes out Waves 7 and 8** of `docs/Omniview_Backlog.md`
+(whose rows 7.0 and 8.0 were "needs its own SPUTO"; this is that pass).
+Waves 0–4 there are unchanged except 3.5 and 3.6 as already revised.
+
+**Revised 2026-10-04: never internet-facing** (Femi: "IT CAN NEVER BE
+INTERNET FACING"; corrected seed, FiSH PR #61). Omniview is private-network
+only; tickets reach it only through a FiSH service (PROPOSED: EA relays;
+D3). Waves 7A–7C below are reshaped around that: no public hostname,
+listener rule or certificate, no JWT verification inside Omniview, and a
+new EA task for the relay.
+
+**Protocol:** claim a row (session + date) as its own small commit before
+starting; mark `Done` with a commit reference; never edit another
+session's row. Only CM pushes, merges and deploys. Work in another
+service's repo needs a row in that repo's COORDINATION file and a message
+to its session through the proper channel. Every row names **every** peer
+dependency, not the most salient one. Front-end work for client-facing
+screens goes through WEB (Omniview's own operator console is exempt).
+
+**Peers:** CM (infra, secrets, review/push/deploy), GL, EA, WEB sessions;
+Femi (decisions, DNS, Terraform apply); a solicitor and a statistician
+(external, via Femi).
+
+---
+
+## Wave 7A: decide (no code; unblocks everything after it)
+
+| # | Item | Owner | Depends on | Status |
+|---|---|---|---|---|
+| 7A.0 | Full SPUTO pass for Product Support (this document set) | Omniview | — | **Done 2026-10-04**, revised same day for the private-only rule (draft, pending Femi's review) |
+| 7A.1 | Femi decides the Support-blocking items: D1 (retire interim thread view), D2 (EA's old operator threads), D5 (ticket model; attachments out), D12 (email, and who sends), D13 (operator authentication), D17 (ticket data protection, with solicitor), D21 | Femi (+ solicitor for D17) | 7A.0 | Open |
+| 7A.2 | Confirm **D3**: EA as the relay, and service-to-service authentication to Omniview (a Cognito service-account audience for EA, plus a security-group restriction) | CM, EA, then Femi | 7A.0 | Open |
+| 7A.3 | **D4: how operators reach a private Omniview** (VPN, SSM port-forward, or another internal-only path). The shared load balancer is public, so this needs a different path; it also decides when WEB's public `/operator` can be retired | CM, Femi | 7A.0 | Open |
+| 7A.4 | WEB confirms the widget now calls **EA's** ticket routes (a repoint of the existing support-chat client), never Omniview | WEB | 7A.2 | Open |
+
+## Wave 7B: foundation (suspended)
+
+| # | Item | Owner | Depends on | Status |
+|---|---|---|---|---|
+| 7B.1 | Remove the write path (backlog 3.6): the reply POST proxy, the reply box in the ported frontend, their tests | Omniview | Femi: resume build | Not started, suspended |
+| 7B.2 | Read-only enforcement test: outbound gateways expose no write method (NFR-OV-6). Omniview's own database repositories are exempt; the test covers gateways to other services only | Omniview | 7B.1 | Not started, suspended |
+| 7B.3 | **Private-only** `omniview.tf`: no public ALB rule, certificate or DNS name (the earlier version was reverted for exactly that). An internal path for the relay and for operators (D4), a database on the shared RDS (own DB, the manual 5-step creation procedure), secrets, a security group admitting only the relay's group and the operator access path. Controlled outbound access for its calls to EA/GL/health endpoints (and SES if D12 says Omniview sends). The apply must be **targeted** (state has drifted; a full plan would replace the Jenkins admin password) and is Femi's | CM, Femi | 7A.2, 7A.3 | Not started, suspended |
+| 7B.4 | Persistence: Exposed + Flyway, small bounded pool (NFR-OV-11), tickets and replies tables, migration verified against a fresh database | Omniview | 7B.3 (a database to point at; local work can use Postgres) | Not started, suspended |
+| 7B.5 | **Service-to-service authentication** for inbound calls (NFR-OV-14): verify a Cognito service-account credential with the relay's audience (no defaults), fail closed. **No human JWT verification and no `/me` call inside Omniview** | Omniview | 7A.2 | Not started, suspended |
+| 7B.6 | Console and input hardening: strict CSP on the operator console, text-only rendering of ticket content, body and field size limits (NFR-OV-8, 10). No CORS configuration is needed because no browser calls Omniview from another origin | Omniview | 7B.5 | Not started, suspended |
+| 7B.7 | **EA relay routes** (EA session): Owner-Admin ticket create / list / read routes that verify the Owner Admin with EA's existing gate, apply the per-tenant quota and size limits, call Omniview privately as a service, **store no ticket content**, and fail closed when Omniview is unreachable (FR-OV-S9, S14, S15, S16). EA's existing tenancy-internal chat is untouched | **EA** | 7A.2, 7B.5 (the contract to call), 7A.1 (D1, D2, D18) | Not started, suspended |
+
+## Wave 7C: Product Support live (suspended)
+
+| # | Item | Owner | Depends on | Status |
+|---|---|---|---|---|
+| 7C.1 | Ticket domain (states Open/Answered/Closed, invariants) and use cases, test-first | Omniview | 7B.4 | Not started, suspended |
+| 7C.2 | Internal ticket API for the relay (UC-OV-5, 8): create, list a tenant's tickets, read replies. **Adversarial tests:** a call without the service credential, a credential with the wrong audience, a request for another tenant's ticket id, a forged tenant id from a non-relay caller | Omniview | 7B.5, 7B.6, 7C.1 | Not started, suspended |
+| 7C.3 | Operator ticket API and console view (UC-OV-6): queue, thread, reply, close; tenant-name lookup read-only from EA; text rendered as text | Omniview | 7C.1, 7B.6 | Not started, suspended |
+| 7C.4 | Email notification (only if D12 = yes): sender per D12 (Omniview via SES, or the relay), bare "you have a reply" content | Omniview or EA, CM (SES identity, egress) | 7A.1 (D12), 7C.2 | Not started, suspended |
+| 7C.5 | Retention, export and erasure of ticket content (FR-OV-S13) | Omniview | 7A.1 (D17), 7C.1 | Not started, suspended |
+| 7C.6 | **WEB widget:** an Owner Admin raises a ticket and reads replies **through EA's ticket routes**; an employee sees "ask your Owner Admin" and keeps EA chat (UC-OV-5, 8, 10) | **WEB** | 7B.7 deployed, 7A.4 | Not started, suspended (request via WEB session) |
+| 7C.7 | **EA:** once WEB switches, stop accepting new tenant posts to the legacy operator thread; leave `/me` and tenancy-internal chat unchanged (D1/D2) | **EA** | 7C.6 | Not started, suspended |
+| 7C.8 | Backups and a tested restore for the ticket database (NFR-OV-12) | CM | 7B.3 | Not started, suspended |
+| 7C.9 | Deploy, then verify live: tickets flow only through the relay; **prove Omniview is unreachable from outside** (no public listener, no public DNS, nothing answering from the internet); a forged or missing service credential is refused; an expired Owner-Admin token never reaches Omniview | CM, Omniview, EA | 7B.3 applied, Jenkins PAT, 7B.7, 7C.2, 7C.3, the operator access path from 7A.3 working | Not started, suspended |
+| 7C.10 | WEB retires its public `/operator` (backlog 3.5) after at least one real operating cycle on tickets, **and only once operators can actually reach Omniview privately** | WEB | 7C.9, 7C.6, 7A.3 | Not started, suspended |
+
+## Wave 8A: Market decisions and legal (mostly not code; starts in parallel with Wave 7)
+
+| # | Item | Owner | Depends on | Status |
+|---|---|---|---|---|
+| 8A.1 | Femi decides D6 (debt definition, segment list), D7 (gold source, price, date), D14 (unit = Tenant, as-of date), D15 (staff definition), D20 (audience, role separation) | Femi | 7A.0 | Open |
+| 8A.2 | Cohort method, minimum sample sizes and concentration threshold set with a statistician (D8) | Femi + statistician | 8A.1 | Open |
+| 8A.3 | Consent wording and mechanism; the registering body's confidentiality rules (D9) | Femi + solicitor | — | Open |
+
+## Wave 8B: Market build (suspended; needs Wave 8A and work in three other repos)
+
+| # | Item | Owner | Depends on | Status |
+|---|---|---|---|---|
+| 8B.1 | **EA:** consent record (versioned, revocable, Owner Admin only), its routes, and an operator-only route listing consenting tenant ids with counts (D16) | **EA** | 8A.3 | Not started, suspended |
+| 8B.2 | **WEB:** consent screen for the Owner Admin (UC-OV-9) | **WEB** | 8B.1 | Not started, suspended |
+| 8B.3 | **GL:** as-at-date balance sheet (today it uses all posted activity) | **GL** | 8A.1 (D14) | Not started, suspended |
+| 8B.4 | **GL:** explicit debt flag on liability accounts, seeded Loans Payable flagged, a coverage count (FR-OV-M3a) | **GL** | 8A.1 (D6) | Not started, suspended |
+| 8B.5 | **GL design, then build:** an operator-only, totals-only aggregate route. Takes an allow-list of tenant ids, a rate table and a date; sums each tenant's Companies; converts to gold; applies cohort, concentration and complementary suppression **inside GL**; returns the whole table (market and segments) as totals and counts only; audited; never logs per-tenant values (NFR-OV-9). **It must be its own route with its own authorization for Omniview's identity: GL's existing service-account bypass skips the tenant check and must not be reused** | **GL** | 8B.3, 8B.4, 8A.2 (D8), 8B.1, D10 | Not started, suspended |
+| 8B.6 | Gold rate table and its maintenance screen (UC-OV-11); report refuses a date with no rate | Omniview | 8A.1 (D7), 7B.4 | Not started, suspended |
+| 8B.7 | Market report API and view (UC-OV-7, 12): the labels, the suppressed-cell display, a response-shape guard that rejects anything per-tenant from GL | Omniview | 8B.5, 8B.6, 8B.1 | Not started, suspended |
+| 8B.8 | **Adversarial non-identification suite:** differencing across time and consent churn, complementary suppression, the allow-list count, dominance, small cells, logs and error text. Statistician reviews the cases | GL, Omniview, statistician | 8B.5, 8B.7 | Not started, suspended |
+| 8B.9 | Authorize Omniview as a caller of the GL route (a service identity, secret, env), with GL's own route and authorization, **never the existing service-account bypass**. Omniview's call to GL is outbound over the private network; the GL route is not reachable beyond that gating | CM, GL | 8B.5 | Not started, suspended |
+| 8B.10 | Deploy and verify live with real consenting tenants | CM, Omniview, GL | 8B.1–8B.9, Wave 7C deployed | Not started, suspended |
+
+## Wave 9: parked, with reasons
+
+| # | Item | Why parked |
+|---|---|---|
+| 9.1 | Education Runtime status (`docs/omniview-er-status-sputo`, unmerged) | Femi: ER is an industry sub-segment; its own SPUTO later |
+| 9.2 | Stored snapshots and trends | Revocation and differencing make this risky (FR-OV-M9) |
+| 9.3 | Consolidation of intercompany balances inside one tenant | GL has none; reports state the limit until it exists |
+| 9.4 | Attachments on tickets | An upload surface carrying tenant files through a public relay into the ticket store; large risk, little value for v2 (D5) |
+| 9.5 | Real operator identity system | Only if D13 chooses to keep the token bridge |
+
+---
+
+## Dependency chain
+
+```
+7A.1 (Femi) ──┐
+7A.2 (CM/EA, then Femi) ─┬─> 7B.5 ─> 7B.6 ─┐
+7A.3 (CM + Femi: D4) ────┤                  ├─> 7C.2 ─┐
+                         └─> 7B.3 (CM+Femi) ─> 7B.4 ─> 7C.1 ─┴─> 7C.3 ─┐
+7B.5 ─> 7B.7 (EA relay) ─> 7C.6 (WEB) ─> 7C.7 (EA)                      │
+7B.3, 7B.7, 7C.2, 7C.3, 7A.3 ──────────────────────────> 7C.9 <────────┘
+7C.9, 7C.6, 7A.3 ─> 7C.10 (WEB retires /operator)
+7B.1 ─> 7B.2   (independent of the rest of 7B)
+
+8A.1/8A.2/8A.3 (Femi, statistician, solicitor)
+  8A.3 ─> 8B.1 (EA) ─> 8B.2 (WEB)
+  8A.1 ─> 8B.3, 8B.4 (GL) ─┐
+  8A.2 ─────────────────────┴─> 8B.5 (GL, needs 8B.1) ─> 8B.9 ─> 8B.7 <─ 8B.6 ─> 8B.8 ─> 8B.10
+```
+
+## What can move while the build is suspended
+
+Planning only, none of it code: Femi's decisions in 7A.1 and 8A.1;
+CM + EA confirming D3 (7A.2) and CM + Femi settling D4 (7A.3), which is
+the one most likely to be underestimated because every operator needs it
+before the console is usable at all; WEB confirming 7A.4; starting the
+solicitor and statistician conversations (8A.2, 8A.3); and the GL session
+writing its design for 8B.5, the longest pole and the riskiest piece.
+
+## Recommended order, with reasons
+
+1. **Wave 7 (Support) before Wave 8 (Market).** Agreed with the seed. Support needs one new piece in one other service (the EA relay, 7B.7, built on identity logic EA already has), unblocks retiring `/operator`, and delivers value alone. Market needs new code in GL, EA and WEB, a consent mechanism that does not exist, a statistician and a solicitor.
+2. **Start 8A (decisions and legal) alongside Wave 7**, because it is the slowest and depends on people, not engineering.
+3. **Inside Market, liabilities-to-equity before debt-to-equity** (FR-OV-M3a): the first needs no new account concept in GL, the second needs the debt flag and coverage.
+4. **Never ship Market without 8B.8.** A report that works but cannot be shown to resist differencing is the outcome the SRS ranks worst.
