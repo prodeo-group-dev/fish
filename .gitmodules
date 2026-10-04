@@ -18,7 +18,7 @@
 	url = https://github.com/prodeo-group-dev/fish-common.git
 [submodule "WEB"]
 	path = WEB
-	url = https://github.com/prodeo-group-dev/fish-gl-web.git
+	url = https://github.com/prodeo-group-dev/fish-web.git
 [submodule "EA"]
 	path = EA
 	url = https://github.com/prodeo-group-dev/fish-enterprise-administration.git
