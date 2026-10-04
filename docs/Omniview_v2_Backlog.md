@@ -1,8 +1,7 @@
 # Omniview v2 — Backlog (Tasks, Dependency-Ordered)
 
 **Status:** draft, 2026-10-04. The **T** and **O** steps of the second
-SPUTO. **Planning only: build, Terraform apply and deploy stay suspended
-until Femi says otherwise**, so every build row below is *Not started —
+SPUTO. **Build resumed 2026-10-04 (Femi: "Resume the Omniview build", confirmed to CM); Product Support go-live is the priority (Femi: "I need it to go live as it is the first level of support I will be giving to tenants"), Market Support is behind it. Only DECIDED items are built; Terraform applies are run by Femi, targeted, from a reviewed plan; only CM merges and deploys.** Rows still marked *suspended* below predate the resume and are read against the go-live plan that follows., so every build row below is *Not started —
 suspended*. Companions:
 `docs/Omniview_v2_Software_Requirements_Specification.md` (`FR-OV-*`,
 `NFR-OV-*`, decisions `D1`–`D20`), `docs/Omniview_v2_Use_Cases.md`.
@@ -28,6 +27,60 @@ screens goes through WEB (Omniview's own operator console is exempt).
 **Peers:** CM (infra, secrets, review/push/deploy), GL, EA, WEB sessions;
 Femi (decisions, DNS, Terraform apply); a solicitor and a statistician
 (external, via Femi).
+
+---
+
+## Support go-live plan (2026-10-04): the shortest safe path
+
+**Scope of "live" (Femi, via CM):** an Owner Admin raises a ticket from FiSH (WEB, then the EA relay, then Omniview); an operator sees it, **is alerted**, answers; the Owner Admin sees the reply in the chat; Omniview is private-only; closure is handled; nothing is lost. **Market Support and the GL route are not built now** (they need the statistician's numbers, consent wording and GL work anyway; D8 stays the launch gate for any market figure).
+
+### Femi's one-line answers (each with my recommended default)
+
+| # | Decision | Recommended default (answer "default" to accept all) | Why it is on the v1 path |
+|---|---|---|---|
+| D5 | Ticket shape | **Real tickets** (several per tenant, each its own thread and status; no attachments), the shape EA's Draft 3 and the SRS are written to. One thread per tenant is smaller for WEB (a repoint) but has no per-issue closure, and closure is a requirement | Fixes the API, the schema and the widget |
+| D34 | How Prodeo staff are alerted | **An SNS topic with an email subscription to a support mailbox** (Prodeo's own staff, not a tenant email, no internet egress through a private VPC endpoint); on-call is **Femi** until he names someone; a second alert fires when a ticket has waited **4 hours** unanswered; SMS or chat can subscribe later with no code change | A ticket nobody is told about is an unfinished build (FR-OV-S31) |
+| D38 | Closure | **Operators close.** A reply on a CLOSED ticket is refused `409 ticket_closed` and the widget offers "start a new ticket". **Auto-close of stale Answered tickets follows v1**; until then the awaiting-reply queue and ageing are the safety net | Closure is in the definition of live; auto-close needs a scheduler, so it is not on the shortest path |
+| D4 | How operators reach a private Omniview | **SSM Session Manager port-forward** from an operator's machine to the Omniview task (identity-based, no VPN to buy, nothing public). CM's lane; he may prefer a VPN | Without it nobody can answer a ticket |
+| D13 | Operator identity inside Omniview | **Named per-operator tokens held in Secrets Manager** (the pattern EA's `EA_OPERATOR_TOKENS` already uses), over the private path; a Cognito operator group follows. Omniview now owns ticket data, so it must authenticate operators itself; today it only forwards a token to EA | Omniview's own operator routes cannot ship unauthenticated |
+| D35/D9 | Is a support-terms acceptance needed before the first ticket | **No acceptance gate in v1.** The widget shows a plain notice ("Prodeo staff will read this message and see your business name"), wording Femi's, solicitor to confirm. EA's support-terms record (already designed in Draft 3) stays the gate to switch on if the solicitor says one is needed. **Market consent is not needed for support** (D35) | Removes the consent routes and text from the critical path |
+| D17 | Ticket data protection (retention, erasure) | **v1: keep tickets until an operator erases one on a verified request (a documented manual procedure); no retention job.** Solicitor to confirm; automatic retention follows | A solicitor question; the default needs no code |
+| D1/D2 | Legacy EA operator threads | **Leave them read-only in EA; WEB's `/operator` stays as their reply surface** until they are closed or abandoned (FR-OV-S18) | Avoids migrating content authored under other rules |
+
+### (1) Minimum v1 that can go live safely
+
+| Layer | In v1 | Backlog rows |
+|---|---|---|
+| Omniview | Remove the reply write path; read-only enforcement test; **persistence** (Exposed, Flyway, tickets and messages, small pool); **ticket domain** (Open, Answered, Closed); **inbound service authentication** (fails closed); **internal ticket API** for the relay (create, list, messages, reply, read marker, unread count, idempotency, quota, size limits, adversarial tests); **operator authentication** (D13); **operator console** (queue with ageing, thread, reply, close; text rendered as text; strict CSP); **alert publisher** (D34); the workflow completeness check (section 14) on create, reply, close, alert | 7B.1, 7B.2, 7B.4, 7B.5, 7B.6, 7C.1, 7C.2, 7C.3, 7C.12 (queue and ageing), 7C.14, 7C.15 |
+| EA | **Security release first** (company registration, invite guard), then the **relay routes** to Contract Draft 3 section 2 (create, list, messages, reply, read, unread; Owner Admin gate; quota; idempotency; error mapping; fail closed with a distinguishable 503), the Omniview gateway with its service-account token provider | 7B.7 (consent routes only if D35/D9 says a gate is needed) |
+| WEB | Widget repointed to EA's ticket routes ("Raising for: tenant", draft kept on failure, idempotent submit, unread on the chat entry); an employee is told to ask the Owner Admin | 7A.4, 7C.6 |
+| CM | See the ordered list below | 7B.3, 7C.8, 7C.9 |
+
+### (2) What follows v1 (not on the critical path)
+
+Everything in Wave 8 (Market Support, the GL route, the consent records for market use, D8's numbers, D36); EA's market-consent routes; the app-wide unread indicator on every screen (FR-OV-S25; v1 has unread on the chat entry only); auto-close of stale tickets and automatic retention (D38, D17); history search (S28); the passive monitors beyond the support alert (D39); retiring WEB's `/operator` (7C.10); disposition of the legacy operator threads (D2) beyond leaving them read-only; ER status data; treasury, gold and rates.
+
+### Critical path (no dates)
+
+1. **EA security release** ships alone first (its own release; independent of everything below).
+2. **In parallel, CM:** the Omniview database and secrets, the EA-to-Omniview Cognito client and audience, the private-only service, operator access, the SNS path (list below). **In parallel, Omniview:** persistence, then the ticket domain, then inbound service auth, then the internal ticket API (7B.4, 7C.1, 7B.5, 7C.2). Local Postgres and a fake token issuer cover the build, so none of this waits for infrastructure.
+3. **EA builds the relay against the API shape in SRS 13.2** (a fake gateway first) and **WEB builds the widget against EA's contract**; both already have what they need.
+4. **Omniview operator authentication, console and alert publisher** (7C.3, 7C.12, 7C.14, 7B.6).
+5. **First private deploy** (Femi applies the reviewed, targeted plan), then **live verification (7C.9):** Omniview is unreachable from outside; a missing or forged service credential is refused; an expired Owner-Admin token never reaches Omniview; a ticket flows end to end; an alert arrives; a reply reaches the chat; closure works; a restore of the ticket database is proven.
+6. **WEB switches the widget** (no feature flag, after the relay is live). Go-live.
+
+The longest chain is 2 (Omniview side) to 4 to 5; the CM items (2) and the EA relay (3) run beside it and must all land before step 5.
+
+### What Omniview needs from CM, in order
+
+1. **The EA security release** first, on its own.
+2. **The Cognito service client and audience for EA calling Omniview** (the audience name and the issuer/JWKS values) so the verifier and EA's token provider are wired from the start; the verifier fails closed when the audience is unset (NFR-OV-14).
+3. **A database on the shared RDS** (`omniview_production`, the manual five-step creation) and its credentials in Secrets Manager. Not needed for local work; needed before the first deploy.
+4. **The private-only service** (a rework of the reverted `omniview.tf`, **no** public ALB rule, certificate or DNS name): the task definition, a security group admitting only EA's, and **an internal path for EA to reach Omniview**, with its base URL given to EA as `EA_OMNIVIEW_BASE_URL` or equivalent.
+5. **Operator private access (D4)** and **named per-operator tokens in Secrets Manager** (D13).
+6. **The SNS topic, a private VPC interface endpoint, an email subscription (D34)**, and publish-only permission on Omniview's task role; I need the topic ARN as an environment value.
+7. **Backups and a tested restore** for the ticket database (NFR-OV-12, 7C.8), before go-live.
+8. **A targeted Terraform plan for Femi to apply, then the deploy and the 7C.9 outside-in verification.**
 
 ---
 
