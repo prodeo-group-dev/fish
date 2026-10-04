@@ -91,6 +91,12 @@ fully independent implementation, not a proxy.
 |---|---|---|---|---|
 | 7.0 | Full SPUTO pass for product-support ticketing (SRS §3.5): ticket model and states, caller authentication, how FiSH's chat reaches Omniview, notifications, retention and privacy, disposition of EA's existing operator threads. Nothing is built before this | Omniview + Femi | — | Not started. **Suspended with all Omniview work, 2026-10-04** |
 
+## Wave 8 — market reporting (new 2026-10-04, NOT scoped)
+
+| # | Item | Owner | Depends on | Status |
+|---|---|---|---|---|
+| 8.0 | Full SPUTO pass for aggregate, non-identifying market reporting (SRS §3.6, NFR-OV-7): define the leverage ratio and segments, the gold price source and date rule, the minimum cohort size, where aggregates are computed, and the legal check of tenant terms. Includes a design request to the GL session for an operator-only, totals-only aggregate route (GL has no operator or cross-tenant read path today). Nothing is built before this | Omniview + GL + Femi | — | Not started. **Suspended with all Omniview work, 2026-10-04.** Non-identification is sacrosanct (Femi) |
+
 ## Wave 5 — future, explicitly out of scope for this backlog
 
 | # | Item | Owner | Depends on | Status |
