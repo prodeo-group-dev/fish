@@ -73,8 +73,8 @@ Status labels as in the SRS. Every flow that touches another service is
 **Trigger:** opens the Market view and picks whole market or a segment.
 
 **Main flow:**
-1. Omniview obtains the consenting-tenant list from EA (D16) and the current gold rate table from its own database.
-2. Omniview sends GL (operator-only, totals-only route) the allow-list, the report date and the rate table.
+1. Omniview reads the current gold rate table from its own database and calls GL's operator-only, totals-only route (a GET, D22) with the report date, the segment and the rate table.
+2. GL reads the consenting-tenant set from EA itself (D16). The caller never supplies or varies it, so two calls cannot be subtracted to isolate a tenant.
 3. GL computes each consenting tenant's balance sheet as at that date (summing its Companies), converts to gold, and applies the cohort, concentration and suppression rules **inside GL**. It returns totals and counts only, never a per-tenant figure.
 4. Omniview shows: tenants, staff with FiSH access, aggregate shareholders' funds, liabilities-to-equity (and debt-to-equity once the debt flag exists), each in gold, with the "unaudited, compiled from tenants' own books" label and the rate, source and date used (FR-OV-M1..M7).
 
