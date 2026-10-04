@@ -74,9 +74,9 @@ Status labels as in the SRS. Every flow that touches another service is
 
 **Main flow:**
 1. Omniview calls GL's operator-only, totals-only route (a GET, D22) with a report date from the fixed month-end menu and a segment. It sends nothing else: no tenant list, no rates.
-2. GL reads the consenting-tenant set from EA itself (D16) and the published gold rate for that date from Omniview's rate table (FR-OV-M12). The caller never supplies or varies either, so two calls cannot be subtracted, and a crafted rate cannot expose a single-currency tenant.
-3. GL computes each consenting tenant's balance sheet as at that date (summing its Companies), converts to gold, and applies the cohort, concentration and suppression rules **inside GL**. It returns totals and counts only, never a per-tenant figure.
-4. Omniview shows: tenants, staff with FiSH access, aggregate shareholders' funds, liabilities-to-equity (and debt-to-equity once the debt flag exists), each in gold, with the "unaudited, compiled from tenants' own books" label and the rate, source and date used (FR-OV-M1..M7).
+2. GL reads the consenting-tenant set from EA itself (D16). The caller never supplies or varies it, so two calls cannot be subtracted to isolate a tenant.
+3. GL computes each consenting tenant's balance sheet as at that date (summing its Companies), reports per currency, and applies the cohort, concentration and suppression rules **inside GL**. It returns totals and counts only, never a per-tenant figure.
+4. Omniview shows, **per currency** (FR-OV-M18, PROPOSED, D28): tenants, staff with FiSH access, aggregate shareholders' funds, and the leverage ratio (total liabilities to shareholders' funds), each in the currency the books are kept in, with the "unaudited, compiled from tenants' own books" label and the as-at date (FR-OV-M1..M7). Tenant and staff counts are currency-neutral. There are no cross-currency totals.
 
 **Alternate flows:**
 - 3a. A figure fails the cohort or concentration test: it is shown as "insufficient cohort" (FR-OV-M10). Related cells are suppressed with it so it cannot be recovered by subtraction (§7.1 of the SRS).
@@ -139,22 +139,9 @@ Status labels as in the SRS. Every flow that touches another service is
 
 ---
 
-## UC-OV-11: Omniview downloads daily rates; an operator reviews failures and corrections
+## UC-OV-11: *(Deferred)* daily rate download
 
-**Actor:** a scheduled job (Omniview); Operator (review and correction only). **Trigger:** once a day.
-
-**Main flow:**
-1. The job calls the rate provider over HTTPS through the controlled egress path (D26, NFR-OV-16) and fetches the day's rates (D27).
-2. For each rate it checks the value against the previous day within a bound, and stores it with its source, retrieval time and raw value (FR-OV-M15). Stored rates are never overwritten.
-3. GL later reads the one published rate for a report date when it builds a report (UC-OV-7).
-
-**Alternate flows:**
-- 1a. The download fails: the job alerts. For an ordinary day nothing more is needed. For a month-end date the report for that date stays unavailable until the rate is backfilled from the provider's history or entered as an audited manual correction (FR-OV-M16). No rate is estimated or carried forward.
-- 2a. A value falls outside the bound: it is held for an operator's review, not published.
-- 3a. A correction is needed: an operator records it as a new row with an audited reason; the old row stays. A report already published is never silently recomputed.
-
-**Notes:** the operator who corrects rates should not be the operator who reads reports (D20). Gold is analytics-only: it never appears in a client-facing screen or currency list (FR-OV-M17).
-**Traces to:** FR-OV-M5, M12, M14, M15, M16, M17; D7, D23b, D26, D27.
+**Deferred to the Treasury & Investment Analysis phase** (SRS §11): Femi: "It is not required now" and "This leaving the area of accounting and into the treasury management and investment analysis space... and that will be done later." The full text is preserved under "Deferred use cases" at the end of this document. It is not built for Product Support or Market Support.
 
 ---
 
@@ -175,9 +162,33 @@ Status labels as in the SRS. Every flow that touches another service is
 |---|---|---|---|---|
 | UC-OV-5 | Raise a ticket (via the relay) | Owner Admin | EA `/me` (in the relay) | Omniview DB, through the relay |
 | UC-OV-6 | Answer a ticket | Operator | EA overview (name only) | Omniview DB |
-| UC-OV-7 | View market report | Operator | EA (consent list, counts), GL (new), Omniview rates | nothing |
+| UC-OV-7 | View market report | Operator | EA (consent list, counts), GL (new) | nothing |
 | UC-OV-8 | Read replies (pulled through the relay) | Owner Admin | EA `/me` (relay), Omniview DB | nothing |
 | UC-OV-9 | Grant/withdraw consent | Owner Admin | n/a | **EA** (EA's own data) |
 | UC-OV-10 | Employee opens chat | Employee | EA `/me` (in FiSH, in the relay) | nothing; never reaches Omniview |
-| UC-OV-11 | Daily rate download; review failures and corrections | Scheduled job; Operator | the rate provider (outbound, controlled egress) | Omniview DB |
+| UC-OV-11 | *(Deferred)* daily rate download | n/a | n/a | n/a (treasury phase) |
 | UC-OV-12 | Suppressed segment | Operator | as UC-OV-7 | nothing |
+
+
+---
+
+## Deferred use cases (Treasury & Investment Analysis, a later SPUTO)
+
+## UC-OV-11: Omniview downloads daily rates; an operator reviews failures and corrections
+
+**Actor:** a scheduled job (Omniview); Operator (review and correction only). **Trigger:** once a day.
+
+**Main flow:**
+1. The job calls the rate provider over HTTPS through the controlled egress path (D26, NFR-OV-16) and fetches the day's rates (D27).
+2. For each rate it checks the value against the previous day within a bound, and stores it with its source, retrieval time and raw value (FR-OV-M15). Stored rates are never overwritten.
+3. GL later reads the one published rate for a report date when it builds a report (UC-OV-7).
+
+**Alternate flows:**
+- 1a. The download fails: the job alerts. For an ordinary day nothing more is needed. For a month-end date the report for that date stays unavailable until the rate is backfilled from the provider's history or entered as an audited manual correction (FR-OV-M16). No rate is estimated or carried forward.
+- 2a. A value falls outside the bound: it is held for an operator's review, not published.
+- 3a. A correction is needed: an operator records it as a new row with an audited reason; the old row stays. A report already published is never silently recomputed.
+
+**Notes:** the operator who corrects rates should not be the operator who reads reports (D20). Gold is analytics-only: it never appears in a client-facing screen or currency list (FR-OV-M17).
+**Traces to:** FR-OV-M5, M12, M14, M15, M16, M17; D7, D23b, D26, D27.
+
+---
