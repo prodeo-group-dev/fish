@@ -151,7 +151,7 @@ Status labels as in the SRS. Every flow that touches another service is
 
 **Note:** whether rates are entered by hand or fetched from a named source is D7. Entering by hand is the smaller first step and removes a third-party dependency.
 
-**D23 (reading PENDING):** if rates for all currencies live in GL, this is **not an Omniview screen**: Omniview cannot write into GL, so rate entry is a GL operator action by a controlled path, and Omniview only displays the rate GL returns with each report.
+**D23b (rate home OPEN):** if rates for all currencies live in GL, this is **not an Omniview screen**: Omniview cannot write into GL, so rate entry is a GL operator action by a controlled path, and Omniview only displays the rate GL returns with each report.
 **Traces to:** FR-OV-M5, M7; D7.
 
 ---
