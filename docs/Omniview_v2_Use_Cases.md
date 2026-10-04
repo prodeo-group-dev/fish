@@ -111,7 +111,7 @@ Status labels as in the SRS. Every flow that touches another service is
 ## UC-OV-9: An Owner Admin grants or withdraws consent to aggregate use
 
 **Actor:** Owner Admin. **Preconditions:** the consent wording exists and is approved (D9).
-**Two separate things (D35):** accepting the **support terms** may gate raising a ticket; **market-aggregate consent** (this use case) is optional, revocable and never a condition of any service.
+**Two separate things (D35):** accepting the **support terms** may gate raising a ticket; **market-aggregate consent** (this use case) is optional, revocable and never a condition of any service. **Update 2026-10-05: there is no support-terms gate (Femi, confirmed to CM); only the market-aggregate consent remains a design, and it is out of v1. Raising a ticket (UC-OV-5) needs no acceptance step beyond being the tenant's Owner Admin.**
 **Trigger:** opens the consent screen in FiSH.
 
 **Main flow:**
