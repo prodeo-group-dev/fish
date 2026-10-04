@@ -65,3 +65,9 @@ EA's feasibility view is recorded in SRS section 12.3. Corrections to this docum
 
 - **Two consent purposes, not one (D35):** support terms (may gate tickets) and market-aggregate inclusion (optional, revocable, never a condition of any service). The ticket-route code is `support_terms_required`.
 - Only the **opaque user id** crosses to Omniview; the relay supplies the tenant display name on create; fixed error codes only, never raw exception or response text; a non-member or non-Owner-Admin is 403 `not_owner_admin`, 404 only for a ticket id; cache only the unread count briefly; the support routes need their own limits and a short timeout to Omniview with a fast 503.
+
+## Third round, 2026-10-04 (WEB's reading of the second round, SRS 12.5)
+
+- **Both consents need routes:** the current text and version, the Owner Admin's accepted version, accept, and, for the **market** consent only, revoke. The consent copy is content served by EA with a version; "fixed error codes only" is about error messages, not this copy.
+- **The error-code list is an enumerated, stable contract**; WEB treats an unknown code with a generic fallback, so changes follow the lockstep pattern.
+- **D36 (Femi):** where the Owner Admin revokes the market consent.
