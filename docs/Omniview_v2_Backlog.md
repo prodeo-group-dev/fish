@@ -12,7 +12,7 @@ Waves 0–4 there are unchanged except 3.5 and 3.6 as already revised.
 
 **Revised 2026-10-04: never internet-facing** (Femi: "IT CAN NEVER BE
 INTERNET FACING"; corrected seed, FiSH PR #61). Omniview is private-network
-only; tickets reach it only through a FiSH service (PROPOSED: EA relays;
+only; tickets reach it only through a FiSH service (EA relays, decided by Femi;
 D3). Waves 7A–7C below are reshaped around that: no public hostname,
 listener rule or certificate, no JWT verification inside Omniview, and a
 new EA task for the relay.
@@ -37,7 +37,7 @@ Femi (decisions, DNS, Terraform apply); a solicitor and a statistician
 |---|---|---|---|---|
 | 7A.0 | Full SPUTO pass for Product Support (this document set) | Omniview | — | **Done 2026-10-04**, revised same day for the private-only rule (draft, pending Femi's review) |
 | 7A.1 | Femi decides the Support-blocking items: D1 (retire interim thread view), D2 (EA's old operator threads), D5 (ticket model; attachments out), D13 (operator authentication), D17 (ticket data protection, with solicitor), D21 | Femi (+ solicitor for D17) | 7A.0 | Open |
-| 7A.2 | Confirm **D3**: EA as the relay, and service-to-service authentication to Omniview (a Cognito service-account audience for EA, plus a security-group restriction) | CM, EA, then Femi | 7A.0 | Open |
+| 7A.2 | Confirm **D3**: EA as the relay, and service-to-service authentication to Omniview (a Cognito service-account audience for EA, plus a security-group restriction) | CM, EA, then Femi | 7A.0 | **D3 DECIDED 2026-10-04 (Femi): EA is the relay.** Remaining: the service-to-service authentication detail for CM and EA (required verifier, fails closed, NFR-OV-14) |
 | 7A.3 | **D4: how operators reach a private Omniview** (VPN, SSM port-forward, or another internal-only path). The shared load balancer is public, so this needs a different path; it also decides when WEB's public `/operator` can be retired | CM, Femi | 7A.0 | Open |
 | 7A.4 | WEB confirms the widget now calls **EA's** ticket routes (a repoint of the existing support-chat client), never Omniview | WEB | 7A.2 | Open |
 
@@ -84,8 +84,8 @@ Femi (decisions, DNS, Terraform apply); a solicitor and a statistician
 
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
-| 8B.1 | **EA:** consent record (versioned, revocable, Owner Admin only), its routes, and an operator-only route listing consenting tenant ids with counts (D16), **and per consenting tenant its Companies with each Company's industry (`industryType` is per-Company in EA; GL has none) and per-Company staff assignment counts**, so industry segments can be built (D14, D24). **Readable by GL's service identity as well as Omniview's** (D22) | **EA** | 8A.3 **EA's sizing: the consent record is small-medium; the consenting-tenants route is bigger than a scaffolded slot: EA's GL provider slot has the human validator today, so it needs a service-principal validator, a route group authenticated by the GL provider only, and tests (EA will verify that an unset audience fails closed). Append-only, effective-dated, per tenant (SRS 12.3).** **The service-only route group fails closed when the GL audience is unset (NFR-OV-14); EA found its current wiring would otherwise fall back to the human verifier.** **Two separate versioned records (D35): support terms (may gate tickets) and market-aggregate consent (optional, never a condition of any service).** | Not started, suspended |
-| 8B.2 | **WEB:** consent screen for the Owner Admin (UC-OV-9) | **WEB** | 8B.1 | Not started, suspended |
+| 8B.1 | **EA:** consent record (versioned, revocable, Owner Admin only), its routes, and an operator-only route listing consenting tenant ids with counts (D16), **and per consenting tenant its Companies with each Company's industry (`industryType` is per-Company in EA; GL has none) and per-Company staff assignment counts**, so industry segments can be built (D14, D24). **Readable by GL's service identity as well as Omniview's** (D22) | **EA** | 8A.3 **EA's sizing: the consent record is small-medium; the consenting-tenants route is bigger than a scaffolded slot: EA's GL provider slot has the human validator today, so it needs a service-principal validator, a route group authenticated by the GL provider only, and tests (EA will verify that an unset audience fails closed). Append-only, effective-dated, per tenant (SRS 12.3).** **The service-only route group fails closed when the GL audience is unset (NFR-OV-14); EA found its current wiring would otherwise fall back to the human verifier.** **Two separate versioned records (D35): support terms (may gate tickets) and market-aggregate consent (optional, never a condition of any service).** **Routes for both consents (WEB feedback): read current text and version, read the accepted version, accept, and for the market consent only revoke.** | Not started, suspended |
+| 8B.2 | **WEB:** consent screen for the Owner Admin (UC-OV-9) | **WEB** | 8B.1 **Also a reachable place to read the market consent's state and revoke it, placement open (D36); WEB has no settings or privacy page today.** | Not started, suspended |
 | 8B.3 | **GL:** as-at-date balance sheet (today it uses all posted activity) | **GL** | 8A.1 (D14) GL's view: a small change (the entry date column exists); the tenant-facing balance sheet gets an optional as-at date too, which also benefits WEB. | Not started, suspended |
 | 8B.4 | ~~**GL:** explicit debt flag on liability accounts, seeded Loans Payable flagged, a coverage count (FR-OV-M3a)~~ | **GL** | 8A.1 (D6) | **DROPPED 2026-10-04:** Femi, D6: one ratio, total liabilities to shareholders' funds; debt means liabilities, so no debt flag is needed |
 | 8B.5 | **GL design, then build:** an operator-only, totals-only aggregate route, **a GET** (D22). Takes **only a fixed report date and a segment**; **reads the consenting set from EA itself** (so no allow-list comes from the caller); sums each tenant's Companies and **builds industry segments from Companies** (a multi-industry tenant appears in each, D14, DECIDED); reports **per currency with no cross-currency totals** (FR-OV-M18, DECIDED, D28); applies cohort and concentration tests (**at both tenant and company level, the stricter governing**, FR-OV-M13), complementary suppression and the cohort-churn rule (FR-OV-M11; mechanism per D29: GL recommends the stateless variant over keeping its own record of published cohorts) **inside GL**; returns the whole table (market and segments) as totals and counts only; audited; never logs per-tenant values (NFR-OV-9). **It must be its own route with its own authorization for Omniview's identity: GL's existing service-account bypass skips the tenant check and must not be reused** | **GL** | 8B.3, 8B.4, 8A.2 (D8), 8B.1, D10, D22, D28 | Not started, suspended |
@@ -149,7 +149,7 @@ Femi: "It is not required now" and "This leaving the area of accounting and into
 ## What can move while the build is suspended
 
 Planning only, none of it code: Femi's decisions in 7A.1 and 8A.1;
-CM + EA confirming D3 (7A.2) and CM + Femi settling D4 (7A.3), which is
+CM + EA settling the service-to-service authentication (7A.2) and CM + Femi settling D4 (7A.3), which is
 the one most likely to be underestimated because every operator needs it
 before the console is usable at all; WEB confirming 7A.4; starting the
 solicitor and statistician conversations (8A.2, 8A.3); and the GL session

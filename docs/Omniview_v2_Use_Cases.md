@@ -10,9 +10,9 @@ UC-1..8 map as: 1→UC-OV-1, 2→UC-OV-2, 3→UC-OV-4, 4→UC-OV-5,
 
 **Revised 2026-10-04: Omniview is never internet-facing** (SRS principle
 10). A tenant's browser never reaches it. The flows below that involve an
-Owner Admin go through a **relay** (PROPOSED: EA, decision D3), over the
+Owner Admin go through a **relay** (EA, decided: D3), over the
 private network, with service-to-service authentication. Where a use case
-says "the relay", read EA unless Femi chooses otherwise.
+says "the relay", read EA.
 
 Actors: **Owner Admin** (a tenant's one Owner Admin), **Employee** (any
 other active member of a tenant), **Operator** (Prodeo staff).
