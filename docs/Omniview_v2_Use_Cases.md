@@ -8,6 +8,12 @@ numbers and are completed here; UC-OV-8 to 12 are new. The seed's
 UC-1..8 map as: 1→UC-OV-1, 2→UC-OV-2, 3→UC-OV-4, 4→UC-OV-5,
 5→UC-OV-8, 6→UC-OV-6, 7→UC-OV-7, 8→UC-OV-3.
 
+**Revised 2026-10-04: Omniview is never internet-facing** (SRS principle
+10). A tenant's browser never reaches it. The flows below that involve an
+Owner Admin go through a **relay** (PROPOSED: EA, decision D3), over the
+private network, with service-to-service authentication. Where a use case
+says "the relay", read EA unless Femi chooses otherwise.
+
 Actors: **Owner Admin** (a tenant's one Owner Admin), **Employee** (any
 other active member of a tenant), **Operator** (Prodeo staff).
 Status labels as in the SRS. Every flow that touches another service is
@@ -17,31 +23,32 @@ Status labels as in the SRS. Every flow that touches another service is
 
 ## UC-OV-5: An Owner Admin raises a support ticket from inside FiSH
 
-**Actor:** Owner Admin. **Preconditions:** signed in to FiSH (Cognito); is Owner Admin of at least one tenant.
+**Actor:** Owner Admin. **Preconditions:** signed in to FiSH (Cognito); is Owner Admin of the tenant concerned.
 **Trigger:** opens the support chat in FiSH and sends a first message.
 
 **Main flow:**
-1. The widget calls Omniview directly with the user's Cognito token (D3, D4).
-2. Omniview verifies the token (issuer, audience, keys), then asks EA `GET /me` with that same token.
-3. Omniview confirms the caller is Owner Admin of the tenant being raised for; the tenant comes from the verified `/me` result, not from the request body (FR-OV-S9).
-4. Omniview creates a ticket (state Open) in its own database, with the tenant as a reference, the Owner Admin's identity, and the message (FR-OV-S1, S3, S12, NFR-OV-13).
-5. The widget shows the ticket as sent.
+1. The FiSH widget calls the **relay** (EA, public, already the FiSH back end the widget talks to) with the user's Cognito token. The widget never calls Omniview.
+2. The relay verifies the token and confirms the caller is Owner Admin of the tenant concerned, using its existing `/me` data and Owner-Admin gate (FR-OV-S9). It applies the per-tenant quota and size limits (FR-OV-S16).
+3. The relay calls Omniview over the private network, authenticated as a service (NFR-OV-14), passing the message, the tenant id and the user's identity. It stores **no copy** of the content (FR-OV-S14).
+4. Omniview creates a ticket (state Open) in its own database, with the tenant as a reference and the identity the relay asserted (FR-OV-S1, S3, S12, NFR-OV-13).
+5. The relay returns the ticket reference; the widget shows the message as sent.
 
 **Alternate flows:**
-- 2a. Token invalid or expired: 401; the widget asks the user to sign in again. No ticket.
-- 3a. Caller is not an Owner Admin of any tenant: 403 with a plain message (see UC-OV-10).
-- 3b. Caller is Owner Admin of several tenants: the widget asks which; the server checks the chosen tenant against `/me`.
-- 3c. EA is unreachable: 503, no ticket, the draft is kept in the widget so nothing typed is lost. Omniview never falls back to trusting the request's own tenant claim.
-- 4a. Over the per-tenant ticket quota, or body over the size limit: rejected with a clear message (NFR-OV-8, D18).
+- 2a. Token invalid or expired: 401 from the relay; the widget asks the user to sign in again. Omniview is never contacted.
+- 2b. Caller is not an Owner Admin of that tenant: 403 from the relay (see UC-OV-10). Omniview is never contacted.
+- 2c. Caller owns several tenants: the widget asks which; the relay checks the chosen tenant against `/me`.
+- 2d. Over quota or body too large: rejected by the relay with a clear message. Omniview repeats size limits as a second line.
+- 3a. Omniview is unreachable or rejects the relay's credential: the relay returns 503 and **fails closed** (FR-OV-S15); the widget keeps the draft so nothing typed is lost. The relay never stores the ticket itself as a fallback.
+- 3b. A call reaches Omniview from anything other than the authenticated relay: refused. Omniview trusts a tenant id only from the relay.
 
-**Postconditions:** one ticket exists in Omniview only. Nothing was written to EA or any service.
-**Traces to:** FR-OV-S1, S3, S9, S12; NFR-OV-6, 8, 13.
+**Postconditions:** one ticket exists in Omniview only. Nothing was written to EA's data or any tenancy's data.
+**Traces to:** FR-OV-S1, S3, S9, S12, S14, S15, S16; NFR-OV-6, 8, 13, 14.
 
 ---
 
 ## UC-OV-6: An operator triages and answers a ticket
 
-**Actor:** Operator. **Preconditions:** signed in (UC-OV-1, or a Cognito operator group if D13 moves there).
+**Actor:** Operator. **Preconditions:** the operator has private access to Omniview (D4); signed in (UC-OV-1, or a Cognito operator group if D13 moves there).
 **Trigger:** opens the Tickets view.
 
 **Main flow:**
@@ -88,15 +95,16 @@ Status labels as in the SRS. Every flow that touches another service is
 **Trigger:** opens the chat, or the widget's poll interval fires.
 
 **Main flow:**
-1. The widget asks Omniview for its tickets and new replies (authenticated as in UC-OV-5).
-2. Omniview returns only tickets of tenants the caller is verified Owner Admin of (FR-OV-S10).
-3. The widget shows the replies. **FiSH pulls; Omniview pushes nothing** (FR-OV-S4).
+1. The widget asks the **relay** for its tickets and new replies, with the user's Cognito token.
+2. The relay verifies the Owner Admin as in UC-OV-5, then **pulls** the tickets of that tenant from Omniview over the private network (FR-OV-S4, S10). Omniview scopes the read by the tenant id the relay supplies.
+3. The relay returns them; the widget shows the replies. Omniview pushes nothing anywhere.
 
 **Alternate flows:**
 - 2a. Another tenant's ticket id is requested: the response is indistinguishable from "no such ticket".
-- 3a. If D12 allows email: a reply also triggers an email to the Owner Admin's address. That is a message to a mailbox, written nowhere in a tenancy.
+- 2b. Omniview is unreachable: the widget shows the last replies it already had and a quiet "cannot refresh" note; no error that implies the ticket is lost.
+- 3a. If D12 allows email: a "you have a reply" email reaches the Owner Admin, sent by Omniview (needs controlled outbound access from its private subnets) or by the relay after it notices a reply. A message to a mailbox, written nowhere in a tenancy.
 
-**Traces to:** FR-OV-S4, S10; NFR-OV-8.
+**Traces to:** FR-OV-S4, S10; NFR-OV-8, 14; D12.
 
 ---
 
@@ -123,9 +131,9 @@ Status labels as in the SRS. Every flow that touches another service is
 
 **Actor:** Employee. **Trigger:** opens the chat in FiSH.
 
-**Main flow:** the widget recognises the user is not an Owner Admin (from the same `/me` data FiSH already holds), explains that product support is raised by the tenant's Owner Admin, and offers EA's internal chat so the employee can ask them (FR-OV-S5, S11). No call reaches Omniview.
+**Main flow:** the widget recognises the user is not an Owner Admin (from the same `/me` data FiSH already holds), explains that product support is raised by the tenant's Owner Admin, and offers EA's internal chat so the employee can ask them (FR-OV-S5, S11). No call reaches the relay's ticket route.
 
-**Alternate flow:** if the widget did call Omniview anyway, Omniview rejects with 403 (UC-OV-5, 3a). Hiding the control is a courtesy; the server check is the rule.
+**Alternate flow:** if the widget did call the relay anyway, the relay rejects with 403 (UC-OV-5, 2b) and Omniview is never contacted. Hiding the control is a courtesy; the relay's check is the rule.
 
 **Traces to:** FR-OV-S5, S11.
 
@@ -161,11 +169,11 @@ Status labels as in the SRS. Every flow that touches another service is
 
 | ID | Name | Actor | Reads from | Writes to |
 |---|---|---|---|---|
-| UC-OV-5 | Raise a ticket | Owner Admin | EA `/me` | Omniview DB |
+| UC-OV-5 | Raise a ticket (via the relay) | Owner Admin | EA `/me` (in the relay) | Omniview DB, through the relay |
 | UC-OV-6 | Answer a ticket | Operator | EA overview (name only) | Omniview DB |
 | UC-OV-7 | View market report | Operator | EA (consent list, counts), GL (new), Omniview rates | nothing |
-| UC-OV-8 | Read replies (pull) | Owner Admin | EA `/me`, Omniview DB | nothing |
+| UC-OV-8 | Read replies (pulled through the relay) | Owner Admin | EA `/me` (relay), Omniview DB | nothing |
 | UC-OV-9 | Grant/withdraw consent | Owner Admin | n/a | **EA** (EA's own data) |
-| UC-OV-10 | Employee opens chat | Employee | EA `/me` (in FiSH) | nothing |
+| UC-OV-10 | Employee opens chat | Employee | EA `/me` (in FiSH, in the relay) | nothing; never reaches Omniview |
 | UC-OV-11 | Maintain gold rates | Operator | n/a | Omniview DB |
 | UC-OV-12 | Suppressed segment | Operator | as UC-OV-7 | nothing |
