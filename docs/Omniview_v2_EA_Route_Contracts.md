@@ -1,4 +1,13 @@
-# Omniview v2: EA route contracts (DRAFT 4)
+# Omniview v2: EA route contracts (DRAFT 5)
+
+**Changes since Draft 4.1 (2026-10-05, Femi's decisions in the EA session):**
+- **There is NO support-specific agreement or gate.** Support is for every Owner Admin of every business of every industry and size. The support routes never answer `403 support_terms_required`; EA ships no consent routes and no `consent_wording_unavailable` in the support release.
+- **The terms agreement is an onboarding matter** (a general terms of use accepted once at sign-up) and is **parked as a go-live step**. Sections 3 and 3A are kept below as design for that later work and are marked PARKED; nothing in them is part of the support release. (The market-aggregate consent that section 4's GL route depends on is likewise not in v1.)
+- **The Product Support relay stays in EA** (Femi, keeping the earlier D3).
+- EA's purpose, stated by Femi, is to help the owner get information about his companies so he can decide well; EA builds no legal text, consent or agreement features unless asked and told where they belong.
+- Build status: the release candidate is EA branch `feat/omniview-support-relay-final` (local, not deployed): the relay, human-only, hardened gateway, no migration. The consent and terms-gate code is parked on separate branches and unreleased.
+Details are marked "(Draft 5)" below.
+
 
 **Draft 4.1 (2026-10-04, after OmniView confirmed the built Omniview API against this contract):** the exact Omniview rules EA now applies for it are written down in section 2 ("Omniview input rules"); `unreadCount` counts **tickets** with an unread support reply, not messages; new fixed detail token `body_control_characters`; Omniview's own idempotency window (48 hours) and provisional quota caps are recorded as Omniview's numbers, not EA's. No route changed.
 
@@ -11,7 +20,7 @@
 - Consent entry wire shape stated exactly for WEB (section 3A): `purpose` values `SUPPORT_TERMS` / `MARKET_AGGREGATE`, versions are JSON numbers.
 - Error catalogue: new `consent_wording_unavailable`; new fixed `detail` tokens `invalid_body`, `invalid_paging`, `invalid_version`, `body_rejected`.
 - EA's side is **built on local branches, not deployed** (section 11); the Omniview env names EA actually reads are in section 9.
-Details are marked "(Draft 4)" below.
+Details are marked "(Draft 4)" below. **Note (Draft 5): the Draft 4 bullets about the support-terms gate being in v1, the placeholder-wording guard and the consent wire shape are SUPERSEDED by the Draft 5 changes at the top of this file; those pieces are parked.**
 
 **Changes since Draft 2 (2026-10-04, after D41 and the industry-immutability ruling):** the consenting-tenants response loses `activeStaff` (D41 DECIDED: the market view is capitalisation plus the leverage ratio only; no tenant or staff counts), so the staff bullet, D15/D24/D40 and the FR-OV-M1 revisit fall away; industry immutability is now **DECIDED** (Femi: a Company that is a school cannot become something else), its enforcing fix is approved and queued for deploy, and one data caveat for legacy rows is recorded; a new section 7A states the EA-side **workflows** (ticket relay lifecycle, relay unavailable, quota, legacy threads, retention and erasure) with their open decisions named. Details are marked "(Draft 3)" below.
 
@@ -47,7 +56,7 @@ A tenant that is not the caller's gets `403 not_owner_admin`; **404 only for a t
 
 ## 2. Support ticket relay (tenant-facing)
 
-All routes: Owner Admin of `{tenantId}`; **every** route here, including `unread`, also requires the current **support terms** accepted (section 3), else `403 support_terms_required`. **D5 DECIDED (Draft 4): real tickets** (several per tenant, each its own thread and status; no attachments).
+All routes: Owner Admin of `{tenantId}`; **no other gate applies** (Draft 5: there is no support-terms acceptance; support is open to every Owner Admin of every business). **D5 DECIDED (Draft 4): real tickets** (several per tenant, each its own thread and status; no attachments).
 
 | Route | Body / query | Success | Notes |
 |---|---|---|---|
@@ -79,9 +88,11 @@ All routes: Owner Admin of `{tenantId}`; **every** route here, including `unread
 
 Omniview-to-EA error mapping: 404 on a ticket -> `404 ticket_not_found`; 400 -> `400 validation_failed`; 429 -> `429` (`quota_exceeded` or `rate_limited`); 409 on a closed ticket -> `409 ticket_closed`; 409 on a reused key -> `409 idempotency_key_reused`; everything else -> `503 support_unavailable`. **Every `429` carries the wait twice (Draft 2):** the `Retry-After` header and `retryAfterSeconds` in the JSON body. Browsers hide `Retry-After` from cross-origin scripts unless the server sends `Access-Control-Expose-Headers: Retry-After`, so WEB reads the body field; EA also adds the expose header at build time.
 
-## 3. Consent records (tenant-facing): two separate purposes (D35)
+## 3. Consent records (tenant-facing): two separate purposes (D35): PARKED (Draft 5)
 
-Two **separate, versioned** records, both owned by EA and both Owner-Admin only. **Support terms** gate every support route in v1 (D9, decided); **market-aggregate inclusion** is optional, revocable, and **never a condition of any service**. Wording and legal mechanism are D9 (Femi + solicitor); the text is data served by EA, so a rewording needs no WEB deploy (FR-OV-M8).
+**PARKED (Draft 5, Femi 2026-10-05).** Not part of the support release: there is no support-terms gate, and the terms agreement is an onboarding matter parked as a go-live step. The code for these consent records exists on unreleased branches. This section and section 3A are kept only as design for that later onboarding work and for the market-report consent (section 4), and must not be read as current behaviour.
+
+Two **separate, versioned** records, both owned by EA and both Owner-Admin only. **Support terms** (parked: they would have gated support, which Femi has ruled out); **market-aggregate inclusion** is optional, revocable, and **never a condition of any service**. Wording and legal mechanism are D9 (Femi + solicitor); the text is data served by EA, so a rewording needs no WEB deploy (FR-OV-M8).
 
 | Route | Body | Success | Notes |
 |---|---|---|---|
@@ -94,7 +105,9 @@ Two **separate, versioned** records, both owned by EA and both Owner-Admin only.
 
 **Rules:** support terms are "accepted" when the latest record for that purpose is ACCEPTED at the current version (a new version re-asks). Market consent for a **report date D** follows D33: the tenant counts only if its latest market record **recorded before 00:00 UTC on the 1st of D's month** is ACCEPTED at the version that was current at that boundary. OPEN (legal, D9/D33): whether acceptance of an old version survives a version bump at the boundary (default here: it lapses until re-accepted); and when an Owner-Admin ownership change (future feature) carries consent over (default: consent belongs to the tenant, the record keeps who accepted).
 
-## 3A. Consent wire shape, the gate flow and placeholder wording (Draft 4)
+## 3A. Consent wire shape, the gate flow and placeholder wording (Draft 4): PARKED (Draft 5)
+
+**PARKED (Draft 5): see section 3.** Nothing below is produced by EA's support release.
 
 **Entry shape**, from `GET /tenants/{tenantId}/consents` (an array, one entry per purpose that has final wording): `{purpose, currentVersion, text, accepted, acceptedVersion?, acceptedAt?}`.
 - `purpose` is exactly `SUPPORT_TERMS` or `MARKET_AGGREGATE` (upper-snake enum names, not the path slugs; a closed enum, lockstep change).
@@ -130,7 +143,7 @@ Two **separate, versioned** records, both owned by EA and both Owner-Admin only.
 
 EA is the **public edge for support** and also the authorization service every other service calls (`GET /me`), runs one task and has no rate limiting today. A flood or a slow Omniview must not degrade `/me`. Requirements:
 
-1. Limits apply **only to `/support/*`** (the consent routes carry no limit in v1: a few rare, idempotent calls per tenant), never to `/me` or other routes. **Order of checks (Draft 4, as built): authentication, Owner Admin, the edge limit, the terms gate, then the request.** The limiter (in memory) runs before the terms gate so a flood cannot become database reads. PROPOSED per tenant+user: writes 20/min, reads 120/min, answers `429 rate_limited` with `Retry-After`. In-memory per instance (fine at one task; revisit if EA scales).
+1. Limits apply **only to `/support/*`** (the consent routes carry no limit in v1: a few rare, idempotent calls per tenant), never to `/me` or other routes. **Order of checks (Draft 5, as built): authentication (human tokens only), Owner Admin, the edge limit, then the request.** There is no terms gate. PROPOSED per tenant+user: writes 20/min, reads 120/min, answers `429 rate_limited` with `Retry-After`. In-memory per instance (fine at one task; revisit if EA scales).
 2. Size limits (section 2) enforced at EA; Omniview repeats them.
 3. The **authoritative per-tenant quota is Omniview's**; EA passes its `429 quota_exceeded` and `Retry-After` through.
 4. Short timeouts to Omniview (section 2) and an immediate `503`, never queueing, so slow calls cannot pin EA's request threads.
@@ -141,17 +154,17 @@ EA is the **public edge for support** and also the authorization service every o
 |---|---|---|
 | 401 | `unauthorized` | missing or invalid token (existing behaviour) |
 | 403 | `not_owner_admin` | caller is not the Owner Admin of the path tenant (employee, other tenant's owner, non-member) |
-| 403 | `support_terms_required` | any support route (including `unread`) before the current support terms are accepted, after a wording version bump, or while the wording is still a placeholder (Draft 4) |
+| 403 | `support_terms_required` | **PARKED (Draft 5): not produced by EA's support release** (no support-terms gate) |
 | 403 | `service_forbidden` | section 4 only: caller is not GL's service identity |
 | 400 | `validation_failed` | empty or over-length body, bad `companyId`, bad or missing `Idempotency-Key`, bad date; `detail` carries a fixed token (`body_empty`, `body_too_long`, `invalid_company`, `idempotency_key_missing`, `invalid_report_date`, and from Draft 4: `invalid_body` malformed or unknown-field JSON, `invalid_paging` both or malformed `before`/`after`, `invalid_version` a consent version below 1, `body_rejected` Omniview refused the text, `body_control_characters` a body with control characters other than newline, carriage return and tab, from Draft 4.1) |
 | 404 | `ticket_not_found` | ticket id unknown or belongs to another tenant |
-| 409 | `consent_version_stale` | accepted version is not the current one |
+| 409 | `consent_version_stale` | **PARKED (Draft 5):** consent routes are not in the support release |
 | 409 | `ticket_closed` | reply on a CLOSED ticket (D38 DECIDED; Draft 4) |
 | 409 | `idempotency_key_reused` | (Draft 2) same `Idempotency-Key` with a different body |
 | 413 | `payload_too_large` | request over the byte cap |
 | 429 | `rate_limited` / `quota_exceeded` | edge limit / Omniview quota; `Retry-After` header **and** `retryAfterSeconds` in the body (Draft 2) |
 | 503 | `support_unavailable` | Omniview unreachable, slow, or unusable (tenant support routes) |
-| 503 | `consent_wording_unavailable` | (Draft 4) the consent wording is not final (placeholder or missing), on `GET /consents`, acceptance or revocation |
+| 503 | `consent_wording_unavailable` | **PARKED (Draft 5):** consent routes are not in the support release |
 | 503 | `service_unavailable` | section 4 when the GL audience is not configured or EA cannot compute |
 | 409 | `legacy_thread_read_only` | legacy `POST /support-thread/messages` after retirement (section 7 only) |
 
@@ -166,7 +179,7 @@ EA is the **public edge for support** and also the authorization service every o
 
 Each step names who does what and what happens when it fails. EA is a relay and a consent ledger here; it is **not** a ticket store.
 
-**Raising a ticket.** Owner Admin posts with an `Idempotency-Key`. EA checks, in order: the gate (Owner Admin of that tenant), `support_terms_required` (latest support-terms record not accepted at the current version), the edge limit, body rules. It then forwards to Omniview with the key and the tenant's display name, and returns `201 {ticket, message}` from Omniview's answer. EA writes nothing for the ticket.
+**Raising a ticket.** Owner Admin posts with an `Idempotency-Key`. EA checks, in order: authentication (human tokens only), Owner Admin of that tenant, the edge limit, body rules (no terms gate: Draft 5). It then forwards to Omniview with the key and the tenant's display name, and returns `201 {ticket, message}` from Omniview's answer. EA writes nothing for the ticket.
 
 **Relay unavailable (PROPOSED).** If Omniview times out, refuses, or answers something EA cannot decode, EA answers `503 support_unavailable` and **queues nothing**: there is no EA-side outbox. The cost is that a message the user typed is not delivered until they retry; the benefit is that EA never holds ticket content and cannot send a stale message later. WEB keeps the draft and the same `Idempotency-Key` so a retry after a timeout cannot duplicate (at-least-once with the key, section 2). If Femi wants guaranteed delivery instead, that needs an EA outbox storing message bodies (a different privacy and retention position), so it would be an explicit decision, not an implementation detail.
 
@@ -176,7 +189,7 @@ Each step names who does what and what happens when it fails. EA is a relay and 
 
 **Legacy threads.** The old support thread and the operator routes stay as they are (section 7). Nothing is migrated; a tenant sees old history through the legacy GET and new conversations as tickets. The two do not merge in v1.
 
-**Consent.** Accepting support terms is required, once per wording version, before **any** support route works (Draft 4, D9 decided for v1); EA serves the wording, records the acceptance and enforces it, and Omniview enforces nothing about it. Market-aggregate consent is a separate choice that is never a condition of service; accepting and revoking are Owner-Admin only and append a record. A revocation takes effect at the **next** report boundary by rule (D33) and never rewrites a past report's cohort.
+**Consent (Draft 5: parked).** There is no support-terms acceptance in front of support; the general terms agreement is an onboarding matter parked as a go-live step. Market-aggregate consent (not in v1) is a separate choice that is never a condition of service; accepting and revoking are Owner-Admin only and append a record. A revocation takes effect at the **next** report boundary by rule (D33) and never rewrites a past report's cohort.
 
 **Retention and erasure (PROPOSED; two parts OPEN).**
 - Consent records are an audit trail and are append-only: EA never deletes or edits them. They hold the tenant, purpose, version, action, the accepting user's id and the time, no free text.
@@ -190,19 +203,19 @@ Routes are path-scoped and the gate is evaluated per tenant, so a user who is Ow
 
 ## 9. Infrastructure and configuration (CM's lane; EA proposes names)
 
-- EA to Omniview: a Cognito service-account app client and resource scope for EA, Omniview verifying that audience (NFR-OV-14), a private network path and security-group restriction. **Draft 4: the names EA actually reads (six, mirroring the `EA_SCHOOLADMISSIONS_*` pattern):** `EA_OMNIVIEW_BASE_URL` (origin plus any path prefix, for example `http://omniview.fish.internal:8090`), `EA_OMNIVIEW_COGNITO_REGION`, `EA_OMNIVIEW_COGNITO_CLIENT_ID`, `EA_OMNIVIEW_COGNITO_CLIENT_SECRET`, `EA_OMNIVIEW_COGNITO_USERNAME`, `EA_OMNIVIEW_COGNITO_PASSWORD` (secrets through the reviewed task-definition path). **If any is unset or blank, EA still boots, one warning logs the missing NAMES only, and the ticket routes answer `503 support_unavailable`** (new, additive feature must not crash-loop the auth service); the consent routes need no Omniview. **Never set `EA_ALLOW_PLACEHOLDER_CONSENT_TEXT` in a production task definition** (section 3A).
+- EA to Omniview: a Cognito service-account app client and resource scope for EA, Omniview verifying that audience (NFR-OV-14), a private network path and security-group restriction. **Draft 4: the names EA actually reads (six, mirroring the `EA_SCHOOLADMISSIONS_*` pattern):** `EA_OMNIVIEW_BASE_URL` (origin plus any path prefix, for example `http://omniview.fish.internal:8090`), `EA_OMNIVIEW_COGNITO_REGION`, `EA_OMNIVIEW_COGNITO_CLIENT_ID`, `EA_OMNIVIEW_COGNITO_CLIENT_SECRET`, `EA_OMNIVIEW_COGNITO_USERNAME`, `EA_OMNIVIEW_COGNITO_PASSWORD` (secrets through the reviewed task-definition path). **If any is unset or blank, EA still boots, one warning logs the missing NAMES only, and the ticket routes answer `503 support_unavailable`** (new, additive feature must not crash-loop the auth service); the consent routes need no Omniview. (Draft 5: the placeholder-wording flag from Draft 4 does not exist in the support release.)
 - GL to EA: set `EA_JWT_SERVICE_AUDIENCE_GL` (unset in production today; HR, IM, POP and SOP are set) and give GL a Cognito service client for that audience. GL also needs new client code (a service-account token provider on a separate, body-log-free HttpClient; GL forwards a human token to EA today), and its client secret reaches GL through a task-definition change (Draft 2, GL's gap 4).
 - Env or task-definition changes are not carried by Jenkins (it patches only the image): same targeted, reviewed, task-definition path as past EA secret changes.
 
 ## 10. Tests the build must include
 
-Fake `OmniviewGateway` with success, 4xx, timeout and undecodable-body cases mapped to the exact codes above; a `MockEngine` test that a malformed 200 never leaks body text; the gate matrix (Owner Admin, employee, other tenant's owner, non-member) on every tenant route; `support_terms_required` before and after acceptance and after a version bump; consent-history boundary tests (recorded just before and after 00:00 UTC on the 1st, revoke, re-accept, version bump); the GL route rejecting a human token, a POP/SOP/IM/HR token and the operator token, and failing closed with the audience unset; limits scoped to support routes only (`/me` unaffected); Idempotency-Key forwarded unchanged. Draft 2 additions: latest-page / `before` / `after` paging including a short final page; `subject` truncation at 80 UTF-16 code units; a body of exactly 4,000 and of 4,001 code units (emoji counted as 2); `ticket_closed`, `idempotency_key_reused`; a `429` carrying both the header and `retryAfterSeconds`; the GL response containing no staff or count fields at all (Draft 3: assert the exact field set per Company is `companyId` and `industryType`) and no tenant-status filtering; the GL route not logging its response.
+Fake `OmniviewGateway` with success, 4xx, timeout and undecodable-body cases mapped to the exact codes above; a `MockEngine` test that a malformed 200 never leaks body text; the gate matrix (Owner Admin, employee, other tenant's owner, non-member) on every tenant route; (parked with section 3: `support_terms_required` before and after acceptance and after a version bump); consent-history boundary tests (parked with section 3) (recorded just before and after 00:00 UTC on the 1st, revoke, re-accept, version bump); the GL route rejecting a human token, a POP/SOP/IM/HR token and the operator token, and failing closed with the audience unset; limits scoped to support routes only (`/me` unaffected); Idempotency-Key forwarded unchanged. Draft 2 additions: latest-page / `before` / `after` paging including a short final page; `subject` truncation at 80 UTF-16 code units; a body of exactly 4,000 and of 4,001 code units (emoji counted as 2); `ticket_closed`, `idempotency_key_reused`; a `429` carrying both the header and `retryAfterSeconds`; the GL response containing no staff or count fields at all (Draft 3: assert the exact field set per Company is `companyId` and `industryType`) and no tenant-status filtering; the GL route not logging its response.
 
 ## 11. Build order and sizing (when build resumes; no dates)
 
-1. **Consent texts, records and routes** (small-medium): no external dependency. **Draft 4 status: built** (migration V18, which must be released after V17, the company-registration fix). The legal wording is a V19 row Femi must supply; until then the placeholder guard keeps support deliberately unavailable in production.
+1. **Consent texts, records and routes** (small-medium): **PARKED (Draft 5)**. Built on unreleased branches (`feat/omniview-consent-records`, `feat/omniview-support-terms`) but not part of the support release; the agreement is an onboarding matter for the go-live steps.
 2. **Edge protections** (small): support-route-only limits and CORS header.
-3. **Omniview gateway and ticket routes** (medium): **Draft 4 status: built** against a fake gateway and a mock Omniview, with the consent-backed gate, human-only mounting and the placeholder guard (branch `feat/omniview-support-terms`, local, not deployed). Still needed: Omniview's private API live, the Cognito client and the private path (CM), Femi's final wording.
+3. **Omniview gateway and ticket routes** (medium): **Draft 5 status: built** against a fake gateway and a mock Omniview, human-only, no gate (branch `feat/omniview-support-relay-final`, local, reviewed by CM, not deployed). Release order: the two EA security fixes first, then this branch rebased onto them. Still needed: Omniview live (its first image is waiting on a Jenkins token fix), and the Cognito client applied (Femi runs the apply).
 4. **Service-principal validator and GL route** (medium): needs `EA_JWT_SERVICE_AUDIENCE_GL` and GL's call shape; this is the security-sensitive piece and gets the full test list above.
 5. **Legacy POST retirement** (small, lockstep with WEB): only after D34 and the widget move.
 
@@ -213,7 +226,7 @@ Fake `OmniviewGateway` with success, 4xx, timeout and undecodable-body cases map
 | D5 | **DECIDED (Draft 4): real tickets**, no attachments | closed |
 | D38 | **DECIDED (Draft 4): operators close; a reply on a closed ticket becomes a new ticket** (relay: `409 ticket_closed`, WEB creates the new ticket with the carried text); auto-close of stale Answered tickets follows v1 | closed |
 | D1/D2 | legacy operator-thread history (recommended: read-only, not migrated) | Femi |
-| D9/D33 | **v1: the support-terms gate is IN** (EA serves, records and enforces it); the support-terms WORDING is still Femi's and a solicitor's (a V19 row, until then support is deliberately unavailable in production). Still open: market-consent wording, version-bump survival, revocation timing, ownership-change carry-over | Femi + solicitor |
+| D9/D33 | **Draft 5: the support-terms gate is OUT.** Support has no agreement in front of it; the general terms agreement is an onboarding matter, parked as a go-live step (Femi). Still open, for later: the terms wording itself (Femi and a solicitor), market-consent wording, version-bump survival, revocation timing, ownership-change carry-over | Femi + solicitor |
 | D15/D24/D40 | **fell away (Draft 3, D41 DECIDED): no staff or tenant counts in the market view** | closed |
 | D34 | new-ticket alerting: **DECIDED in substance** (an SNS topic with an email subscription, at ticket creation and at an Owner Admin reply; Omniview's and CM's side, nothing in EA). Mailbox address and on-call remain Femi's | Femi, CM |
 | D36 | where the Owner Admin revokes market consent: **not needed in v1** (market consent stays out of v1); revisit with the market view | Femi |
