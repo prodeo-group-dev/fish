@@ -4,7 +4,7 @@
 
 **Why it matters.** EA's route contract gates two other pieces: **WEB's** support-chat widget calls EA's ticket routes (it must never call Omniview, which is never internet-facing), and **GL's** Market Support aggregate route reads the consenting set from EA. Product Support (Wave 7) and Market Support (Wave 8) cannot start without it.
 
-**References (FiSH master):** `docs/Omniview_v2_Software_Requirements_Specification.md` (FR-OV-S1..S16, FR-OV-M8, NFR-OV-8/14, decisions D1-D4, D9, D12, D15-D18, D24), `docs/Omniview_v2_Backlog.md` (7B.5, 7B.7, 7C.7, 8B.1), `docs/Omniview_v2_Use_Cases.md` (UC-OV-5, 8, 9, 10). Treasury, gold and rates are **deferred** (SRS section 11); ignore them.
+**References (FiSH master):** `docs/Omniview_v2_Software_Requirements_Specification.md` (FR-OV-S1..S16, FR-OV-M8, NFR-OV-8/14, decisions D1-D4, D9, D12, D16-D18), `docs/Omniview_v2_Backlog.md` (7B.5, 7B.7, 7C.7, 8B.1), `docs/Omniview_v2_Use_Cases.md` (UC-OV-5, 8, 9, 10). Treasury, gold and rates are **deferred** (SRS section 11); ignore them.
 
 ## Settled (DECIDED by Femi)
 
@@ -29,9 +29,9 @@ Market reports may include only tenants whose Owner Admin has consented. **No co
 
 ## 3. Consenting-tenants route (backlog 8B.1)
 
-**PROPOSED:** an operator-only, read-only route returning, per consenting tenant, its Companies with each Company's `industryType` (stored per Company, migration V13) and per-Company staff assignment counts, readable by **GL's service identity** and Omniview's. GL calls it itself (D22, DECIDED) so no caller can choose the cohort.
+**PROPOSED:** an operator-only, read-only route returning, per consenting tenant, its Companies with each Company's `industryType` (stored per Company, migration V13) readable by **GL's service identity** and Omniview's. GL calls it itself (D22, DECIDED) so no caller can choose the cohort.
 
-Questions: can EA authorise a service credential on a route today (its operator routes use `X-Operator-Token`)? What does "staff" mean for counts (D15 **OPEN**; proposed: distinct active Memberships, and distinct people per industry, D24 **OPEN**)?
+Question: can EA authorise a service credential on a route today (its operator routes use `X-Operator-Token`)? **Settled by D41: no staff counts, so the staff-meaning questions (D15, D24) fell away.**
 
 ## What is wanted back
 
