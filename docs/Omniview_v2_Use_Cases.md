@@ -52,7 +52,7 @@ Status labels as in the SRS. Every flow that touches another service is
 **Trigger:** opens the Tickets view.
 
 **Main flow:**
-1. Omniview lists tickets, Open first then oldest first, with the tenant's *name* (looked up from EA's operator overview, read-only), state, age, and last message preview.
+1. Omniview lists tickets, Open first then oldest first, **with ageing so nothing sits unanswered (FR-OV-S29)**, with the tenant's *name* (looked up from EA's operator overview, read-only), state, age, and last message preview.
 2. Operator opens a ticket and reads the thread. All text is rendered as text (NFR-OV-10).
 3. Operator writes a reply; Omniview stores it in its own database, records the operator's name, and sets the ticket to Answered (FR-OV-S2, S8).
 4. Operator can close the ticket. Closing changes only Omniview's record (FR-OV-S7).
@@ -102,7 +102,7 @@ Status labels as in the SRS. Every flow that touches another service is
 **Alternate flows:**
 - 2a. Another tenant's ticket id is requested: the response is indistinguishable from "no such ticket".
 - 2b. Omniview is unreachable: the widget shows the last replies it already had and a quiet "cannot refresh" note; no error that implies the ticket is lost.
-- 3a. If D12 allows email: a "you have a reply" email reaches the Owner Admin, sent by Omniview (needs controlled outbound access from its private subnets) or by the relay after it notices a reply. A message to a mailbox, written nowhere in a tenancy.
+- 3a. There is **no email on reply** (D12, DECIDED): the Owner Admin sees a reply only when they next open FiSH, where an unread indicator on every FiSH screen (FR-OV-S25) tells them. Email is deferred, not forbidden.
 
 **Traces to:** FR-OV-S4, S10; NFR-OV-8, 14; D12.
 
