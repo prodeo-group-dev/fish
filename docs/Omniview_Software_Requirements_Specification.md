@@ -13,10 +13,23 @@ requirements form; it does not re-open anything already decided there
 ### 1.1 Purpose
 
 This SRS defines the functional and non-functional requirements for
-**Omniview**, the Prodeo Group's cross-platform operator oversight
-console. It guides the initial build (repo `fish-er-omniview`) and
-serves as the baseline Femi, CM, and the EA-fork session are building
-against.
+**Omniview**, Prodeo Capital's read-only view across all tenancies
+(repo `fish-er-omniview`).
+
+**Omniview's purpose is two things (Femi, 2026-10-04):**
+
+1. **Product Support.** The home of product support: a tenant's Owner
+   Admin raises a ticket from inside FiSH, and a Prodeo operator answers
+   it from Omniview (§3.5).
+2. **Market Support.** Aggregate, non-identifying market reports for
+   Prodeo Capital: the number of tenants, the number of staff,
+   aggregate shareholders' funds and leverage, translated into gold,
+   whole market or by segment, unaudited (§3.6).
+
+It reads from FiSH, never writes into any tenancy's data, and never
+shows an identifiable tenant in anything it publishes (NFR-OV-6,
+NFR-OV-7). It guides the build and is the baseline Femi and CM are
+working against.
 
 ### 1.2 Scope — the problem this solves
 
@@ -32,19 +45,21 @@ fragmentation has grown with it — and Prodeo is actively hiring an
 operations team who will need this view and currently have nowhere to
 get it.
 
-**What Omniview is:** *"where I oversee everything in the
-FiSH+ERverse"* (direct instruction, 2026-10-03) — a single,
-operator-facing console giving cross-service, cross-tenant visibility
-platform-wide. Internal tooling only; never client-facing, the same
-"strictly for management and support" boundary the original operator
-overview inside EA was built under.
+**What Omniview is (revised 2026-10-04):** it exists for Product Support
+and Market Support (§1.1). The original 2026-10-03 framing, *"where I
+oversee everything in the FiSH+ERverse"*, is how the platform-health
+strip and the tenant overview came to be built. They are retained as
+tools that serve those two purposes (to be confirmed by Femi), not as
+the purpose itself. Internal to Prodeo Capital: a tenant's Owner Admin
+reaches it only by raising a ticket from inside FiSH (§3.5); it has no
+client-facing screen.
 
 **What Omniview is not:** a second system of record for any *other service's* data.
 Omniview owns exactly one domain of its own: Prodeo Capital's product-support
 tickets (§3.5, added 2026-10-04). Every sibling service keeps owning its own data; Omniview calls out
-and aggregates/presents, never absorbs. It is also explicitly not
-(yet) a financial-data or deep business-data surface — see §3.4 and
-the DDD design's own staged-phase framing.
+and aggregates/presents, never absorbs. Its financial reporting is
+aggregate-only and non-identifying (§3.6); it is never a per-tenant
+financial-data surface.
 
 In scope for this SRS: the three capabilities that exist today inside
 EA and are being extracted out (platform health, cross-tenant
