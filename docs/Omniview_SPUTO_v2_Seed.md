@@ -31,6 +31,7 @@ The platform-health strip and the tenant overview stay as supporting tools for t
 - **Non-identification is sacrosanct.** No cohort size ever waives it.
 - **Reports are unaudited.** Prodeo Capital is engaged as accountants, not auditors. Every report says so.
 - **Gold is the base currency** for Prodeo Capital's market analysis; all fiat is translated to gold value.
+- **Omniview is never internet-facing.** It is reachable only on Prodeo's private network. A tenant's browser never reaches it: a ticket arrives only through a FiSH service, over the private network, and replies come back the same way. (Femi, 2026-10-04: "Omniview is never internet facing".)
 
 ### 1.3 In scope / deferred / out of scope
 
@@ -49,8 +50,9 @@ The platform-health strip and the tenant overview stay as supporting tools for t
 ### 1.5 Context
 
 ```
-Owner Admin --FiSH chat--> Omniview  (ticket in, replies out: FiSH pulls)
-Operator    --browser----> Omniview
+Owner Admin --FiSH chat--> a public FiSH service (PROPOSED: EA) --private network--> Omniview
+                            (ticket in; replies pulled back the same way; never a tenant browser to Omniview)
+Operator    --private access only--> Omniview   (how: OPEN, §6)
 Omniview --GET--> EA  (tenant overview, staff and tenant counts; Owner Admin identity)
 Omniview --GET--> GL  (NEW operator-only, totals-only aggregate route; does not exist yet)
 Omniview --GET--> public /health of GL, POP, SOP, IM, HR
@@ -92,7 +94,7 @@ Existing IDs are kept where unchanged so nothing already written breaks. The v2 
 
 - **NFR-OV-6 (DECIDED):** read-only toward every other service; verified by a test that outbound gateways expose no write method.
 - **NFR-OV-7 (DECIDED): non-identification.** No per-tenant figure or breakdown anywhere: view, API, export, log, or stored snapshot. Minimum cohort determined statistically (minimum sample sizes), plus a concentration rule (max share any one tenant may hold of a published total), stricter test governs, plus suppression that defeats differencing. Enforced in code with tests. Tenants' permission taken first.
-- **NFR-OV-8 (PROPOSED): inbound is internet-facing.** Omniview was an internal tool; the ticket intake makes it reachable by tenants' Owner Admins. It needs real authentication, rate limiting and input limits.
+- **NFR-OV-8 (DECIDED): never internet-facing.** Omniview is reachable only on Prodeo's private network. Its inbound callers are a FiSH service relaying tickets and operators over private access, never a tenant's browser. Calls into it are authenticated service-to-service and size-limited, and ticket content is treated as untrusted input.
 - **NFR-OV-9 (PROPOSED): a new privileged read path in GL is audited**, returns totals only, and enforces the cohort and concentration rules at the source.
 
 ### 2.4 Data ownership
@@ -128,9 +130,9 @@ Existing IDs are kept where unchanged so nothing already written breaks. The v2 
 |---|---|
 | **Omniview session** | Remove the write path (backlog 3.6). Ticket domain and schema. Ticket API (inbound). Operator ticket UI. Market report UI. Non-identification enforcement module with tests. Gold rate table and translation. v2 SRS, use cases, backlog |
 | **GL session** | Design and build an operator-only, totals-only aggregate route: per-currency equity, liabilities and debt, by segment, with cohort and concentration enforced at source. Audited. GL has no operator concept or cross-tenant read path today |
-| **WEB session** | Chat widget raises tickets in Omniview (Owner Admin only) and reads replies by pull. Retires `/operator` only after Product Support is live (backlog 3.5) |
-| **EA session** | Provide the Owner Admin identity check for Omniview's inbound caller (the existing `GET /me` pattern). Tenancy communication unchanged |
-| **CM** | Rework `omniview.tf` (database on the shared RDS, secrets, security group, Cognito audience). Jenkins PAT scope, DNS, targeted Terraform apply (state has drifted, a full plan is unsafe). Backups and recovery for a now-stateful service |
+| **WEB session** | Chat widget raises tickets through the FiSH service that relays to Omniview (never directly to Omniview), Owner Admin only, and reads replies the same way. Retires `/operator` only after Product Support is live (backlog 3.5) |
+| **EA session** | PROPOSED: relay tickets and fetch replies over the private network, since EA already authenticates the Owner Admin and knows the tenant. Tenancy communication unchanged |
+| **CM** | Rework `omniview.tf`: **private only**. The merged version puts a public ALB rule, a public certificate and a public DNS name on it, which contradicts the decision. Needs an internal path for operators, a database on the shared RDS, secrets and a security group. Jenkins PAT scope, targeted Terraform apply (state has drifted, a full plan is unsafe). Backups and recovery for a now-stateful service |
 | **Femi / legal / statistician** | Tenants' permission wording and mechanism. Registering body's confidentiality rules. Cohort and concentration method and values. Gold price source, which price, as of which date. What counts as "debt". Segment list. The ticket model (who sees what) |
 
 ---
@@ -138,7 +140,7 @@ Existing IDs are kept where unchanged so nothing already written breaks. The v2 
 ## 5. O: Order (PROPOSED)
 
 - **Phase A: decide.** Resolve the blocking open decisions (§6). Nothing is built.
-- **Phase B: foundation.** Remove the write path. Provision the database and secrets. Build Owner Admin authentication for the inbound caller. Build the ticket domain.
+- **Phase B: foundation.** Remove the write path. Provision the database and secrets. Build the private relay path and its service-to-service authentication. Build the ticket domain.
 - **Phase C: Product Support live.** Ticket intake from WEB, operator UI, pull-based replies. Then WEB retires `/operator` (backlog 3.5).
 - **Phase D: Market Support.** GL aggregate route, gold translation, non-identification enforcement, the legal gates, then the report UI.
 - **Phase E: deferred.** Education Runtime status gets its own SPUTO.
@@ -153,8 +155,8 @@ Existing IDs are kept where unchanged so nothing already written breaks. The v2 
 |---|---|---|
 | 1 | Does the interim read-only EA thread view (UC-8) retire when tickets exist? | Femi |
 | 2 | Disposition of EA's existing operator-thread messages (FR-OV-S6) | Femi |
-| 3 | How the Owner Admin authenticates into Omniview (Cognito JWT plus EA `/me`, as GL, POP, SOP, IM and HR do, vs proxied via WEB) | CM + EA |
-| 4 | Whether FiSH's chat calls Omniview directly or through WEB | WEB + Omniview |
+| 3 | Which FiSH service relays tickets to Omniview (PROPOSED: EA) and how it authenticates to Omniview privately | CM + EA |
+| 4 | How operators reach a private Omniview (VPN, SSM port-forward, or another internal-only path). The shared load balancer is public, so Omniview needs a different path | CM + Femi |
 | 5 | Ticket model: fields, who sees which tickets, attachments, retention, notifications | Omniview + Femi |
 | 6 | What counts as "debt"; the segment list beyond industry | Femi |
 | 7 | Gold: price source, which price, as of which date (PROPOSED: closing rate at the balance-sheet date) | Femi |
@@ -179,7 +181,7 @@ Existing IDs are kept where unchanged so nothing already written breaks. The v2 
 | Infra | No database | Database and secrets; `omniview.tf` reworked |
 | EA | Message source | Not Omniview |
 | Education Runtime status | Phase 2 | Deferred; ER is an industry segment |
-| Exposure | Internal tool | Internet-facing inbound intake |
+| Exposure | Internal tool | Still internal, never internet-facing (DECIDED); tickets arrive via a FiSH service |
 
 **Effect on what is already built (merged, not live):**
 - **Keep:** health strip, tenant overview, thread reading, frontend scaffold, Dockerfile.
@@ -192,7 +194,7 @@ Existing IDs are kept where unchanged so nothing already written breaks. The v2 
 ## 8. Risks CM wants on the table early
 
 1. **A GL aggregate route is a new privileged, cross-tenant read path** in a system built on strict per-tenant isolation. It must return totals only, be audited, and enforce cohort and concentration at the source.
-2. **Internet-facing intake.** Omniview becomes reachable by tenants, so it needs real authentication, rate limits and input limits, and it widens the attack surface.
+2. **Intake crosses a trust boundary.** Tickets come from tenants' Owner Admins via a FiSH service. Omniview stays private, but the relay must authenticate the Owner Admin, and Omniview must treat ticket content as untrusted input (size limits, no HTML injection into the operator UI).
 3. **Stateful service.** A database brings backups, recovery and connection slots. The shared RDS instance already hit a connection-exhaustion incident in September, so pool sizes must stay small.
 4. **Operator token is an interim bridge** (named per-operator tokens, held in browser storage). That is acceptable for a handful of operators, not for a wider audience.
 5. **Terraform state has drifted from code.** A full plan would replace the Jenkins admin password. Any Omniview infra apply must be targeted, with a reviewed plan, run by Femi.
