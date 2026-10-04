@@ -1,6 +1,6 @@
 # Omniview Backlog — Task Breakdown & Dependency Order
 
-> **ALL OMNIVIEW WORK SUSPENDED, 2026-10-04 (Femi's direct instruction).** Do not resume, apply `omniview.tf`, or deploy until Femi says so. State at suspension: code merged to `fish-er-omniview` master (`41ed5ff`), Terraform merged but never applied, nothing live.
+> **PLANNING RESUMED, BUILD AND DEPLOY STILL SUSPENDED (Femi, 2026-10-04).** Femi lifted the suspension for planning only: a second SPUTO is under way, seeded by `docs/Omniview_SPUTO_v2_Seed.md`. Do not build, apply `omniview.tf`, or deploy until Femi says so. This backlog is superseded by the v2 SPUTO once it lands. State at suspension: code merged to `fish-er-omniview` master (`41ed5ff`), Terraform merged but never applied, nothing live.
 >
 > **Design principle added 2026-10-04 (Femi): Omniview is strictly read-only toward every other FiSH service.** It reads, it never writes into another service. The operator reply into EA (FR-OV-10) is superseded; see 3.6 for the code that must come out.
 >
