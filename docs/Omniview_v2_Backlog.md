@@ -12,7 +12,7 @@ Waves 0–4 there are unchanged except 3.5 and 3.6 as already revised.
 
 **Revised 2026-10-04: never internet-facing** (Femi: "IT CAN NEVER BE
 INTERNET FACING"; corrected seed, FiSH PR #61). Omniview is private-network
-only; tickets reach it only through a FiSH service (PROPOSED: EA relays;
+only; tickets reach it only through a FiSH service (EA relays, decided by Femi;
 D3). Waves 7A–7C below are reshaped around that: no public hostname,
 listener rule or certificate, no JWT verification inside Omniview, and a
 new EA task for the relay.
@@ -37,7 +37,7 @@ Femi (decisions, DNS, Terraform apply); a solicitor and a statistician
 |---|---|---|---|---|
 | 7A.0 | Full SPUTO pass for Product Support (this document set) | Omniview | — | **Done 2026-10-04**, revised same day for the private-only rule (draft, pending Femi's review) |
 | 7A.1 | Femi decides the Support-blocking items: D1 (retire interim thread view), D2 (EA's old operator threads), D5 (ticket model; attachments out), D13 (operator authentication), D17 (ticket data protection, with solicitor), D21 | Femi (+ solicitor for D17) | 7A.0 | Open |
-| 7A.2 | Confirm **D3**: EA as the relay, and service-to-service authentication to Omniview (a Cognito service-account audience for EA, plus a security-group restriction) | CM, EA, then Femi | 7A.0 | Open |
+| 7A.2 | Confirm **D3**: EA as the relay, and service-to-service authentication to Omniview (a Cognito service-account audience for EA, plus a security-group restriction) | CM, EA, then Femi | 7A.0 | **D3 DECIDED 2026-10-04 (Femi): EA is the relay.** Remaining: the service-to-service authentication detail for CM and EA (required verifier, fails closed, NFR-OV-14) |
 | 7A.3 | **D4: how operators reach a private Omniview** (VPN, SSM port-forward, or another internal-only path). The shared load balancer is public, so this needs a different path; it also decides when WEB's public `/operator` can be retired | CM, Femi | 7A.0 | Open |
 | 7A.4 | WEB confirms the widget now calls **EA's** ticket routes (a repoint of the existing support-chat client), never Omniview | WEB | 7A.2 | Open |
 
@@ -149,7 +149,7 @@ Femi: "It is not required now" and "This leaving the area of accounting and into
 ## What can move while the build is suspended
 
 Planning only, none of it code: Femi's decisions in 7A.1 and 8A.1;
-CM + EA confirming D3 (7A.2) and CM + Femi settling D4 (7A.3), which is
+CM + EA settling the service-to-service authentication (7A.2) and CM + Femi settling D4 (7A.3), which is
 the one most likely to be underestimated because every operator needs it
 before the console is usable at all; WEB confirming 7A.4; starting the
 solicitor and statistician conversations (8A.2, 8A.3); and the GL session

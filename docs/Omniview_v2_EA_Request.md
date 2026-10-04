@@ -12,7 +12,7 @@ Omniview is **never internet-facing** (private network only; a tenant's browser 
 
 ## 1. Ticket relay (backlog 7B.7)
 
-**PROPOSED, not yet confirmed by Femi (D3): EA is the relay.** Reasons: EA already authenticates the Owner Admin (`GET /me` `isOwnerAdmin`; `authorizeTenantOwnerAdmin`) and hosts today's support chat and email gateway.
+**DECIDED by Femi (D3): EA is the relay** ("Definitely.. It is where the owner Admin lives. The dashboard there is his"). Reasons: EA already authenticates the Owner Admin (`GET /me` `isOwnerAdmin`; `authorizeTenantOwnerAdmin`) and hosts today's support chat and email gateway.
 
 Asked: Owner-Admin ticket create / list / read routes that verify the Owner Admin with the existing gate and call Omniview over the private network **as a service** (a Cognito service-account audience; NFR-OV-14), and:
 
@@ -71,3 +71,8 @@ EA's feasibility view is recorded in SRS section 12.3. Corrections to this docum
 - **Both consents need routes:** the current text and version, the Owner Admin's accepted version, accept, and, for the **market** consent only, revoke. The consent copy is content served by EA with a version; "fixed error codes only" is about error messages, not this copy.
 - **The error-code list is an enumerated, stable contract**; WEB treats an unknown code with a generic fallback, so changes follow the lockstep pattern.
 - **D36 (Femi):** where the Owner Admin revokes the market consent.
+
+## Decided 2026-10-04
+
+- **D3: EA is the relay** ("It is where the owner Admin lives. The dashboard there is his"). **EA now owns the route-contract doc**; WEB and GL finalise against it.
+- **D35: two separate consent records** (support terms, which may gate tickets; market-aggregate inclusion, optional, revocable, never a condition of any service). Femi's reaction to the bundling was "Why would that be a thing"; treated as decided unless he says otherwise. Legal wording and mechanism stay open (D9).
