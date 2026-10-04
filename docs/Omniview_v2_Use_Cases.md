@@ -80,7 +80,7 @@ Status labels as in the SRS. Every flow that touches another service is
 
 **Alternate flows:**
 - 3a. A figure fails the cohort or concentration test: it is shown as "insufficient cohort" (FR-OV-M10). Related cells are suppressed with it so it cannot be recovered by subtraction (§7.1 of the SRS).
-- 3b. Debt-to-equity requested before the debt flag exists or with thin coverage: shown as "not yet available", with coverage if known.
+- 3b. A currency whose cohort is too small is shown as "insufficient cohort" (FR-OV-M19); there is no cross-currency fallback.
 - 3c. GL is unreachable: the view is unavailable, never an empty report.
 - 1a. A tenant revokes consent: it is excluded from the next computation, nothing stored needs correcting (FR-OV-M9).
 
