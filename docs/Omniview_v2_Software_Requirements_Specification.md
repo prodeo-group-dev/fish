@@ -315,7 +315,7 @@ the code shows; "Recommendation" is mine, not agreed.
 | D25 | **DEFERRED to the treasury phase (§11):** gold unit and precision. Femi's earlier decisions are preserved there, not lost | Treasury phase |
 | D26 | **DEFERRED to the treasury phase (§11):** rate provider, licence and cost. Femi's earlier decisions are preserved there, not lost | Treasury phase |
 | D27 | **DEFERRED to the treasury phase (§11):** which currencies are downloaded. Femi's earlier decisions are preserved there, not lost | Treasury phase |
-| D28 | The unit for Market Support without gold | **Femi: per-currency reporting is "what we do currently" (DECIDED).** Report per currency, no cross-currency totals, until the deferred treasury phase can translate to a common factor (FR-OV-M18). On translation: "Currency translation is very important in this project but that is for later." The alternatives (one reporting currency; single-currency tenants only) are closed. Cost, accepted: smaller cohorts and more suppression (FR-OV-M19). Femi also agreed the lighter near-term scope: no new outbound path, no extra service identity, no change to  | Settled |
+| D28 | The unit for Market Support without gold | **Femi: per-currency reporting is "what we do currently" (DECIDED).** Report per currency, no cross-currency totals, until the deferred treasury phase can translate to a common factor (FR-OV-M18). On translation: "Currency translation is very important in this project but that is for later." The alternatives (one reporting currency; single-currency tenants only) are closed. Cost, accepted: smaller cohorts and more suppression (FR-OV-M19). Femi also agreed the lighter near-term scope: no new outbound path, no extra service identity, no change to `common` | Settled |
 
 ---
 
