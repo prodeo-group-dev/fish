@@ -76,3 +76,8 @@ EA's feasibility view is recorded in SRS section 12.3. Corrections to this docum
 
 - **D3: EA is the relay** ("It is where the owner Admin lives. The dashboard there is his"). **EA now owns the route-contract doc**; WEB and GL finalise against it.
 - **D35: two separate consent records** (support terms, which may gate tickets; market-aggregate inclusion, optional, revocable, never a condition of any service). Femi's reaction to the bundling was "Why would that be a thing"; treated as decided unless he says otherwise. Legal wording and mechanism stay open (D9).
+
+
+## Pending D41, 2026-10-04 (Femi reframed Market Support)
+
+Femi: Femi: "Omniview will simply show market capitalisation - the aggregated Balance Sheet balance of shareholders funds". The one confirmed financial figure is aggregate shareholders' funds. **Awaiting Femi (D41):** whether the leverage ratio and the tenant and staff counts stay. If the counts go, the consenting-tenants response shrinks to `{reportDate, consentBoundary, tenants:[{tenantId, companies:[{companyId, industryType?}]}]}` (no `activeStaff`) and the staff-counting questions (D15, D24, D40) fall away. **Nothing to change in the contract yet.** The ticket routes and both consent records are unaffected.
