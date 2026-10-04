@@ -181,8 +181,8 @@ internet inbound.
 | FR-OV-M15 | **DEFERRED to the treasury phase (§11):** rate provenance. Full text preserved in §11 | DEFERRED |
 | FR-OV-M16 | **DEFERRED to the treasury phase (§11):** missed-day rule for rates. Full text preserved in §11 | DEFERRED |
 | FR-OV-M17 | **DEFERRED to the treasury phase (§11):** gold as an analytics-only currency. Full text preserved in §11 | DEFERRED |
-| FR-OV-M18 | **Per-currency reporting (CM's PROPOSAL; Femi has not said).** Without gold there is no common unit, so Market Support reports **per currency, as each Company's books are kept, with no cross-currency totals**, until the treasury phase can translate to a common factor. Cohort and concentration tests apply per currency; a tenant with Companies in several currencies counts in each. Tenant and staff counts are currency-neutral. Leverage (total liabilities to shareholders' funds) is a ratio of per-currency aggregate totals, never an average across currencies | PROPOSED (D28) |
-| FR-OV-M19 | **Small cells suppress more.** Splitting by currency, then by segment, makes cohorts smaller, so many cells will read "insufficient cohort" for a long time and an uncommon currency may never publish. That is correct behaviour (FR-OV-M10); "whole market" means the whole market within one currency | PROPOSED |
+| FR-OV-M18 | **Per-currency reporting (DECIDED, D28: Femi, "which is what we do currently").** Without gold there is no common unit, so Market Support reports **per currency, as each Company's books are kept, with no cross-currency totals**, until the treasury phase can translate to a common factor. Cohort and concentration tests apply per currency; a tenant with Companies in several currencies counts in each. Tenant and staff counts are currency-neutral. Leverage (total liabilities to shareholders' funds) is a ratio of per-currency aggregate totals, never an average across currencies | DECIDED (D28) |
+| FR-OV-M19 | **Small cells suppress more.** Splitting by currency, then by segment, makes cohorts smaller, so many cells will read "insufficient cohort" for a long time and an uncommon currency may never publish. That is correct behaviour (FR-OV-M10); "whole market" means the whole market within one currency | DECIDED (follows from D28) |
 
 ---
 
@@ -315,7 +315,7 @@ the code shows; "Recommendation" is mine, not agreed.
 | D25 | **DEFERRED to the treasury phase (§11):** gold unit and precision. Femi's earlier decisions are preserved there, not lost | Treasury phase |
 | D26 | **DEFERRED to the treasury phase (§11):** rate provider, licence and cost. Femi's earlier decisions are preserved there, not lost | Treasury phase |
 | D27 | **DEFERRED to the treasury phase (§11):** which currencies are downloaded. Femi's earlier decisions are preserved there, not lost | Treasury phase |
-| D28 | The unit for Market Support without gold | **CM's PROPOSAL; Femi has not said.** Report per currency, no cross-currency totals, until the treasury phase can translate to a common factor (FR-OV-M18). Alternatives: choose one reporting currency (needs foreign exchange, which is the deferred work), or report only single-currency tenants and exclude the rest. Cost of per-currency: smaller cohorts and more suppression (FR-OV-M19) | Femi |
+| D28 | The unit for Market Support without gold | **Femi: per-currency reporting is "what we do currently" (DECIDED).** Report per currency, no cross-currency totals, until the deferred treasury phase can translate to a common factor (FR-OV-M18). On translation: "Currency translation is very important in this project but that is for later." The alternatives (one reporting currency; single-currency tenants only) are closed. Cost, accepted: smaller cohorts and more suppression (FR-OV-M19). Femi also agreed the lighter near-term scope: no new outbound path, no extra service identity, no change to  | Settled |
 
 ---
 

@@ -76,7 +76,7 @@ Status labels as in the SRS. Every flow that touches another service is
 1. Omniview calls GL's operator-only, totals-only route (a GET, D22) with a report date from the fixed month-end menu and a segment. It sends nothing else: no tenant list, no rates.
 2. GL reads the consenting-tenant set from EA itself (D16). The caller never supplies or varies it, so two calls cannot be subtracted to isolate a tenant.
 3. GL computes each consenting tenant's balance sheet as at that date (summing its Companies), reports per currency, and applies the cohort, concentration and suppression rules **inside GL**. It returns totals and counts only, never a per-tenant figure.
-4. Omniview shows, **per currency** (FR-OV-M18, PROPOSED, D28): tenants, staff with FiSH access, aggregate shareholders' funds, and the leverage ratio (total liabilities to shareholders' funds), each in the currency the books are kept in, with the "unaudited, compiled from tenants' own books" label and the as-at date (FR-OV-M1..M7). Tenant and staff counts are currency-neutral. There are no cross-currency totals.
+4. Omniview shows, **per currency** (FR-OV-M18, DECIDED, D28): tenants, staff with FiSH access, aggregate shareholders' funds, and the leverage ratio (total liabilities to shareholders' funds), each in the currency the books are kept in, with the "unaudited, compiled from tenants' own books" label and the as-at date (FR-OV-M1..M7). Tenant and staff counts are currency-neutral. There are no cross-currency totals.
 
 **Alternate flows:**
 - 3a. A figure fails the cohort or concentration test: it is shown as "insufficient cohort" (FR-OV-M10). Related cells are suppressed with it so it cannot be recovered by subtraction (§7.1 of the SRS).
