@@ -89,13 +89,13 @@ fully independent implementation, not a proxy.
 
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
-| 7.0 | Full SPUTO pass for product-support ticketing (SRS §3.5): ticket model and states, caller authentication, how FiSH's chat reaches Omniview, notifications, retention and privacy, disposition of EA's existing operator threads. Nothing is built before this | Omniview + Femi | — | Not started. **Suspended with all Omniview work, 2026-10-04** |
+| 7.0 | Full SPUTO pass for product-support ticketing (SRS §3.5): ticket model and states, caller authentication, how FiSH's chat reaches Omniview, notifications, retention and privacy, disposition of EA's existing operator threads. Nothing is built before this | Omniview + Femi | — | **Done 2026-10-04 (draft, pending Femi's review):** see `docs/Omniview_v2_Software_Requirements_Specification.md`, `Omniview_v2_Use_Cases.md`, `Omniview_v2_Backlog.md` (Waves 7A–7C). Build remains suspended |
 
 ## Wave 8 — market reporting (new 2026-10-04, NOT scoped)
 
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
-| 8.0 | Full SPUTO pass for aggregate, non-identifying market reporting (SRS §3.6, NFR-OV-7): define what counts as "debt" for the debt-to-equity ratio and the segments (both leverage ratios are decided), the gold price source and date rule, how the minimum sample size is determined statistically and the concentration rule, where aggregates are computed, and the legal check of tenant terms. Includes a design request to the GL session for an operator-only, totals-only aggregate route (GL has no operator or cross-tenant read path today). Nothing is built before this | Omniview + GL + Femi | — | Not started. **Suspended with all Omniview work, 2026-10-04.** Non-identification is sacrosanct (Femi) |
+| 8.0 | Full SPUTO pass for aggregate, non-identifying market reporting (SRS §3.6, NFR-OV-7): define what counts as "debt" for the debt-to-equity ratio and the segments (both leverage ratios are decided), the gold price source and date rule, how the minimum sample size is determined statistically and the concentration rule, where aggregates are computed, and the legal check of tenant terms. Includes a design request to the GL session for an operator-only, totals-only aggregate route (GL has no operator or cross-tenant read path today). Nothing is built before this | Omniview + GL + Femi | — | **Done 2026-10-04 (draft, pending Femi's review):** see the v2 documents above (Waves 8A–8B). The pass found Market Support needs new work in GL, EA and WEB plus a consent mechanism that does not exist. Build remains suspended. Non-identification is sacrosanct (Femi) |
 
 ## Wave 5 — future, explicitly out of scope for this backlog
 
