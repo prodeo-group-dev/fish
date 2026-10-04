@@ -257,13 +257,14 @@ non-identifying reports**. Read-only throughout (NFR-OV-6).
 | ID | Requirement | Status |
 |---|---|---|
 | FR-OV-M1 | Report the number of tenants and the number of staff, from EA's existing operator overview (both already available per tenant, summed) | Draft |
-| FR-OV-M2 | Capitalisation of the market = total equity | **Decided** (Femi) |
-| FR-OV-M3 | Leverage of the market: the ratio is not yet fixed. Candidates: total liabilities to equity, or debt to equity | **OPEN** |
+| FR-OV-M2 | Capitalisation of the market = aggregate shareholders' funds, taken from standard balance-sheet figures | **Decided** (Femi) |
+| FR-OV-M3 | Leverage of the market is reported as **both** ratios, each analysed as an aggregate across the entire SME market: total liabilities to equity, and debt to equity. Each is a ratio of aggregate totals (aggregate liabilities or debt over aggregate shareholders' funds), never an average of per-tenant ratios, so no per-tenant figure is ever needed (NFR-OV-7) | **Decided** (Femi: both; ratio-of-totals is CM's reading of "aggregate", to be confirmed) |
 | FR-OV-M4 | Every report is available for the whole market and for a segment | **Decided** (Femi: "both") |
 | FR-OV-M5 | All fiat currencies are translated into gold value; **gold is the base currency for Prodeo Capital's market analysis** | **Decided** (Femi) |
 | FR-OV-M6 | Every published figure obeys NFR-OV-7 (non-identification), with no exceptions | **Sacrosanct** (Femi) |
 
 **Open, not assumed:**
+- *What counts as "debt"* for the debt-to-equity ratio (borrowings only, or interest-bearing items more broadly), and which balance-sheet lines make up "liabilities" and "shareholders' funds".
 - *Segment dimensions:* what a segment is (jurisdiction, tenant segment, industry, others).
 - *Gold translation:* which gold price source, which price (spot or a published fix), and as of which date. Suggested starting point: the closing rate at the balance-sheet date, which is how balance-sheet items are translated in accounting. Each report should show the rate used, since gold-denominated values move with the gold price alone.
 - *Where the aggregates are computed.* CM's recommendation: GL computes per-currency totals behind a new operator-only route that returns totals only and applies the minimum-cohort rule at the source, so Omniview never holds any tenant's own figures; Omniview then translates to gold from its own rate table. GL has no operator concept and no cross-tenant read route today, so this is new design in GL, not in Omniview alone.
