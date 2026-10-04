@@ -34,7 +34,7 @@ Femi (decisions, DNS, Terraform apply); a solicitor and a statistician
 
 **Scope of "live" (Femi, via CM):** an Owner Admin raises a ticket from FiSH (WEB, then the EA relay, then Omniview); an operator sees it, **is alerted**, answers; the Owner Admin sees the reply in the chat; Omniview is private-only; closure is handled; nothing is lost. **Market Support and the GL route are not built now** (they need the statistician's numbers, consent wording and GL work anyway; D8 stays the launch gate for any market figure).
 
-### Femi's one-line answers (each with my recommended default)
+### Femi's answers (DECIDED 2026-10-04, Femi via CM, 2026-10-04: "go with your recommendations")
 
 | # | Decision | Recommended default (answer "default" to accept all) | Why it is on the v1 path |
 |---|---|---|---|
@@ -47,12 +47,13 @@ Femi (decisions, DNS, Terraform apply); a solicitor and a statistician
 | D17 | Ticket data protection (retention, erasure) | **v1: keep tickets until an operator erases one on a verified request (a documented manual procedure); no retention job.** Solicitor to confirm; automatic retention follows | A solicitor question; the default needs no code |
 | D1/D2 | Legacy EA operator threads | **Leave them read-only in EA; WEB's `/operator` stays as their reply surface** until they are closed or abandoned (FR-OV-S18) | Avoids migrating content authored under other rules |
 
+**Decided as recommended, except two points:** D35/D9 is a **support-terms acceptance gate in v1** (EA serves and records it and enforces it with `403 support_terms_required`; Omniview stores no tenant-facing wording and enforces nothing), so EA's support-terms record and routes move onto the v1 path (still no market consent). **D34** requires the alert **at ticket creation and at an Owner Admin reply**, to a support mailbox through the SNS topic's email subscription; the address is Femi's to name and is not chosen yet, so the publisher is topic-driven, failure-tolerant and loud in the logs. **D38:** a reply on a closed ticket becomes a new ticket (Omniview refuses with `409 ticket_closed`; the widget starts the new ticket; CM to confirm that reading). **D4:** private access only, through CM's planned SSM-only bastion (Omniview needs port 8090 and nothing public). v1 has no market features.
 ### (1) Minimum v1 that can go live safely
 
 | Layer | In v1 | Backlog rows |
 |---|---|---|
 | Omniview | Remove the reply write path; read-only enforcement test; **persistence** (Exposed, Flyway, tickets and messages, small pool); **ticket domain** (Open, Answered, Closed); **inbound service authentication** (fails closed); **internal ticket API** for the relay (create, list, messages, reply, read marker, unread count, idempotency, quota, size limits, adversarial tests); **operator authentication** (D13); **operator console** (queue with ageing, thread, reply, close; text rendered as text; strict CSP); **alert publisher** (D34); the workflow completeness check (section 14) on create, reply, close, alert | 7B.1, 7B.2, 7B.4, 7B.5, 7B.6, 7C.1, 7C.2, 7C.3, 7C.12 (queue and ageing), 7C.14, 7C.15 |
-| EA | **Security release first** (company registration, invite guard), then the **relay routes** to Contract Draft 3 section 2 (create, list, messages, reply, read, unread; Owner Admin gate; quota; idempotency; error mapping; fail closed with a distinguishable 503), the Omniview gateway with its service-account token provider | 7B.7 (consent routes only if D35/D9 says a gate is needed) |
+| EA | **Security release first** (company registration, invite guard), then the **relay routes** to Contract Draft 3 section 2 (create, list, messages, reply, read, unread; Owner Admin gate; quota; idempotency; error mapping; fail closed with a distinguishable 503), the Omniview gateway with its service-account token provider | 7B.7 (**support-terms record and routes are in v1**: D35/D9 decided; market consent is not) |
 | WEB | Widget repointed to EA's ticket routes ("Raising for: tenant", draft kept on failure, idempotent submit, unread on the chat entry); an employee is told to ask the Owner Admin | 7A.4, 7C.6 |
 | CM | See the ordered list below | 7B.3, 7C.8, 7C.9 |
 
