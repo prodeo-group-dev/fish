@@ -128,7 +128,7 @@ arriving from UC-OV-2 by clicking a Tenant's support-activity count.
 
 **Main flow:**
 1. The operator opens the market report and chooses the whole market or a segment (FR-OV-M4).
-2. Omniview obtains the aggregates: tenant count, staff count, total equity and the leverage ratio.
+2. Omniview obtains the aggregates: tenant count, staff count, aggregate shareholders' funds, and both leverage ratios (liabilities to equity, debt to equity), each as a ratio of aggregate totals.
 3. Omniview translates every fiat figure into gold value and shows the rate used (FR-OV-M5).
 4. Any figure covering fewer tenants than the minimum is suppressed, including where it could be derived by subtracting one figure from another (NFR-OV-7).
 5. Omniview renders the report.

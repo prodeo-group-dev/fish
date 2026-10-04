@@ -95,7 +95,7 @@ fully independent implementation, not a proxy.
 
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
-| 8.0 | Full SPUTO pass for aggregate, non-identifying market reporting (SRS §3.6, NFR-OV-7): define the leverage ratio and segments, the gold price source and date rule, the minimum cohort size, where aggregates are computed, and the legal check of tenant terms. Includes a design request to the GL session for an operator-only, totals-only aggregate route (GL has no operator or cross-tenant read path today). Nothing is built before this | Omniview + GL + Femi | — | Not started. **Suspended with all Omniview work, 2026-10-04.** Non-identification is sacrosanct (Femi) |
+| 8.0 | Full SPUTO pass for aggregate, non-identifying market reporting (SRS §3.6, NFR-OV-7): define what counts as "debt" for the debt-to-equity ratio and the segments (both leverage ratios are decided), the gold price source and date rule, the minimum cohort size, where aggregates are computed, and the legal check of tenant terms. Includes a design request to the GL session for an operator-only, totals-only aggregate route (GL has no operator or cross-tenant read path today). Nothing is built before this | Omniview + GL + Femi | — | Not started. **Suspended with all Omniview work, 2026-10-04.** Non-identification is sacrosanct (Femi) |
 
 ## Wave 5 — future, explicitly out of scope for this backlog
 
