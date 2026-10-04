@@ -73,8 +73,8 @@ Status labels as in the SRS. Every flow that touches another service is
 **Trigger:** opens the Market view and picks whole market or a segment.
 
 **Main flow:**
-1. Omniview reads the current gold rate table from its own database and calls GL's operator-only, totals-only route (a GET, D22) with the report date, the segment and the rate table.
-2. GL reads the consenting-tenant set from EA itself (D16). The caller never supplies or varies it, so two calls cannot be subtracted to isolate a tenant.
+1. Omniview calls GL's operator-only, totals-only route (a GET, D22) with a report date from the fixed month-end menu and a segment. It sends nothing else: no tenant list, no rates.
+2. GL reads the consenting-tenant set from EA itself (D16) and the published gold rate for that date from Omniview's rate table (FR-OV-M12). The caller never supplies or varies either, so two calls cannot be subtracted, and a crafted rate cannot expose a single-currency tenant.
 3. GL computes each consenting tenant's balance sheet as at that date (summing its Companies), converts to gold, and applies the cohort, concentration and suppression rules **inside GL**. It returns totals and counts only, never a per-tenant figure.
 4. Omniview shows: tenants, staff with FiSH access, aggregate shareholders' funds, liabilities-to-equity (and debt-to-equity once the debt flag exists), each in gold, with the "unaudited, compiled from tenants' own books" label and the rate, source and date used (FR-OV-M1..M7).
 
@@ -147,7 +147,7 @@ Status labels as in the SRS. Every flow that touches another service is
 
 **Alternate flows:**
 - A report date with no rate: the report is unavailable for that date, not estimated.
-- A correction: added as a new row with a reason; the old row stays for traceability.
+- A correction: added as a new row with an audited reason; the old row stays for traceability. A report already published is never silently recomputed (FR-OV-M12).
 
 **Note:** whether rates are entered by hand or fetched from a named source is D7. Entering by hand is the smaller first step and removes a third-party dependency.
 **Traces to:** FR-OV-M5, M7; D7.
