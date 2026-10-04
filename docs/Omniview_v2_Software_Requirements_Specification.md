@@ -143,23 +143,20 @@ exhaustion, so Omniview's pool stays small.
 | FR-OV-S21 | **Machine-readable error codes (WEB feedback).** The relay returns codes the widget can tell apart without parsing prose: 401 (session expired); 403 `not_owner_admin`; 403 or 409 `consent_required`; 404 `ticket_not_found` (including another tenant's ticket, so existence is never leaked); 400 validation (empty or over-length body); 429 `rate_limited` or `quota_exceeded` with `Retry-After`; and 503 `support_unavailable` for Omniview or the relay being unreachable, distinct from a generic 500 or 502 | PROPOSED |
 | FR-OV-S22 | **Body constraints (WEB feedback).** Tickets and replies are **plain text**; a maximum length is stated by the relay so the widget can enforce it; **attachments are out for v2** (D5). Omniview and the widget render the text as text, never as HTML (NFR-OV-10) | PROPOSED |
 | FR-OV-S23 | **Relay compatibility (WEB feedback).** The new routes are additive: the existing support-thread routes stay until the widget has moved, because WEB deploys independently; any contract-breaking change follows the lockstep pattern used for the Creditor-to-Supplier rename (field diff first, coordinated window). The relay's CORS allows WEB's origin (`capital.theprodeogroup.com`) with the `Authorization` header and GET/POST; a missing CORS rule has broken a route before | PROPOSED |
+| FR-OV-S24 | **Replies persist and are never lost.** Tickets and replies are stored durably in Omniview and stay readable for the life of the ticket (until erased under retention, FR-OV-S13) | PROPOSED (for Femi) |
+| FR-OV-S25 | **Unread indicator on every FiSH screen, not only inside the chat.** The app can ask the relay cheaply for an unread count (builds on FR-OV-S17), so an Owner Admin sees a reply wherever they are in FiSH. EA (the relay's unread route) and WEB (the indicator) each own a part | PROPOSED (for Femi) |
+| FR-OV-S26 | **Pull timing is stated.** FiSH pulls and Omniview never pushes, so the worst-case delay between an operator's reply and the Owner Admin seeing it is a stated requirement, met by a polling interval or a long poll. Proposed target for Femi: the unread count refreshes within about a minute while FiSH is open | PROPOSED (the number is Femi's) |
+| FR-OV-S27 | **A flaky connection never loses or duplicates a ticket or reply:** retry with idempotent submit (FR-OV-S20) and the draft kept on failure (FR-OV-S15) | PROPOSED |
+| FR-OV-S28 | **History is ordered and searchable** for both the Owner Admin and the operator | PROPOSED (for Femi) |
+| FR-OV-S29 | **Operators see an "awaiting reply" queue with ageing**, so nothing sits unanswered. With no email, this is the safety net on Prodeo's side. Service-level targets for how quickly a ticket is answered are OPEN | PROPOSED (targets OPEN) |
+| FR-OV-S30 | **Recorded limitation:** with no email, a reply is seen only when the Owner Admin next opens FiSH. The product states response-time expectations to the tenant (wording OPEN). In-app or PWA notifications later are NOT decided | DECIDED (limitation) / OPEN (wording) |
 | FR-OV-S11 | An ordinary employee who opens the chat is told to ask their Owner Admin, and keeps EA's internal chat. The relay rejects an employee's ticket in any case; hiding the control is a courtesy | PROPOSED |
 | FR-OV-S12 | A ticket carries `tenantId` as a reference only; Omniview never resolves it into tenancy data beyond the tenant's name for display | DECIDED (reference-only) / PROPOSED (name lookup) |
 | FR-OV-S13 | Ticket content is stored with a retention period and can be exported or erased on a verified request (D17) | PROPOSED |
 
-**CHALLENGE on notifications (D12).** The seed says Omniview never pushes
-a notification. Today EA *emails* the other party on every message. If
-"no push" includes email, an Owner Admin learns of a reply only by
-opening FiSH, which for a support channel is a real usability cost. If
-email is allowed, it is a message to a person's mailbox, not a write into
-FiSH or tenancy data. I recommend allowing it (a bare "you have a reply",
-no ticket text), because it writes nothing into any tenancy; but this is
-Femi's call, so it is a decision, not an assumption. **Private-network
-consequence:** if Omniview sends the email it needs controlled outbound
-access to SES from its private subnets (CM); the alternative is the relay
-(EA, which already has an email gateway) sending it after noticing a reply,
-which needs the relay to poll Omniview. Both keep Omniview off the
-internet inbound.
+**Notifications (D12, DECIDED).** Femi: "The chat should be robust enough to be effective communication" and "An in app chat is priortised over emails or phonecalls". The in-app chat is **the** channel for Product Support: no email on reply and no phone, at least for now. Email, and the SES path with its controlled egress, is **deferred, not forbidden**; Femi did not rule it out forever.
+
+**Honest limitation.** With no email, a reply is seen only when the Owner Admin next opens FiSH (FR-OV-S30). Response-time expectations therefore belong in the product, and in-app or PWA notifications later are **not decided**. The chat has to be robust enough to carry that weight, which is why FR-OV-S24..S30 exist.
 
 ---
 
@@ -307,7 +304,7 @@ the code shows; "Recommendation" is mine, not agreed.
 | D9 | Tenants' permission: wording, mechanism, registering body's rules | A consent record does not exist (§2.2); this decision also creates EA work (D16) | Femi + solicitor |
 | D10 | Where aggregates are computed | **GL**, reading the consenting set from EA itself (FR-OV-M5a, M8, D22); a route with its own authorization, not publicly reachable beyond gating | GL + Omniview + CM |
 | D11 | Store snapshots or compute fresh | **Compute fresh** (FR-OV-M9) | Omniview |
-| D12 | May an Owner Admin be emailed about a reply? Who sends | See §3. Recommend yes, a bare "you have a reply" with no ticket text. Sender is either Omniview (needs controlled SES egress from private subnets) or the relay (needs to poll). Both keep Omniview off the internet inbound **Evidence from WEB (2026-10-04):** the app is a PWA with no push channel and signs out after 15 minutes idle, so in-app unread reaches only someone already in the app. An Owner Admin who raises a ticket and leaves will not learn there is an answer without email (or a push channel). That makes email close to necessary for tickets to be useful, and strengthens the recommendation to allow it. | Femi, then CM + EA |
+| D12 | May an Owner Admin be emailed about a reply? Who sends | **Femi: "The chat should be robust enough to be effective communication" and "An in app chat is priortised over emails or phonecalls". (DECIDED).** The in-app chat is the channel for Product Support; **no email on reply and no phone for now**. Email and the SES path are **deferred, not forbidden**. Consequences: the email/SES path is dropped from Wave 7 (7C.4) and from the egress discussion; chat-robustness requirements FR-OV-S24..S30 (PROPOSED, for Femi); the limitation that a reply is seen only when the Owner Admin next opens FiSH is recorded (FR-OV-S30). WEB's evidence (a PWA with no push and a 15-minute idle sign-out) is why the unread indicator and the robustness requirements matter | Settled; robustness requirements for Femi |
 | D13 | Operator authentication | The token bridge was accepted for a handful of operators reading status. It now guards a queue of tenant free text plus market data. Private access (D4) adds a network layer; it does not replace operator identity. Recommend deciding before Product Support goes live whether operators move to a Cognito group; calls to EA's operator routes still need EA's tokens or an EA change | Femi + CM + EA |
 | D14 | Market unit, as-of date, currency basis | **Femi: the unit being the tenant and one common month-end is "doable but it is the company that determines the industry", and "test both tenant and company" (DECIDED).** Verified: `industryType` is stored **per Company** in EA (migration V13); GL has no industry field. So industry segments are built from Companies, a multi-industry tenant appears in each of its industries, and the **minimum-cohort and concentration tests apply at both tenant level and company level, the stricter governing** (FR-OV-M13). Staff by industry is D24 (open) | Settled |
 | D15 | Definition of "staff" | Active EA Memberships, labelled "staff with FiSH access" | Femi |
@@ -401,7 +398,7 @@ Planning-level feedback from the other sessions, recorded with its source, so re
 
 - **Size depends on the ticket model (D5).** A flat thread per tenant is a repoint; real tickets are a new view. Recorded in D5.
 - **Owner Admin of several tenants needs no picker:** the widget already follows the selected tenant and `isOwnerAdmin` is per tenant, so being Owner Admin of A and staff in B behaves correctly. Recorded as FR-OV-S19. WEB also found a tenant-switch state bug in the current widget, to be fixed in that build.
-- **Unread and polling:** FR-OV-S17. **D12 evidence:** no push, 15-minute idle sign-out (recorded in D12).
+- **Unread and polling:** FR-OV-S17. **D12 (now DECIDED: in-app chat, no email):** no push, 15-minute idle sign-out (recorded in D12).
 - **Fail closed and keep the draft** is workable: the draft is already cleared only on success and is kept in memory only, not persisted across sign-out. The relay needs a distinguishable code (FR-OV-S15).
 - **Consent screen** is feasible as a blocking step before the first ticket; text and version from EA (FR-OV-M8).
 - **Cutover gap found:** two places an operator might look and a tenant might write (FR-OV-S18). This also corrects an earlier simplification: retiring `/operator` is gated on legacy threads being resolved, not only on tickets being live (backlog 7C.10).
