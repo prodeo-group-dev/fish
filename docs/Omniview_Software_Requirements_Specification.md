@@ -49,7 +49,8 @@ get it.
 and Market Support (§1.1). The original 2026-10-03 framing, *"where I
 oversee everything in the FiSH+ERverse"*, is how the platform-health
 strip and the tenant overview came to be built. They are retained as
-tools that serve those two purposes (to be confirmed by Femi), not as
+tools that serve those two purposes (confirmed by Femi, 2026-10-04: they are
+implied by them and stay), not as
 the purpose itself. Internal to Prodeo Capital: a tenant's Owner Admin
 reaches it only by raising a ticket from inside FiSH (§3.5); it has no
 client-facing screen.
