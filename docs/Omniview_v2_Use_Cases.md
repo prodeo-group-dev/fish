@@ -52,13 +52,13 @@ Status labels as in the SRS. Every flow that touches another service is
 **Trigger:** opens the Tickets view.
 
 **Main flow:**
-1. Omniview lists tickets, Open first then oldest first, **with ageing so nothing sits unanswered (FR-OV-S29)**, with the tenant's *name* (looked up from EA's operator overview, read-only), state, age, and last message preview.
+1. Omniview lists tickets, Open first then oldest first, **with ageing so nothing sits unanswered (FR-OV-S29)**, with the tenant's *name* (supplied by the relay when the ticket was created, FR-OV-S12), state, age, and last message preview.
 2. Operator opens a ticket and reads the thread. All text is rendered as text (NFR-OV-10).
 3. Operator writes a reply; Omniview stores it in its own database, records the operator's name, and sets the ticket to Answered (FR-OV-S2, S8).
 4. Operator can close the ticket. Closing changes only Omniview's record (FR-OV-S7).
 
 **Alternate flows:**
-- 1a. The tenant-name lookup fails: tickets still list, with the tenant id shown instead of the name; the failure never blocks answering.
+- 1a. A tenant name may be stale after a rename; the tenant id is always shown with it. Omniview does no lookup, so there is nothing to fail.
 - 3a. Database write fails: the reply stays in the box with an inline error; nothing is lost.
 - 4a. A ticket calls for a change in the tenant's data (for example fixing an account): the operator tells the Owner Admin in the reply; whoever owns that data makes the change. Omniview offers no action that writes into a tenancy (FR-OV-S7).
 
@@ -111,6 +111,7 @@ Status labels as in the SRS. Every flow that touches another service is
 ## UC-OV-9: An Owner Admin grants or withdraws consent to aggregate use
 
 **Actor:** Owner Admin. **Preconditions:** the consent wording exists and is approved (D9).
+**Two separate things (D35):** accepting the **support terms** may gate raising a ticket; **market-aggregate consent** (this use case) is optional, revocable and never a condition of any service.
 **Trigger:** opens the consent screen in FiSH.
 
 **Main flow:**
