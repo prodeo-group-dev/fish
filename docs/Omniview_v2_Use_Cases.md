@@ -163,7 +163,7 @@ Status labels as in the SRS. Every flow that touches another service is
 |---|---|---|---|---|
 | UC-OV-5 | Raise a ticket (via the relay) | Owner Admin | EA `/me` (in the relay) | Omniview DB, through the relay |
 | UC-OV-6 | Answer a ticket | Operator | EA overview (name only) | Omniview DB |
-| UC-OV-7 | View market report | Operator | EA (consent list, counts), GL (new) | nothing |
+| UC-OV-7 | View market report | Operator | EA (consent list), GL (new) | nothing |
 | UC-OV-8 | Read replies (pulled through the relay) | Owner Admin | EA `/me` (relay), Omniview DB | nothing |
 | UC-OV-9 | Grant/withdraw consent | Owner Admin | n/a | **EA** (EA's own data) |
 | UC-OV-10 | Employee opens chat | Employee | EA `/me` (in FiSH, in the relay) | nothing; never reaches Omniview |
