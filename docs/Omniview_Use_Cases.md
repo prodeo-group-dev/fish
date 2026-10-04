@@ -119,6 +119,26 @@ arriving from UC-OV-2 by clicking a Tenant's support-activity count.
 
 ---
 
+## UC-OV-7 (DRAFT, 2026-10-04): Prodeo Capital views the market report
+
+> Draft only. Needs its own SPUTO pass: leverage definition, segments, gold price source and date, minimum cohort size and where the aggregates are computed are all open (SRS §3.6).
+
+**Actor:** Operator (Prodeo Capital)
+**Preconditions:** Signed in (UC-OV-1).
+
+**Main flow:**
+1. The operator opens the market report and chooses the whole market or a segment (FR-OV-M4).
+2. Omniview obtains the aggregates: tenant count, staff count, total equity and the leverage ratio.
+3. Omniview translates every fiat figure into gold value and shows the rate used (FR-OV-M5).
+4. Any figure covering fewer tenants than the minimum is suppressed, including where it could be derived by subtracting one figure from another (NFR-OV-7).
+5. Omniview renders the report.
+
+**Postconditions:** Only aggregates are shown. No per-tenant figure is exposed anywhere. Nothing is written into any tenancy (NFR-OV-6).
+
+**Traces to:** FR-OV-M1 to M6, NFR-OV-6, NFR-OV-7.
+
+---
+
 ## UC-OV-4: Operator checks platform health
 
 **Actor:** Operator
@@ -157,3 +177,4 @@ one view that keeps working even if EA is the service that's down).
 | UC-OV-4 | Platform health | Operator | No |
 | UC-OV-5 | Raise a support ticket from inside FiSH (draft) | Tenant Owner Admin | No |
 | UC-OV-6 | Answer a support ticket (draft) | Operator | No |
+| UC-OV-7 | View the market report: aggregate, non-identifying (draft) | Operator | Yes |

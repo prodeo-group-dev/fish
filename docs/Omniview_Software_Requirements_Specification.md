@@ -215,7 +215,7 @@ increases"*):
 | ID | Requirement | Priority |
 |---|---|---|
 | FR-OV-12 | ER/Education Runtime status data | **Future** — not designed, not built |
-| FR-OV-13 | GL or any sibling's financial/revenue data | **Future** — not designed, not built |
+| FR-OV-13 | GL or any sibling's financial/revenue data | **Future** — not designed, not built. The first slice is aggregate-only market reporting (§3.6, draft) |
 
 These are named here only so a future SRS revision has an explicit
 anchor point — building either without a fresh design pass is
@@ -247,6 +247,29 @@ Not designed yet: ticket states and ownership, authentication of the
 Owner Admin caller, notifications, retention
 and privacy, and SLAs. Those are the SPUTO pass's job; none are assumed here.
 
+### 3.6 Market Reporting: aggregate, non-identifying (DRAFT, 2026-10-04 — needs its own SPUTO pass before any build)
+
+Direction from Femi: Omniview can generate for Prodeo Capital a report
+summary: the number of tenants, the number of staff, the capitalisation
+of the market and the leverage of the market. They are **aggregate,
+non-identifying reports**. Read-only throughout (NFR-OV-6).
+
+| ID | Requirement | Status |
+|---|---|---|
+| FR-OV-M1 | Report the number of tenants and the number of staff, from EA's existing operator overview (both already available per tenant, summed) | Draft |
+| FR-OV-M2 | Capitalisation of the market = total equity | **Decided** (Femi) |
+| FR-OV-M3 | Leverage of the market: the ratio is not yet fixed. Candidates: total liabilities to equity, or debt to equity | **OPEN** |
+| FR-OV-M4 | Every report is available for the whole market and for a segment | **Decided** (Femi: "both") |
+| FR-OV-M5 | All fiat currencies are translated into gold value; **gold is the base currency for Prodeo Capital's market analysis** | **Decided** (Femi) |
+| FR-OV-M6 | Every published figure obeys NFR-OV-7 (non-identification), with no exceptions | **Sacrosanct** (Femi) |
+
+**Open, not assumed:**
+- *Segment dimensions:* what a segment is (jurisdiction, tenant segment, industry, others).
+- *Gold translation:* which gold price source, which price (spot or a published fix), and as of which date. Suggested starting point: the closing rate at the balance-sheet date, which is how balance-sheet items are translated in accounting. Each report should show the rate used, since gold-denominated values move with the gold price alone.
+- *Where the aggregates are computed.* CM's recommendation: GL computes per-currency totals behind a new operator-only route that returns totals only and applies the minimum-cohort rule at the source, so Omniview never holds any tenant's own figures; Omniview then translates to gold from its own rate table. GL has no operator concept and no cross-tenant read route today, so this is new design in GL, not in Omniview alone.
+- *Minimum cohort size* (the threshold value) and whether the tenant terms permit aggregate use (legal check).
+- *Whether Omniview stores report snapshots* (aggregate figures only, never per-tenant) to show trends.
+
 ---
 
 ## 4. Data Requirements
@@ -259,6 +282,8 @@ concerns — **never** another service's domain data:
 | Tenant/Membership/KYB status | EA | Read-through, via API call, never cached beyond the request/response |
 | Existing operator-thread messages | EA | Read-through only, via API call, interim. No write-through; disposition open (FR-OV-S6) |
 | Product-support tickets and replies | **Omniview** | Omniview-owned, in its own database (§3.5, draft) |
+| Market aggregates (tenant and staff counts, equity, leverage) | EA and GL | Read-only. Aggregates only, never per-tenant (NFR-OV-7). Source and where computed are open (§3.6) |
+| Gold price series | **Omniview** (own data) | Omniview-owned rate table used to translate fiat to gold (§3.6, draft) |
 | Service health | N/A (derived) | Computed fresh on each request, not stored |
 | Operator token | Operator's own browser (entered at sign-in) | Held client-side for the session, forwarded per-request — see §7.1 for the open question on exactly how |
 
@@ -297,6 +322,7 @@ Omniview.
 | NFR-OV-2 | Per-operator action attribution and individual token revocation shall be preserved end-to-end for every EA-calling capability — the explicit reason the service-account approach was rejected (DDD design §1) |
 | NFR-OV-3 | No EA-side route, auth mechanism, or schema change required to ship this — a constraint, not just a nicety, agreed directly with the EA-fork session |
 | NFR-OV-4 | No new financial/business data of any kind surfaced in this release (§3.4) |
+| NFR-OV-7 | **Non-identification is sacrosanct (Femi, 2026-10-04).** Every figure Omniview publishes about the market shall be an aggregate that identifies no tenant. There shall be no per-tenant figure or breakdown anywhere: not in any view, API, export, log or stored snapshot. Each published figure shall cover at least a minimum number of tenants (threshold to be set by Femi); anything below it is suppressed. Suppression shall also defeat differencing, so that a total and its segments can never be combined to derive a small segment. Enforced in code with tests, not by convention. The tenant terms must be checked to permit aggregate use before any report is shown | Draft |
 | NFR-OV-6 | Omniview shall be strictly read-only toward every other FiSH service: its outbound gateways issue only `GET`, and no write method (`POST`/`PUT`/`PATCH`/`DELETE`) to any sibling shall exist in its code. Its only writes are to its own support-ticket database (§3.5). Omniview shall never write into any tenancy's data (Femi: it is not its business); a ticket may reference a tenant ID, nothing in a tenancy is altered. Verified by a test asserting the gateways expose no write operation, and enforced in review. Added 2026-10-04 on Femi's direct decision |
 | NFR-OV-5 | Deployed the same way every sibling is (ECS/Fargate, Jenkins CI/CD) — no bespoke infrastructure |
 
