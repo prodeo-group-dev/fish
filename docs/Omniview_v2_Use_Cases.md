@@ -139,20 +139,22 @@ Status labels as in the SRS. Every flow that touches another service is
 
 ---
 
-## UC-OV-11: An operator maintains the gold rate table
+## UC-OV-11: Omniview downloads daily rates; an operator reviews failures and corrections
 
-**Actor:** Operator (or a named finance role, D7). **Trigger:** a new rate is due.
+**Actor:** a scheduled job (Omniview); Operator (review and correction only). **Trigger:** once a day.
 
-**Main flow:** the operator enters a rate with its date, source and basis (for example "closing price on the date"); Omniview stores it in its own rate table, never overwriting history. Reports always show the rate row used.
+**Main flow:**
+1. The job calls the rate provider over HTTPS through the controlled egress path (D26, NFR-OV-16) and fetches the day's rates (D27).
+2. For each rate it checks the value against the previous day within a bound, and stores it with its source, retrieval time and raw value (FR-OV-M15). Stored rates are never overwritten.
+3. GL later reads the one published rate for a report date when it builds a report (UC-OV-7).
 
 **Alternate flows:**
-- A report date with no rate: the report is unavailable for that date, not estimated.
-- A correction: added as a new row with an audited reason; the old row stays for traceability. A report already published is never silently recomputed (FR-OV-M12).
+- 1a. The download fails: the job alerts. For an ordinary day nothing more is needed. For a month-end date the report for that date stays unavailable until the rate is backfilled from the provider's history or entered as an audited manual correction (FR-OV-M16). No rate is estimated or carried forward.
+- 2a. A value falls outside the bound: it is held for an operator's review, not published.
+- 3a. A correction is needed: an operator records it as a new row with an audited reason; the old row stays. A report already published is never silently recomputed.
 
-**Note:** whether rates are entered by hand or fetched from a named source is D7. Entering by hand is the smaller first step and removes a third-party dependency.
-
-**D23b (rate home OPEN):** if rates for all currencies live in GL, this is **not an Omniview screen**: Omniview cannot write into GL, so rate entry is a GL operator action by a controlled path, and Omniview only displays the rate GL returns with each report.
-**Traces to:** FR-OV-M5, M7; D7.
+**Notes:** the operator who corrects rates should not be the operator who reads reports (D20). Gold is analytics-only: it never appears in a client-facing screen or currency list (FR-OV-M17).
+**Traces to:** FR-OV-M5, M12, M14, M15, M16, M17; D7, D23b, D26, D27.
 
 ---
 
@@ -177,5 +179,5 @@ Status labels as in the SRS. Every flow that touches another service is
 | UC-OV-8 | Read replies (pulled through the relay) | Owner Admin | EA `/me` (relay), Omniview DB | nothing |
 | UC-OV-9 | Grant/withdraw consent | Owner Admin | n/a | **EA** (EA's own data) |
 | UC-OV-10 | Employee opens chat | Employee | EA `/me` (in FiSH, in the relay) | nothing; never reaches Omniview |
-| UC-OV-11 | Maintain gold rates | Operator | n/a | Omniview DB |
+| UC-OV-11 | Daily rate download; review failures and corrections | Scheduled job; Operator | the rate provider (outbound, controlled egress) | Omniview DB |
 | UC-OV-12 | Suppressed segment | Operator | as UC-OV-7 | nothing |
