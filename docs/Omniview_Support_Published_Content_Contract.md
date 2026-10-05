@@ -2,8 +2,11 @@
 
 **Status:** DECIDED 2026-10-05 (Femi: "D now, a relay later"; GL will not host a relay and EA's decline stands).
 **Omniview's side is built** (branch `feat/omniview-support-s4`): generator, local and S3 publishers, runner.
-**Hosting is built and merged by CM** (fish-infrastructure PR #12), **not yet applied**. Until it is applied and the base
-URL exists, production publishing is off. The S3 and S4 routes remain relay-agnostic, so a relay later changes the
+**Hosting is applied and live** (fish-infrastructure PR #12; distribution `E26EUCBT46B3CR`). Base URL:
+`https://d2y9d7psy2v7dv.cloudfront.net/support-content/v1/`. Nothing is published until Omniview's S4 branch is deployed with
+`OMNIVIEW_PUBLISH_S3_BUCKET` and `OMNIVIEW_PUBLISH_CLOUDFRONT_DISTRIBUTION_ID` set, so the index answers 403 until then.
+**CORS is settled as production origin only** (`https://capital.theprodeogroup.com`; fish-infrastructure PR #13): local
+development serves the generated files same-origin instead. The S3 and S4 routes remain relay-agnostic, so a relay later changes the
 transport, not the content.
 
 ## 0. The idea in one paragraph
