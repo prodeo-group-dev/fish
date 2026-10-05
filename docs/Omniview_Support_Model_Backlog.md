@@ -49,7 +49,7 @@ Sizing is qualitative (S, M, L), not a date.
 | S1.5 | **SLA clocks and alerts** per severity within the published hours; alerts at half the target and at breach, through the existing outbox (FR-SUP-A4, J2); published hours and response wording as a setting (FR-SUP-K3) | Omniview | S1.1, SD2 | M | **Built 2026-10-05** (fish-er-omniview branch `feat/omniview-support-s1`, tested, awaiting CM) |
 | S1.6 | **Operator access log**: every ticket read, card open, export and close by named operator, append-only, viewable by Femi (FR-SUP-F4). Built **now**, before the tenant card exists | Omniview | S0.1 | S | **Built 2026-10-05** (fish-er-omniview branch `feat/omniview-support-s1`, tested, awaiting CM) |
 | S1.7 | **Metrics view v1**: volume by family and severity, first-response and resolution against targets, backlog age, reopen rate, workload per operator (FR-SUP-J1) | Omniview | S1.1, S1.5 | M | **Built 2026-10-05** (fish-er-omniview branch `feat/omniview-support-s1`, tested, awaiting CM) |
-| S1.8 | **Satisfaction rating** on closure: the field and the operator view; the tenant-side prompt rides on S3 (SD10) | Omniview, WEB | S1.1, SD10 | S | **Not started:** the rating needs the tenant-side prompt (S3.6) or it could never be written, so the field waits for it |
+| S1.8 | **Satisfaction rating** on closure: the field and the operator view; the tenant-side prompt rides on S3 (SD10) | Omniview, WEB | S1.1, SD10 | S | **Omniview side built 2026-10-05** with Wave S3 (a closed ticket can be rated once; rating and comment shown to operators; satisfaction in the metrics); the tenant prompt is S3.6 in WEB |
 | S1.9 | **Merge and link** tickets; **feedback** as a ticket kind, counted (FR-SUP-A10, J4) | Omniview | S1.1 | S | **Not started:** merge and link wait for the next increment; the feedback kind is covered by the FEEDBACK family |
 | S1.10 | **Assignment worklists**: "mine", "unassigned", "breaching soon"; on-call roster setting (SD12) | Omniview | S1.1, S1.5 | S | **Partly built:** the worklists (mine, unassigned, needs attention) are done; the on-call roster setting is not |
 
@@ -67,12 +67,12 @@ Sizing is qualitative (S, M, L), not a date.
 
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| S3.1 | **Knowledge base** in Omniview: authoring, versions, category, jurisdiction, industry, language, owner and review date (FR-SUP-C1, C4); SD11 decides owners | Omniview | S1.1 | M | Not started |
-| S3.2 | **Pull route** for articles and **help screen** in FiSH (through the relay; Omniview never pushes) | EA, WEB, Omniview | S3.1 | M | Not started |
-| S3.3 | **Suggested answers** while typing a ticket, and articles viewed attached to the ticket (FR-SUP-C2, UC-SUP-6) | WEB, Omniview | S3.2 | M | Not started |
-| S3.4 | **Access explainer**: "Why can't I see this?" answered from the real grants with the exact fix (FR-SUP-C3, UC-SUP-5); an EA feature that also feeds the operator card | EA, WEB | S2.1 | M | Not started |
-| S3.5 | **Promote a reply** into a macro or article, with an owner review (FR-SUP-C5) | Omniview | S3.1, S1.4 | S | Not started |
-| S3.6 | **Satisfaction prompt** on closure in the widget (S1.8) | WEB | S1.8, S3.2 | S | Not started |
+| S3.1 | **Knowledge base** in Omniview: authoring, versions, category, jurisdiction, industry, language, owner and review date (FR-SUP-C1, C4); SD11 decides owners | Omniview | S1.1 | M | **Built 2026-10-05** (branch `feat/omniview-support-s3`, awaiting CM): versioned plain-text articles, publish, withdraw, review dates, views, Articles tab; Prodeo still has to write the first set |
+| S3.2 | **Pull route** for articles and **help screen** in FiSH (through the relay; Omniview never pushes) | EA, WEB, Omniview | S3.1 | M | **Omniview side built 2026-10-05** (branch `feat/omniview-support-s3`, awaiting CM); contract: `docs/Omniview_Support_S3_Self_Serve_Contract.md`; EA relay routes (after its support relay release) and the WEB help screen follow |
+| S3.3 | **Suggested answers** while typing a ticket, and articles viewed attached to the ticket (FR-SUP-C2, UC-SUP-6) | WEB, Omniview | S3.2 | M | **Omniview side built 2026-10-05** (branch `feat/omniview-support-s3`, awaiting CM); contract: `docs/Omniview_Support_S3_Self_Serve_Contract.md` (search and the `viewedArticles` key on ticket create); WEB builds the suggestions |
+| S3.4 | **Access explainer**: "Why can't I see this?" answered from the real grants with the exact fix (FR-SUP-C3, UC-SUP-5); an EA feature that also feeds the operator card | EA, WEB | S2.1 | M | **Not started:** EA's feature; unchanged |
+| S3.5 | **Promote a reply** into a macro or article, with an owner review (FR-SUP-C5) | Omniview | S3.1, S1.4 | S | **Built 2026-10-05** (Reuse this reply: a canned reply or an article draft; an article is never published by it) |
+| S3.6 | **Satisfaction prompt** on closure in the widget (S1.8) | WEB | S1.8, S3.2 | S | Omniview rating routes built (see S1.8); the **WEB prompt is not started** |
 
 ## Wave S4: Notices, incidents and problems
 
