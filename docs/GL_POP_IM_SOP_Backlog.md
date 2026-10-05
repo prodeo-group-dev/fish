@@ -250,6 +250,7 @@ separable from the accounting-correctness work above.
 | ~~GL's `AccountsReceivableAging` (domain/sales/accounts_receivable_aging.kt) has no HTTP route exposing it at all~~ | GL | **Resolved 2026-10-02** - new `ComputeAccountsReceivableAgingUseCase` + `POST /companies/{companyId}/accounts-receivable-aging` (GL `d29ce6d`, live in production, Jenkins build #56), mirroring `ComputeCustomerBalancesUseCase`/`CustomerBalancesRoutes`'s exact shape and returning the full `AgingBucketAmount` breakdown instead of just the scalar total. Additive only - the existing `customer-balances` endpoint is unchanged. 9 new tests (5 use-case, 4 route), full suite green (817/817, verified by CM with `--rerun`). **AP's identical gap resolved the same day too** - see the row below. |
 | ~~GL's `AccountsPayableAging` (domain/purchasing/accounts_payable_aging.kt) has the same scalar-only gap~~ | GL | **Resolved 2026-10-02**, per direct user instruction - new `ComputeAccountsPayableAgingUseCase` + `POST /companies/{companyId}/accounts-payable-aging` (GL `5c5c8cb`, local, handed to CM), mirroring the AR route above exactly (and `ComputeVendorBalancesUseCase`/`VendorBalancesRoutes`'s existing shape). Additive only - the existing `vendor-balances` endpoint is unchanged. 9 new tests (5 use-case, 4 route), full suite green. |
 | GL's `purchase-posting-context` endpoint has no `suspenseAccountId` field, unlike `inventory-posting-context` (GL `8a04ee6`) | GL | Found 2026-10-02 while building POP's `ImportOpeningApLineUseCase` (Opening Figures CSV Upload step 4, AP half). Doesn't block that use case - `Request.suspenseAccountId` is caller-supplied, the same precedent IM's own still-unbuilt route layer already set. Will block the shared CSV/route layer once that's built, since the importer will need to resolve the Suspense account itself rather than require the caller to already know it. Not scoped or started. |
+| GL's jurisdiction registry (V29, live 2026-10-05, GL PR #57) has no write path of its own - adding a country (e.g. ZA) is an INSERT by CM through the credential-split path when Femi asks for one, and enabling/disabling one is the same. A governed operator route (add / enable / disable, audited) is the eventual fix | GL + CM (needs an operator identity GL doesn't have yet) | Direct instruction 2026-10-05: jurisdiction is reference DATA Prodeo can add to without a code change or deploy, one source feeding WEB/EA/HR/Omniview. Built as a `jurisdictions` table (`code`, `name`, `enabled`) read by `GET /api/jurisdictions` and by `POST .../companies`' validation. **Not a blocker** - CM confirmed the INSERT path is acceptable meanwhile. Likely rides on the operator-identity work already scoped for Omniview's aggregate route (own named provider, never the service-account bypass) rather than a separate one. Related, still open: `VatRateSchedule.forJurisdiction` is code, so a new country has Company + Corporate Income Tax (TaxRule rows are already data) but no VAT schedule until VAT becomes data too; HR's `PayrollTaxRule.jurisdiction` is still an independent unvalidated String that should read the registry. |
 
 ---
 
@@ -584,3 +585,18 @@ So the real shape of this problem is: **a policy decision (which currencies, whe
   POP and WEB were both notified directly with this exact before/after
   shape ahead of the rename landing, per "coordination is the prime
   directive" - not left to discover it from the diff.
+
+- **2026-10-05 (GL session)**: Jurisdiction registry delivered
+  (GL PR #57, master `77f6a11`, Jenkins #65, live). `Jurisdiction` is no
+  longer a compiled enum: it is a two-letter code validated against a
+  `jurisdictions` table (V29, seeded UK/IE/NG/SL/LR/GN/CI, `enabled`
+  flag as the governance gate), served by `GET /api/jurisdictions` and
+  enforced by `POST /tenants/{tenantId}/companies`. UK is the single code
+  for the whole United Kingdom, Northern Ireland included (no GB/NI).
+  **Effect on "Multi-currency conflict detail" above:** the real blocking
+  item it named - `Jurisdiction`'s closed enum having no `GH`/`GM` - no
+  longer exists; adding a jurisdiction is now a data insert. The user's
+  decision to hold all five (GHS/GMD/LRD/GNF/XOF) onboarding is
+  unchanged and still governs. New "not yet waved" row added for the
+  registry's missing operator write path. WEB was told before and after;
+  its interim hardcoded dropdown is being deleted.
