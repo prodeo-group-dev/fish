@@ -1,9 +1,10 @@
 # Omniview Support: published content (option D) contract
 
-**Status:** DRAFT 1, 2026-10-05, written by the Omniview session for CM and Femi. This is the **default** CM
-recommended for how help articles and platform notices reach FiSH, written down so the decision is about a concrete
-thing. **Nothing here is built yet** (section 8 says what I build first); the S3 and S4 routes are relay-agnostic and
-work with this or with a relay. Femi decides; CM owns the infrastructure.
+**Status:** DECIDED 2026-10-05 (Femi: "D now, a relay later"; GL will not host a relay and EA's decline stands).
+**Omniview's side is built** (branch `feat/omniview-support-s4`): generator, local and S3 publishers, runner.
+**Hosting is built and merged by CM** (fish-infrastructure PR #12), **not yet applied**. Until it is applied and the base
+URL exists, production publishing is off. The S3 and S4 routes remain relay-agnostic, so a relay later changes the
+transport, not the content.
 
 ## 0. The idea in one paragraph
 
@@ -65,17 +66,18 @@ is never overwritten, so the index pointing at it can be swapped atomically.
 
 ## 3. Publishing: how files get there
 
-1. Something changes (an article published or withdrawn, a notice published or withdrawn) **or** 15 minutes pass (so a
-   notice whose window ended drops out without anyone touching it).
+1. **About once a minute** the runner rebuilds the intended content and compares a fingerprint (everything except the
+   generation time) with the last successful publish. Nothing changed means nothing is uploaded. This needs no change
+   hooks: a publish or withdrawal shows on the next cycle, and a notice whose window ended drops out by itself.
 2. The generator builds the **whole intended file set** from the database: pure, deterministic, no network.
 3. Upload **article files first** (skip any that already exist), then `index.json` **last**. The index is the pointer, so
    a reader sees either the whole old state or the whole new one, never an index pointing at a file that is not there.
 4. Invalidate `/support-content/v1/index.json` in CloudFront so a withdrawal shows within seconds, not at cache expiry.
 5. Delete the files of articles that are no longer published, and invalidate their paths.
 
-A failed publish is **retried** (the change is recorded first, the same at-least-once shape as the staff alert
-outbox) and **logged loudly**; the last good files keep serving meanwhile. Because the output is a pure function of the
-database, a retry or a duplicate run is harmless.
+A failed publish is **retried on the next cycle** and **logged loudly** (`SUPPORT CONTENT NOT PUBLISHED`); the last
+good files keep serving meanwhile. Because the output is a pure function of the database, a retry or a duplicate run is
+harmless. (This replaces the change-recorded-first outbox idea in the first draft: it is simpler and cannot lose a change.)
 
 **Cache headers:** `index.json` `max-age=60`; article files `max-age=3600`; both `Content-Type: application/json`,
 `X-Content-Type-Options: nosniff`.
@@ -138,15 +140,25 @@ These are the cases `NoticeContract` already asserts server-side; WEB should ass
 
 ## 8. Cost, access and who does what
 
-**Infrastructure (CM, applied by Femi):** one private bucket with public access blocked and versioning off; one
-CloudFront distribution with an origin access control; CORS allowing `GET` from the FiSH app origin(s) only. Omniview's
-task role gets **only**: `s3:PutObject`, `s3:DeleteObject`, `s3:ListBucket` on that bucket and prefix, and
-`cloudfront:CreateInvalidation` on that one distribution. Nothing else; no read of any other bucket. Cost is pennies a
-month at this scale.
+**Infrastructure (CM, merged as fish-infrastructure PR #12, applied by Femi):** a dedicated private bucket
+`fish-gl-engine-production-support-content-827709230476` (public access blocked) and a dedicated CloudFront distribution
+with an origin access control, on the default CloudFront domain. Dedicated, not a second origin on WEB's distribution,
+because WEB's deploy runs `s3 sync --delete` on its own bucket and would erase these files, and Omniview's
+invalidation right must reach only this distribution. Files are at `support-content/v1/index.json` and
+`support-content/v1/articles/{key}/v{n}.json`. CORS: GET, HEAD and OPTIONS only, no credentials, from
+`https://capital.theprodeogroup.com` and `http://localhost:5173` (a variable removes the dev origin). Omniview's task role
+(`fish-omniview-publish-support-content`) gets **only**: `s3:PutObject` and `s3:DeleteObject` on `support-content/v1/*`,
+`s3:ListBucket` restricted to that prefix, and `cloudfront:CreateInvalidation` on that one distribution. **No
+`s3:GetObject`**, so the uploader learns what already exists from the listing, not a HEAD. Cost is pennies a month.
 
-**Omniview (me):** the pure generator and a local-directory publisher (so the output can be inspected and tested
-without AWS) come first and are safe to build now. The S3 and CloudFront uploader is built **only after Femi decides**,
-because it is useless without the bucket.
+**Omniview (built):** the pure generator, `LocalDirectoryPublisher` (development; inspect exactly what would go out),
+`S3ContentPublisher` (articles first, index last, delete withdrawn articles, invalidate the index and the deleted
+paths), and the runner. Configuration, none of it secret: `OMNIVIEW_PUBLISH_S3_BUCKET` plus
+`OMNIVIEW_PUBLISH_CLOUDFRONT_DISTRIBUTION_ID` (both required together; the bucket alone logs an error and publishes
+nothing, because without invalidation a withdrawn article would stay visible until its cache expires),
+`OMNIVIEW_PUBLISH_S3_PREFIX` (default `support-content/v1/`), or `OMNIVIEW_PUBLISH_DIR` for development. With none set,
+publishing is off. The distribution id and base URL exist only after the apply (terraform outputs
+`support_content_distribution_id` and `support_content_base_url`).
 
 **WEB:** read `index.json`, apply section 7, render notices as in the S4 contract and articles as in S3. Same parser as
 the pull route.
@@ -154,8 +166,9 @@ the pull route.
 **EA:** nothing, which is the point: this path needs no EA route at all. (The ticket relay EA is already building is
 untouched and still needed for tickets, ratings and the context.)
 
-## 9. Decision needed
+## 9. Decision (made)
 
-Femi: **D, a relay (A to C), or D now and a relay later.** D now is the cheapest start and does not close any door: the
-Omniview routes behind a relay are already built, and the published files use the same field names, so moving from one
-to the other later changes the transport, not the content.
+Femi, 2026-10-05: **D now, a relay later only if needed.** GL will not host a relay (a ledger's functions are ledger
+functions), and EA's decline stands (it is not in EA's purview). Option C (an API Gateway in front of Omniview) was ruled
+out because it would make Omniview internet-reachable. The Omniview routes behind a relay are already built, and the
+published files use the same field names, so a relay later changes the transport, not the content.
