@@ -38,18 +38,20 @@ Sizing is qualitative (S, M, L), not a date.
 
 ## Wave S1: Operator effectiveness (Omniview only, no peer dependency)
 
+**Build note (2026-10-05):** the access log (S1.6) writes a change every time, and writes a repeated read by the same operator of the same thing once per 10 minutes, so the console's own polling does not drown it. Reading the log needs `OMNIVIEW_ADMIN_OPERATORS` (a comma-separated list of operator names); unset means nobody can read it. Published hours are UK time, 08:00 to 18:00 Monday to Friday, and UK bank holidays are not modelled yet.
+
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| S1.1 | **Ticket fields**: family and sub-category (the catalogue), severity P1-P4 with a reason, tags, lane, owner (assignee), change history of each (FR-SUP-A2, A3, A5) | Omniview | S0.1 | M | Not started |
-| S1.2 | **Internal notes** on a ticket, never returned through the relay (FR-SUP-A6); the relay's strict shapes are unchanged | Omniview | S1.1 | S | Not started |
-| S1.3 | **Search and filters** across tickets: tenant, family, severity, status, owner, age, text (FR-SUP-A8) | Omniview | S1.1 | M | Not started |
-| S1.4 | **Macros**: versioned canned replies with placeholders, by family and language; insert in the reply box (FR-SUP-A7) | Omniview | S1.1 | M | Not started |
-| S1.5 | **SLA clocks and alerts** per severity within the published hours; alerts at half the target and at breach, through the existing outbox (FR-SUP-A4, J2); published hours and response wording as a setting (FR-SUP-K3) | Omniview | S1.1, SD2 | M | Not started |
-| S1.6 | **Operator access log**: every ticket read, card open, export and close by named operator, append-only, viewable by Femi (FR-SUP-F4). Built **now**, before the tenant card exists | Omniview | S0.1 | S | Not started |
-| S1.7 | **Metrics view v1**: volume by family and severity, first-response and resolution against targets, backlog age, reopen rate, workload per operator (FR-SUP-J1) | Omniview | S1.1, S1.5 | M | Not started |
-| S1.8 | **Satisfaction rating** on closure: the field and the operator view; the tenant-side prompt rides on S3 (SD10) | Omniview, WEB | S1.1, SD10 | S | Not started |
-| S1.9 | **Merge and link** tickets; **feedback** as a ticket kind, counted (FR-SUP-A10, J4) | Omniview | S1.1 | S | Not started |
-| S1.10 | **Assignment worklists**: "mine", "unassigned", "breaching soon"; on-call roster setting (SD12) | Omniview | S1.1, S1.5 | S | Not started |
+| S1.1 | **Ticket fields**: family and sub-category (the catalogue), severity P1-P4 with a reason, tags, lane, owner (assignee), change history of each (FR-SUP-A2, A3, A5) | Omniview | S0.1 | M | **Built 2026-10-05** (fish-er-omniview branch `feat/omniview-support-s1`, tested, awaiting CM) |
+| S1.2 | **Internal notes** on a ticket, never returned through the relay (FR-SUP-A6); the relay's strict shapes are unchanged | Omniview | S1.1 | S | **Built 2026-10-05** (fish-er-omniview branch `feat/omniview-support-s1`, tested, awaiting CM) |
+| S1.3 | **Search and filters** across tickets: tenant, family, severity, status, owner, age, text (FR-SUP-A8) | Omniview | S1.1 | M | **Built 2026-10-05** (fish-er-omniview branch `feat/omniview-support-s1`, tested, awaiting CM) |
+| S1.4 | **Macros**: versioned canned replies with placeholders, by family and language; insert in the reply box (FR-SUP-A7) | Omniview | S1.1 | M | **Built 2026-10-05** (fish-er-omniview branch `feat/omniview-support-s1`, tested, awaiting CM) |
+| S1.5 | **SLA clocks and alerts** per severity within the published hours; alerts at half the target and at breach, through the existing outbox (FR-SUP-A4, J2); published hours and response wording as a setting (FR-SUP-K3) | Omniview | S1.1, SD2 | M | **Built 2026-10-05** (fish-er-omniview branch `feat/omniview-support-s1`, tested, awaiting CM) |
+| S1.6 | **Operator access log**: every ticket read, card open, export and close by named operator, append-only, viewable by Femi (FR-SUP-F4). Built **now**, before the tenant card exists | Omniview | S0.1 | S | **Built 2026-10-05** (fish-er-omniview branch `feat/omniview-support-s1`, tested, awaiting CM) |
+| S1.7 | **Metrics view v1**: volume by family and severity, first-response and resolution against targets, backlog age, reopen rate, workload per operator (FR-SUP-J1) | Omniview | S1.1, S1.5 | M | **Built 2026-10-05** (fish-er-omniview branch `feat/omniview-support-s1`, tested, awaiting CM) |
+| S1.8 | **Satisfaction rating** on closure: the field and the operator view; the tenant-side prompt rides on S3 (SD10) | Omniview, WEB | S1.1, SD10 | S | **Not started:** the rating needs the tenant-side prompt (S3.6) or it could never be written, so the field waits for it |
+| S1.9 | **Merge and link** tickets; **feedback** as a ticket kind, counted (FR-SUP-A10, J4) | Omniview | S1.1 | S | **Not started:** merge and link wait for the next increment; the feedback kind is covered by the FEEDBACK family |
+| S1.10 | **Assignment worklists**: "mine", "unassigned", "breaching soon"; on-call roster setting (SD12) | Omniview | S1.1, S1.5 | S | **Partly built:** the worklists (mine, unassigned, needs attention) are done; the on-call roster setting is not |
 
 ## Wave S2: Tenant context
 
