@@ -88,11 +88,11 @@ Sizing is qualitative (S, M, L), not a date.
 
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| S5.1 | **Onboarding progress** derived read-only from EA and GL (Company registered, verification, chart of accounts, first posting, staff invited, period opened) (FR-SUP-E1) | EA, GL, Omniview | S2.3 | M | Not started |
-| S5.2 | **Health signals and worklist**: onboarding idle, verification deadline near, no posting after go-live, period left open, repeated posting failures (FR-SUP-E2) | Omniview | S5.1 | M | Not started |
-| S5.3 | **Outreach by notice, and operator-initiated threads under SD9's narrow rule**; logged and rate-limited (FR-SUP-E3, UC-SUP-7) | Omniview, EA, WEB | S5.2, S4.1, SD9 | M | Not started |
-| S5.4 | **Month-end load forecast** from the close calendar (FR-SUP-E4) | Omniview | S5.1 | S | Not started |
-| S5.5 | **Migration case template** and the opening-figures checklist, linked to the CSV upload design when it is built (UC-SUP-8) | Omniview, GL | S1.4 | S | Not started |
+| S5.1 | **Onboarding progress** derived read-only from EA and GL (Company registered, verification, chart of accounts, first posting, staff invited, period opened) (FR-SUP-E1) | EA, GL, Omniview | S2.3 | M | **Partly built 2026-10-05** (branch `feat/omniview-support-s5`, awaiting CM): progress from what EA's existing tenant list answers (company, business and phone verification, staff, active), strictly decoded; the three ledger steps are shown as **unknown** until GL has a read route (proposal in `docs/Omniview_Support_S5_Onboarding_Health_Contract.md`, needs Femi's decision on whether activity facts count as business data) |
+| S5.2 | **Health signals and worklist**: onboarding idle, verification deadline near, no posting after go-live, period left open, repeated posting failures (FR-SUP-E2) | Omniview | S5.1 | M | **Partly built** (same branch): five signals from EA's list (verification flagged, overdue, due within 14 days, no company on a draft, owner phone unverified), Omniview-clock episodes, Worklist tab, V11; the ledger signals wait on the GL route; **no background refresh** (needs S2.4's service credential), so no automatic escalation |
+| S5.3 | **Outreach by notice, and operator-initiated threads under SD9's narrow rule**; logged and rate-limited (FR-SUP-E3, UC-SUP-7) | Omniview, EA, WEB | S5.2, S4.1, SD9 | M | **Notice side built** (same branch): a notice to one tenant, at most two per episode three days apart, plain text with no business name, logged, withdrawn when the signal clears. **Operator-initiated threads not built** (needs a decision and relay and widget work) |
+| S5.4 | **Month-end load forecast** from the close calendar (FR-SUP-E4) | Omniview | S5.1 | S | **Blocked:** needs the ledger's period and close dates (the GL route proposed in the S5 contract) |
+| S5.5 | **Migration case template** and the opening-figures checklist, linked to the CSV upload design when it is built (UC-SUP-8) | Omniview, GL | S1.4 | S | **Built 2026-10-05** (same branch): a fixed eight-step case checklist on a ticket with who and when, in history and the access log, Case tab, V10; the link to the CSV upload waits for that upload to be built |
 
 ## Wave S6: Specialist lanes and routing
 
