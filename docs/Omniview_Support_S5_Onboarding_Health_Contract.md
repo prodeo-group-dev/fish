@@ -81,41 +81,62 @@ It is not yet linked to the CSV opening-figures upload, which is design-only.
 ## 2. What EA needs to know
 
 1. **Nothing to build.** The worklist reads `GET /api/operator/tenants` exactly as it is today.
-2. **That DTO is now a contract.** Any new field on `OperatorTenantOverviewDto` breaks the worklist until Omniview adds it. Tell me
-   before you change it.
-3. **Two optional additions that would improve it** (ask, not a requirement): a `createdAt` on the overview, so "stuck for N days" counts
-   from the real set-up date and not from first sight; and the phone verification deadline (the card already has it).
-4. The list is **not paged**. Omniview refuses more than 1,000 tenants with `ea_too_many_tenants`. A filtered or paged route is
-   the next step well before then.
+2. **That DTO is now a contract, and EA has agreed.** EA will not add, remove or rename a field on `OperatorTenantOverviewDto`
+   (today: tenantId, name, status, segment, kybStatus, kybVerificationDeadline?, adminPhoneVerificationStatus, companyCount, staffCount,
+   supportMessageCount, awaitingSupportReply) without messaging Omniview first.
+3. **`createdAt` is not available.** EA stores no tenant creation time (no column), so adding one is a migration, and older tenants would
+   have no real value (a backfill would be a guess, so it would be nullable). EA will raise it with Femi rather than do it unasked.
+   Until then Omniview's "first seen" clock is the honest basis, and the console labels it that way.
+4. **The list is not paged** and EA does not plan to page it. Omniview's 1,000-tenant cap, refusing above it with `ea_too_many_tenants`,
+   is the right guard.
 
-## 3. What GL needs to know (a proposal, not a request to start)
+## 3. What GL can and cannot back (a proposal, corrected by GL's own reading of its schema and code)
 
-Three of the eight onboarding steps and the signals "no posting after go-live", "a period left open" and "repeated posting
-failures" need facts only the ledger holds. A route like this would unblock them, but **it needs Femi's decision first** (section 5):
+Nothing here is a request to start. Three of the eight onboarding steps and some signals need facts only the ledger holds.
+**GL read its schema (V1 to V29) and code for this draft; its answer, and what that does to the proposal:**
+
+| Fact | What GL can honestly give |
+| --- | --- |
+| Chart of accounts set up | **Yes.** A boolean from the count of the Company's accounts |
+| A period left open | **Yes.** The oldest open period's end date, from each Company's periods |
+| First and last posting | **Only approximately.** `journal_entries` keeps `entry_date`, a date the caller chooses and can backdate, and no posted-at time. "First/last posting" would mean the earliest and latest `entry_date` among posted, system and reversed entries; a backdated entry can hide "no posting after go-live". A true timestamp needs the audit trail's `occurred_at`, which exists only once Audit Trail Wave 2 (the write-path rollout) is built; today nothing writes to it |
+| Failed postings | **Not available.** GL records nothing about rejected posts (a 4xx response only; no table). It would need new storage and a decision on what counts as a failure. **Dropped from S5 v1**, to be scoped as separate GL work if wanted |
+
+So the shape worth designing is smaller than first drafted, and it is **not "an operator-token route"** (my first wording was wrong):
+GL has no operator identity and does not verify EA's operator tokens. It would follow the pattern GL is already designing for the Market
+aggregate: **a separate, named service-principal provider for Omniview**, a required non-null verifier, a 401 for human tokens, and never
+the service-account bypass. That provider is shared with the Market route, so **the two must be designed together** (S9-era work for CM, GL
+and Omniview).
 
 ```
-GET /api/operator/tenants/{tenantId}/activity     (operator token)
+GET <GL>/operator/tenants/{tenantId}/activity     (Omniview's service principal)
 { "companies": [ { "companyId": "uuid", "chartOfAccountsConfigured": true,
-                   "firstPostingAt": "2026-09-01T09:00:00Z", "lastPostingAt": "2026-10-04T16:20:00Z",
-                   "oldestOpenPeriodEnd": "2026-08-31", "failedPostingsLast7Days": 0 } ] }
+                   "earliestEntryDate": "2026-09-01", "latestEntryDate": "2026-10-04", "oldestOpenPeriodEnd": "2026-08-31" } ] }
 ```
 
-Booleans, dates and counts only: **no amounts, no accounts, no counterparties**.
+Booleans and dates only: no amounts, no accounts, no counterparties. **Dates are entry dates, not posting times, and the doc says so wherever it shows them.**
+
+**Consent.** GL cannot see EA's Owner Admin approval switch and **should not be where it is enforced**. If the approval must gate this,
+either the route takes EA's consent as its source (as the Market route would), or Omniview and EA filter before calling. Not decided.
+
+**Risk class.** GL's point, recorded: a per-Company "last posting date" is an activity fact about one named business. That is
+a different class from the Market aggregate's cohort-protected figures, which are protected by design; a per-Company route has no cohort
+protection and is identifying. Whether that is acceptable is Femi's decision (section 5, question 1), not GL's or mine.
 
 ## 4. Not built, and what blocks each
 
 | Item | Blocked on |
 | --- | --- |
-| Ledger onboarding steps and the three ledger signals (S5.1, S5.2) | The GL route above, and Femi's answer on whether activity facts count as business data (section 5) |
+| Ledger onboarding steps and the ledger signals (S5.1, S5.2) | A GL route behind Omniview's own service principal (designed with the Market route), a consent source, and Femi's answer on whether per-Company activity facts are acceptable (section 5). "Failed postings" is dropped from v1 |
 | Escalation to Femi at a verification deadline (UC-SUP-7) | A background refresh, which needs the dedicated EA service credential (S2.4: CM and EA) |
-| Month-end load forecast (S5.4) | The ledger's period and close dates, so the same GL route (or a period read) |
+| Month-end load forecast (S5.4) | The ledger's period and close dates: the same GL route (the oldest open period end) |
 | Operator-initiated threads | A decision on whether support may open a ticket (section 5), and relay and widget work |
 | Link from the migration case to the CSV upload | The opening-figures upload being built |
 
 ## 5. Decisions for Femi
 
 1. **Is ledger activity "business data"?** SD1 (default A) says no business data on the support surface. The facts in section 3 are
-   dates, booleans and counts, no amounts or names. **Recommendation:** allow them, behind the same Owner Admin approval switch the
+   dates and booleans, no amounts or names, **but per-Company, so identifying** (GL's point). **Recommendation:** allow them, behind the same Owner Admin approval switch the
    card uses, so a business that has not allowed support to see its setup is not read at all. The open design question for EA and
    GL is where that approval is enforced: GL cannot see EA's switch, so either EA gates it or Omniview only calls GL after EA's card says approved.
 2. **Operator-initiated threads.** Notice-only reminders work today and are the lower-risk shape. A thread lets the owner reply in
