@@ -2,8 +2,8 @@
 
 **SPUTO, step P (Plan), with S (Scope) in section 1.** Companions:
 `docs/Omniview_Support_Model_Use_Cases.md` (U), `docs/Omniview_Support_Model_Backlog.md` (T and O).
-**Status:** draft for Femi's review, 2026-10-05. **Planning only: nothing here is built or decided
-unless it is marked DECIDED.** Statuses used: **DECIDED** (Femi's own words, quoted), **BUILT**
+**Status:** SD1 to SD13 accepted at their recommended defaults on 2026-10-05 (section 6); Wave S1 is
+being built; later waves are planning only until started. Statuses used: **DECIDED** (Femi's own words, quoted), **BUILT**
 (in `fish-er-omniview` today), **PROPOSED** (my recommendation, with a default), **OPEN** (needs Femi).
 
 **Requested by Femi, 2026-10-05:** "The Omniview is for my team to provide support for all tenants.
@@ -237,9 +237,12 @@ until the volume justifies promising them. Plan tiers (SD3) may later shorten th
 
 ---
 
-## 6. Decisions for Femi (each with a recommended default)
+## 6. Decisions (DECIDED 2026-10-05: the recommended defaults)
 
-Answer "default" to accept all. Numbered `SD` to keep them apart from the v2 `D` series.
+**Femi, 2026-10-05, answering "Answer 'default' to accept all": "Lets do it".** Read as: accept every
+recommended default below and begin the work. If he meant otherwise for any row he will say; each row
+stays easy to change because nothing past Wave S1 is built. Numbered `SD` to keep them apart from the
+v2 `D` series.
 
 | # | Decision | Recommended default | Why it matters |
 |---|---|---|---|
