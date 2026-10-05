@@ -2,7 +2,8 @@
 
 **SPUTO, steps T and O.** Companions: `docs/Omniview_Support_Model_SRS.md` (`FR-SUP-*`, `NFR-SUP-*`,
 decisions `SD1`-`SD13`), `docs/Omniview_Support_Model_Use_Cases.md` (`UC-SUP-*`).
-**Status:** draft for Femi's review, 2026-10-05. **Planning only.** Nothing below is started. Wave S0 is
+**Status:** decisions SD1 to SD13 accepted at their recommended defaults, 2026-10-05 (Femi: "Lets do it").
+**Wave S1 is the work in progress;** every other wave below is planning only and not started. Wave S0 is
 Product Support v1, which is being brought live now (`docs/Omniview_v2_Backlog.md`, support go-live plan).
 
 **Protocol** (as everywhere in this project): claim a row in the right coordination file before starting;
