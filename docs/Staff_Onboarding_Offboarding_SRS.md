@@ -23,7 +23,7 @@ Bringing a person into a business, and taking them out, touches four systems, an
 | D4 | HR is the source of truth for employment; EA derives access from HR's position via a mapping EA owns; ER holds the school duty. | Teaching-staff drafts (HR, EA `be82609`/`eb5fe74`, ER) |
 | D5 | HR and Payroll administration are grouped under EA (the Owner Admin's toolkit); WEB and EA collaborate on the screens. | Femi, 2026-10-06 |
 | D6 | The EA dashboard is the Owner Admin's alone. | Femi, 2026-10-06 |
-| D7 | **The Owner Admin is the sole approver.** Said after the peers' positions on pay changes ("You are all right... OWNER ADMIN be SOLE APPROVER"): nothing sensitive takes effect on a delegate's say-so alone, and no one but the Owner Admin approves. In particular a delegate's change to pay rate, pay frequency or bank details must not take effect without the Owner Admin (OI-12 settled in principle; the mechanism is below). | Femi, 2026-10-06 |
+| D7 | **The Owner Admin is the sole approver.** Said after the peers' positions on pay changes ("You are all right... OWNER ADMIN be SOLE APPROVER"): nothing sensitive takes effect on a delegate's say-so alone, and no one but the Owner Admin approves. In particular a delegate's change to pay rate, pay frequency or bank details must not take effect without the Owner Admin (OI-12 settled in principle; the mechanism is in backlog row 0.10, including whether a delegate may also *propose* such a change from day one). | Femi, 2026-10-06 |
 
 ### 1.3 In scope
 1. A **request** that an HR Officer or the Owner Admin raises to onboard or offboard a person, an approve or reject decision by the Owner Admin, and the execution that follows approval.
