@@ -80,3 +80,19 @@ EA read this draft and agrees, pending Femi naming the lead. Nothing is built on
 2. ER's registry lets us tell "unknown school id" (`404`) from "known school, no access" (`200` empty). The cost: any authenticated user can learn whether a school id exists. School ids are unguessable UUIDs, so this is judged acceptable; **CM to confirm in review**. WEB only calls it for Companies registered through the school flow, so a registered school is the normal case.
 
 **Femi, 2026-10-06 ("EA is Owner-Admin. He is the Business Owner... He onboards through HR and can sack through HR"):** the human who employs and dismisses teaching staff is the Business Owner, through the HR screens in WEB. So an **immediate cut-off is a first-class path, not an edge case**: the explicit revoke (`DELETE /schools/{schoolId}/staff/{email}/employment/{employmentId}`, service-account, reachable by EA on the Owner's behalf) is **required in v1**, not optional as 2.3 left it; the scheduled `validUntil` is the other path. Both layers (EA Membership, ER assignment) must be cut by the one HR action.
+
+**Capability codes, one per ErPrincipal check (checked against the code 2026-10-06; final list is published with the route contract at build time):**
+
+| Code | ErPrincipal check | Roles today | WEB screen |
+|---|---|---|---|
+| `MANAGE_REGISTER` | `canManageRegister` | SCHOOL_ADMIN, REGISTRAR | Students console |
+| `MANAGE_ADMISSIONS` | `canManageAdmissions` | SCHOOL_ADMIN, REGISTRAR, ADMISSIONS_OFFICER | Admissions tab (a **separate** permission from `MANAGE_REGISTER`: an admissions officer is not a register admin) |
+| `MANAGE_TIMETABLE` | `canManageTimetable` | SCHOOL_ADMIN, TIMETABLER | Timetable |
+| `MANAGE_FEES` | `canManageFees` | SCHOOL_ADMIN, FEE_OFFICER, BURSAR | Fees and billing |
+| `MARK_ATTENDANCE` | `canMarkAttendance` | TEACHER, SCHOOL_ADMIN, HEAD_TEACHER, HOD, HOY (+ the device account) | Attendance register |
+| `ENTER_GRADES` | `canEnterGrades` | TEACHER, SCHOOL_ADMIN, HEAD_TEACHER, HOD, HOY | Grades; **also gates the class roster route**, so the register screen needs both `MARK_ATTENDANCE` and `ENTER_GRADES` |
+| `VIEW_ANY_CLASS_DATA` | `canViewAnyClassData` | SCHOOL_ADMIN, HEAD_TEACHER, HOD, HOY | (a plain teacher sees only classes they teach) |
+| `ACCESS_SAFEGUARDING` | `canAccessSafeguarding` | SCHOOL_ADMIN, SAFEGUARDING_LEAD, PASTORAL_LEAD | none yet (D3: no safeguarding flag until its own SPUTO) |
+| `ACCESS_PARENT_GATEWAY` | `canAccessParentGateway` | GUARDIAN, PARENT | Parent view |
+
+`LOOKUP_BY_DPID_IDENTITY` is machine-only and is not returned to humans.
