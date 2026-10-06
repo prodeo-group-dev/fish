@@ -54,6 +54,8 @@ An `EMPLOYMENT` assignment is honoured **only while at least one of its links is
 ### 3.4 Calling ER (Education companies only)
 After EA's own part succeeds, EA calls ER's `PUT /schools/{schoolId}/staff/{email}/employment` with the existing `ea-provisioning` service account, carrying `employmentId`, `duties`, `validFrom`, `validUntil`, `version`. The school comes from the Company's school link. ER may be called **at invite time**: it grants nothing until that verified email signs in. If ER fails after EA succeeded, EA answers `complete: false, er: FAILED` and HR retries; because both legs are idempotent, the retry finishes the job. **No queue or outbox in EA** (HR shows "not synced" and re-syncs). A dismissal calls ER's end/delete route the same way.
 
+**ER wire shapes, pinned by ER and mapped literally (2026-10-06):** every ER error body is `{"error":"<token>"}`, so the two 409s are exactly `{"error":"version_conflict"}` and `{"error":"existing_unlinked_assignment"}`; success bodies are `{"result":"APPLIED"}`, `{"result":"UNCHANGED"}` or `{"result":"STALE"}` (`APPLIED_ADOPTED` only if Femi approves adoption). The path is `PUT` or `DELETE` on `/schools/{schoolId}/staff/{email}/employment[/{employmentId}]`. EA maps `result` straight into its own `er` field and passes both 409 tokens through unchanged.
+
 ## 4. Who sees what
 
 - **WEB:** a teacher sees only Education Operations. WEB asks **ER** (`GET /schools/{schoolId}/me`, ER's own small item) for the person's school roles. The ER duty is **not** added to EA's `GET /me`, which five services decode strictly.
