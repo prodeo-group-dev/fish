@@ -25,7 +25,7 @@
 | 0.6 | OI-9: adopt or refuse a hand-entered ER assignment (ER recommends refuse; if ever approved it is an explicit owner-confirmed `adoptExisting: true` on the same PUT, answered `APPLIED_ADOPTED`, never automatic) | 4.2 |
 | 0.9 | OI-11: dormant admin-granted ER roles reviving on a rehire; ER leans to clearing them when the LAST active link is explicitly DELETEd (undecided) | 4.1 |
 | 0.7 | OI-1: where the request lives (HR proposed); agreed by HR | 2.1 |
-| 0.10 | OI-12: **settled by D7 and D8**: delegates propose pay changes (pay rate, pay frequency, bank details) through a `PAY_CHANGE` request that the Owner Admin approves (row 2.5); the three fields on `PUT /employees/{id}` become Owner-Admin-only direct acts. Audit trail: old and new values for pay rate and frequency, for bank details only that the field changed and by whom (never plaintext). Lands with HR's pay-integrity change (not built; HR waits for Femi's go on that guard before `UNPAID`); CM HIGH review | 2.2, 2.5 |
+| 0.10 | OI-12: **settled by D7, D8 and D9**: the Owner-Admin-only rule on the three pay fields is adopted immediately (row 1.6); delegates then propose through `PAY_CHANGE` (row 2.5). Audit trail: old and new values for pay rate and frequency, for bank details only that the field changed and by whom (never plaintext). The pay-integrity guard for `UNPAID` is separate and still waits for Femi's go; CM HIGH review | 1.6, 2.5 |
 | 0.8 | OI-10: retention and access of personal data in these records | 2.1 |
 
 ## Wave 1 — Independent first moves (can run in parallel)
@@ -36,6 +36,7 @@
 | 1.3 | GL accepts a `STAFF` role value (and maps it to no elevated access); then verified live | GL, reviewed by CM | 0.5; CM running-image check | Not started |
 | 1.4 | HR: Employee email required and normalised on the request path; a derived employment status (`UPCOMING`/`ACTIVE`/`ENDED`, no stored status); a monotonic integer `employmentVersion`; employment type `UNPAID`; the `employee_ended` payroll-line rule; Owner-only direct `POST /employees` and end-date edits (FR-ONB-18) | HR | 0.3 (needed for `UNPAID` only); WEB accepts `UNPAID` and new statuses first (consumers before producer) | Not started |
 | 1.5 | EA dashboard Owner-Admin only (done, `fix/dashboard-owner-admin-only` `1374ae6`, CM-approved) | EA | WEB hides the Dashboard tab for non-owners first (the condition CM set); ratios release lands first | Built, held |
+| 1.6 | **Adopt immediately (D9):** HR makes pay rate, pay frequency and bank details on `PUT /employees/{id}` Owner-Admin-only direct acts (`403 not_owner` for a delegate), with the audit trail (old and new values for rate and frequency; for bank details only that the field changed and by whom, never plaintext). Does not wait for the request flow or `UNPAID`. WEB hides or makes read-only those fields for a delegate **first** (consumers before producer), then HR ships; CM HIGH review, own deploy | HR, then WEB first in release order | D9 (Femi, given); WEB; CM review | Not started |
 
 ## Wave 2 — The request (HR)
 | # | Item | Owner | Depends on | Status |
