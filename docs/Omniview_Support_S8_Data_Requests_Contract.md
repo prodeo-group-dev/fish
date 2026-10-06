@@ -22,7 +22,7 @@ A **data request** is raised on a real ticket from the business, as an **export*
 4. **Executed** by an administrator:
    - **Export**: built when the administrator presses Download, sent with `Cache-Control: no-store` as a file, **stored nowhere**. It holds the business's tickets, messages, internal notes about it, history, escalations,
      case steps, notices addressed to it, and **who at Prodeo looked at what, by name and time**. The administrator records how it was delivered, which closes the request.
-   - **Erasure**: a **preview** shows how many of each thing would go; the administrator types a phrase naming the business (`ERASE` and the first eight characters of its id); it then runs **in one transaction**.
+   - **Erasure**: a **preview** shows how many of each thing would go; the administrator types a confirmation phrase **built from the business's id** (`ERASE` followed by the first eight characters of its id, which the preview shows, not the business's name); it then runs **in one transaction**.
      It removes the tickets and everything hanging off them, notices addressed **only** to that business (a notice shared with others only loses this business's address), and the business's health episodes and outreach.
      **The request's own ticket is kept** unless the administrator ticks a box, so the requester can still be told it is done.
 
@@ -41,6 +41,12 @@ The **record keeps counts and names, never content**, in a timeline (opened, ide
 One additive migration, V15 (data requests, their events, a new staff-alert kind). No new environment variable, no new infrastructure. From the first deploy the console has a **Data requests** tab.
 The new capability is **destructive**, which is why it is gated three ways (verified, approved, typed confirmation) and administrator-only; **CM's review should weight the erase path**, and the
 test of every table in the schema.
+
+**Facts for the live switch (from CM's review).**
+1. **Production has one operator and one administrator today**, so the two-person rule is off and the same person can open, verify, approve and erase. That is acceptable while all data is legacy test data. **The live switch needs at least two operators**; CM will make it a checklist item.
+2. **"Erasure" removes Omniview's support data only.** It does not reach: EA's own legacy support-thread messages for the tenant; copies in CloudWatch logs (ticket ids); the staff alert emails sent to the support mailbox; or database snapshots and backups. **The processing terms and the retention policy must say what erasure covers.** That is a question for the solicitor, not a code gap.
+3. **The export includes internal notes** an operator wrote about the business. Whether those belong in a subject access export is a question for the solicitor; the code includes them because they are personal data about the business's people.
+4. **The schema guard now runs in every ordinary build**: a unit test reads the migration files (no database needed) and fails if a table holding tenant or ticket data is not handled by erasure, in addition to the integration test that checks the live schema.
 
 ## 4. The rest of the wave, and what blocks each part
 

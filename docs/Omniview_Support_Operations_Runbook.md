@@ -46,7 +46,7 @@ The procedure, for a request from a business's Owner Admin, which must arrive **
 2. **Confirm who is asking, out of band** (any operator): ring back on a number Prodeo already holds, a video call, a signed letter, or in person. Record **how**, never the evidence.
 3. **Approve** (an administrator; while there is more than one operator, not the person who verified). An approval lasts seven days.
 4. **Export**: an administrator presses Download. The copy is built then, handed over as a file and stored nowhere. Send it to the Owner Admin by the route you verified, then mark the request done.
-   **Erasure**: an administrator reads the preview (how many of each thing), types the phrase naming the business, and presses Erase. It runs in one transaction. The request's own ticket is kept unless
+   **Erasure**: an administrator reads the preview (how many of each thing), types the confirmation phrase shown (`ERASE` and the first eight characters of the business's id), and presses Erase. It runs in one transaction. The request's own ticket is kept unless
    you tick the box, so you can still tell them it is done; **tell them first if you do tick it**.
 5. **Tell the requester what was done and what remains.** Backups age out on the database's normal schedule; say so. The operator access log is kept (who looked at what, never content).
 
