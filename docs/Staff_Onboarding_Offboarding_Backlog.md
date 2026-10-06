@@ -10,7 +10,7 @@
 | HR | the request aggregate and its routes (2.x); Employee email and terminate (1.4); HR's own payroll-approval SPUTO (`Payroll_Approval_*`, branch `docs/payroll-approval-sputo` `ce81bd6`) for the shared Approvals place; the version contract for the EA route |
 | WEB | every screen (6.x); role-based visibility; hiding the Dashboard tab for non-owners before EA ships that gate; the STAFF label; mirroring these rows in `WEB/COORDINATION.md` |
 | CM | release order, HIGH review of each leg that changes who can do what, the HR service audience (already set in live task definition `fish-enterprise-administration:67`), any new env var, the data-handling questions (OI-10); pushes and deploys everything |
-| ER | the staff/employment routes and the `ea-provisioning` allowlist (4.x); adopt-or-refuse decision (OI-9) |
+| ER | the staff/employment routes, the `ea-provisioning` allowlist and `GET /schools/{id}/me` (4.x); adopt-or-refuse (OI-9) and dormant-roles-on-rehire (OI-11) decisions; their migration waiting on ER PR #9 |
 | GL | accepting a new `STAFF` role value before EA emits it (1.3) |
 | Femi | decisions in Wave 0 |
 
@@ -22,7 +22,8 @@
 | 0.3 | OI-4: how unpaid staff are modelled in HR | 1.4, 2.1 |
 | 0.4 | OI-5: does an offboarding trigger anything in payroll (final pay, leave payout, advances) | 2.4 |
 | 0.5 | OI-8: which EA role a non-function staff member (teacher) holds; `STAFF` recommended | 1.3, 3.3 |
-| 0.6 | OI-9: adopt or refuse a hand-entered ER assignment (ER recommends refuse) | 4.2 |
+| 0.6 | OI-9: adopt or refuse a hand-entered ER assignment (ER recommends refuse; if ever approved it is an explicit owner-confirmed `adoptExisting: true` on the same PUT, answered `APPLIED_ADOPTED`, never automatic) | 4.2 |
+| 0.9 | OI-11: dormant admin-granted ER roles reviving on a rehire; ER leans to clearing them when the LAST active link is explicitly DELETEd (undecided) | 4.1 |
 | 0.7 | OI-1: where the request lives (HR proposed); agreed by HR | 2.1 |
 | 0.8 | OI-10: retention and access of personal data in these records | 2.1 |
 
@@ -50,14 +51,15 @@
 | 3.2 | Union-of-active-windows in the active-membership resolution, tests at both boundaries, gaps and overlaps | EA | 3.1; **HIGH review (CM), own deploy** | Not started |
 | 3.3 | Position mapping table and validation; `STAFF` added to EA's role enum and emitted | EA | 0.5; **1.3 verified live (GL first, EA last)**; HR's position vocabulary | Not started |
 | 3.4 | HR-only internal route group `PUT`/`DELETE /api/internal/tenants/{t}/employments/{id}` (service principal only, 503 when unset), idempotent on `employmentId` + `version` | EA | 3.1, 3.3; HR (contract); CM (audience already set live) | Not started |
-| 3.5 | ER gateway with a fake and a mock-engine test; pass ER's tokens through literally | EA | 4.1; ER pinned shapes | Not started |
+| 3.5 | ER gateway with a fake and a mock-engine test; pass ER's tokens through literally. Tested against ER's fake until 4.1 is live; the gateway is switched on only after ER's deploy (consumer before producer) | EA | 4.1 live for go-live (not for development); ER pinned shapes | Not started |
 | 3.6 | Offboarding of a Membership with no employment link (FR-ONB-11) reuses the existing revoke; never the Owner Admin | EA | 3.4 | Not started |
 
 ## Wave 4 — The school duty (ER)
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
-| 4.1 | `PUT`/`DELETE /schools/{id}/staff/{email}/employment[/{employmentId}]`, employment-link set, TEACHER-only allowlist | ER | ER's own draft; Femi go | Not started |
-| 4.2 | Refuse-by-default for an existing hand-entered assignment (`existing_unlinked_assignment`) | ER | 0.6 | Not started |
+| 4.1 | `PUT`/`DELETE /schools/{id}/staff/{email}/employment[/{employmentId}]`, employment-link set, TEACHER-only allowlist. DELETE ends ONE link; the person loses ER access only when no other link is active | ER | ER's own draft; Femi go; **ER's migration (V31 or later) can land only after ER PR #9 (V28-V30, in CM's queue) has merged and deployed**; 0.9 | Not started |
+| 4.2 | Refuse-by-default for an existing hand-entered assignment (`existing_unlinked_assignment`) | ER | 0.6; same migration dependency as 4.1 | Not started |
+| 4.3 | `GET /schools/{schoolId}/me`: the person's ER roles, server-computed capability codes, employment window and active flag (agreed with WEB, section 6 of ER's draft). EA's `/me` deliberately does not carry ER roles, so WEB gets them here | ER | Femi go; WEB (agreed shape); same migration order | Not started |
 
 ## Wave 5 — Showing it to the Owner Admin (EA, then WEB)
 | # | Item | Owner | Depends on | Status |
@@ -65,13 +67,13 @@
 | 5.1 | Approvals Queue gains `HR_ONBOARDING_REQUEST` and `HR_OFFBOARDING_REQUEST` sources | EA | 2.2 (HR list route), 1.2 | Not started |
 | 5.2 | One Approvals place in Administration listing onboarding, offboarding and payroll-run approvals, each opening the HR detail screen | WEB | 5.1; HR payroll SPUTO's list and approve routes (FR-PA); OI-7 | Not started |
 | 5.3 | HR screens: Add a person, Offboard, My requests, Approve and Reject with reasons, per-leg status and Retry | WEB | 2.2, 2.3, 2.4; HR | Not started |
-| 5.4 | Role-based visibility (a teacher sees no Administration or Finance); `STAFF` label; hide Dashboard and Approvals for non-owners | WEB | 1.3, 1.5, 1.2 | Not started |
+| 5.4 | Role-based visibility (a teacher sees no Administration or Finance); `STAFF` label; hide Dashboard and Approvals for non-owners | WEB | 1.3, 1.5, 1.2, **4.3** (without it WEB cannot know a teacher's ER role) | Not started |
 | 5.5 | Tell the Owner Admin something awaits approval (OI-7) | WEB, EA | 5.1; communication centre contract | Not started |
 
 ## Wave 6 — Release and verification (CM)
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
-| 6.1 | Sequence the deploys: GL role value, then HR, then EA legs (one deploy per auth change), WEB last for anything that exposes a screen; consumers before producers | CM | all | Not started |
+| 6.1 | Sequence the deploys, consumers before producers: GL role value; ER (PR #9 migrations, then 4.1-4.3) before EA's ER gateway goes live; HR; EA legs (one deploy per auth change); WEB last for anything that exposes a screen | CM | all | Not started |
 | 6.2 | HIGH review of each leg that changes who can do what: delegated trigger, Owner Admin final approval, `STAFF` role, validity window, `ea-provisioning` reuse | CM | 1.1, 2.3, 3.2, 3.3, 3.4 | Not started |
 | 6.3 | Wiring: HR service audience (already set live), any new env var for the HR to EA call, secrets | CM | 3.4, 2.4 | Not started |
 | 6.4 | Personal-data handling questions (OI-10), recorded now, answered at the live switch | CM, Femi | 0.8 | Not started |

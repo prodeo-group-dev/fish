@@ -61,7 +61,7 @@ Error tokens below are HR's existing ones (`not_pending`, `not_owner`, `unauthor
 - **Traces:** FR-ONB-12; teaching-staff drafts.
 
 ## UC-ONB-10 Owner Admin offboards with immediate effect
-- **Actor:** Owner Admin. **Main flow:** raises an offboarding with the last day today; as in UC-ONB-1 it is self-approved; HR records the end date and calls EA's DELETE for that one employment, so access ends at once; the person keeps access only if another employment of theirs at the Company is still active.
+- **Actor:** Owner Admin. **Main flow:** raises an offboarding with the last day today; as in UC-ONB-1 it is self-approved; HR records the end date and calls EA's DELETE for that one employment, so that employment's access ends at once; the person loses access when no other employment of theirs at the Company remains active (at ER too: DELETE ends one link only).
 - **Alternate:** a future last day: only `validUntil` is sent; access ends by the date rule with no scheduler.
 - **Traces:** FR-ONB-9, 10.
 
