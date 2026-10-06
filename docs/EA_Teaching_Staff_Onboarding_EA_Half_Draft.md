@@ -23,7 +23,7 @@ A route group for **HR's service identity only** (never the human routes with a 
 | `DELETE /api/internal/tenants/{tenantId}/employments/{employmentId}` | End **that employment only**, immediately (the explicit cut-off). The person keeps access if another of their employments at the Company is still active. A future end date is just `validUntil` on the PUT |
 
 PUT body: `{companyId, email, name, position, validFrom, validUntil?, version}`.
-- `employmentId` is HR's id, the correlation key. `position` is HR's position code. `version` is HR's last-updated instant, so an older push arriving late is ignored.
+- `employmentId` is HR's id, the correlation key. `position` is HR's position code. `version` is a **monotonic integer per employment**, incremented by HR on every pushed change (an instant could tie or move backwards across HR's ECS tasks and a newer push would then read as stale), so an older push arriving late is ignored. `employmentId` is the HR Employee id; a rehire is a new Employee and so a new `employmentId`. Position codes are HR's closed list `STAFF`, `TEACHER`, `NON_TEACHING_STAFF`; EA refuses any other (`422 position_not_mapped`).
 - **Nothing about pay**, and nothing else personal beyond email and name.
 - `tenantId` is in the path and the Company must belong to it; a Company of another tenant is refused (the same integrity rule as company registration). HR is single-tenant per deployment; EA still checks.
 

@@ -25,6 +25,7 @@
 | 0.6 | OI-9: adopt or refuse a hand-entered ER assignment (ER recommends refuse; if ever approved it is an explicit owner-confirmed `adoptExisting: true` on the same PUT, answered `APPLIED_ADOPTED`, never automatic) | 4.2 |
 | 0.9 | OI-11: dormant admin-granted ER roles reviving on a rehire; ER leans to clearing them when the LAST active link is explicitly DELETEd (undecided) | 4.1 |
 | 0.7 | OI-1: where the request lives (HR proposed); agreed by HR | 2.1 |
+| 0.10 | OI-12: should a pay change by a delegate (via `PUT /employees/{id}`) also need the Owner Admin's approval | 2.2 |
 | 0.8 | OI-10: retention and access of personal data in these records | 2.1 |
 
 ## Wave 1 — Independent first moves (can run in parallel)
@@ -33,7 +34,7 @@
 | 1.1 | EA invite and remove become Owner-Admin only (interim, FR-ONB-19); roster read stays for delegates; update the two existing HR_OFFICER tests; own deploy, HIGH review | EA | 0.2; CM review; WEB: confirm TeamTab already gates by `isOwnerAdmin` | Not started |
 | 1.2 | EA Approvals Queue becomes Owner-Admin only (FR-ONB-15); no WEB consumer exists yet, so low blast radius; own deploy | EA | CM review; WEB (will be the only consumer) | Not started |
 | 1.3 | GL accepts a `STAFF` role value (and maps it to no elevated access); then verified live | GL, reviewed by CM | 0.5; CM running-image check | Not started |
-| 1.4 | HR: Employee email required and normalised on the request path; a real terminate path and status (FR-ONB-20) | HR | 0.3 | Not started |
+| 1.4 | HR: Employee email required and normalised on the request path; a derived employment status (`UPCOMING`/`ACTIVE`/`ENDED`, no stored status); a monotonic integer `employmentVersion`; employment type `UNPAID`; the `employee_ended` payroll-line rule; Owner-only direct `POST /employees` and end-date edits (FR-ONB-18) | HR | 0.3 (needed for `UNPAID` only); WEB accepts `UNPAID` and new statuses first (consumers before producer) | Not started |
 | 1.5 | EA dashboard Owner-Admin only (done, `fix/dashboard-owner-admin-only` `1374ae6`, CM-approved) | EA | WEB hides the Dashboard tab for non-owners first (the condition CM set); ratios release lands first | Built, held |
 
 ## Wave 2 — The request (HR)
@@ -41,7 +42,7 @@
 |---|---|---|---|---|
 | 2.1 | `StaffChangeRequest` aggregate, statuses, audit, migration (FR-ONB-1,2,7), modelled on `PayrollRunSubmission` | HR | 0.1, 0.3, 0.7, 0.8; HR's payroll SPUTO conventions (V9 migration order) | Not started |
 | 2.2 | Raise, list, get and cancel routes; delegate gate = HR grant (FR-ONB-4); owner self-approves (FR-ONB-5) | HR | 2.1, 0.1; WEB (screens) | Not started |
-| 2.3 | Approve and reject routes, owner-only via `requireOwnerCaller` (FR-ONB-3,6) | HR | 2.1; CM HIGH review | Not started |
+| 2.3 | Approve and reject routes, owner-only via `requireOwnerCaller` (FR-ONB-3,6); decision and execution separate; execution uses the **atomic claim shared with HR's payroll approval**, so HR's payroll SPUTO Wave 2 comes first | HR | 2.1; HR payroll SPUTO Wave 2 (branch `docs/payroll-approval-sputo`); CM HIGH review | Not started |
 | 2.4 | Execution on approval: create Employee or record end date, then call EA's internal route, per-leg outcomes, retry (FR-ONB-8..12) | HR | 2.3, 3.4 (a fake of the EA route is enough to begin), 0.4 | Not started |
 
 ## Wave 3 — The access leg (EA); each deploy separate, consumers first
