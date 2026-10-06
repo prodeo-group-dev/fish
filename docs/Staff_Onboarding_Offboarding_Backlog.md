@@ -18,7 +18,7 @@
 | # | Decision | Blocks |
 |---|---|---|
 | 0.1 | OI-2: delegate = HR module at WRITE+ at the Company (recommended), or an explicit switch | 2.2 |
-| 0.2 | OI-3: interim, make EA invite/remove Owner-Admin only (recommended) | 1.1 |
+| 0.2 | OI-3: interim, make EA invite/remove Owner-Admin only (recommended). Revises Femi's 2026-09-23 direction that an HR Officer at ADMIN keeps staff management, so it is a question for him, not a build step | 1.1 |
 | 0.3 | OI-4: how unpaid staff are modelled in HR | 1.4, 2.1 |
 | 0.4 | OI-5: does an offboarding trigger anything in payroll (final pay, leave payout, advances) | 2.4 |
 | 0.5 | OI-8: which EA role a non-function staff member (teacher) holds; `STAFF` recommended | 1.3, 3.3 |
@@ -48,7 +48,7 @@
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
 | 3.1 | Migration: `employment_links` and assignment `source` | EA | CM migration order | Not started |
-| 3.2 | Union-of-active-windows in the active-membership resolution, tests at both boundaries, gaps and overlaps | EA | 3.1; **HIGH review (CM), own deploy** | Not started |
+| 3.2 | Union-of-active-windows in the active-membership resolution, tests at both boundaries, gaps and overlaps. **Behavioural only: `GET /me` keeps exactly the same fields, only the set of memberships it lists changes, so no consumer needs to declare anything new (strict-DTO rule).** The HIGH review includes a before-and-after `/me` fixture for a rehired person with overlapping contracts | EA | 3.1; **HIGH review (CM), own deploy** | Not started |
 | 3.3 | Position mapping table and validation; `STAFF` added to EA's role enum and emitted | EA | 0.5; **1.3 verified live (GL first, EA last)**; HR's position vocabulary | Not started |
 | 3.4 | HR-only internal route group `PUT`/`DELETE /api/internal/tenants/{t}/employments/{id}` (service principal only, 503 when unset), idempotent on `employmentId` + `version` | EA | 3.1, 3.3; HR (contract); CM (audience already set live) | Not started |
 | 3.5 | ER gateway with a fake and a mock-engine test; pass ER's tokens through literally. Tested against ER's fake until 4.1 is live; the gateway is switched on only after ER's deploy (consumer before producer) | EA | 4.1 live for go-live (not for development); ER pinned shapes | Not started |

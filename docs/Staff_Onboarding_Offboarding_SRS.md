@@ -80,7 +80,7 @@ Requester cancels                             ->  CANCELLED
 
 ### The existing direct paths
 - **FR-ONB-18 (Must)** Once requests exist, a person cannot be brought in or taken out of a business by a route that skips approval: EA's staff invite and remove, and HR's `POST /team` and `DELETE /team/{id}` that proxy them, are used only as the execution step of an approved request, or by the Owner Admin directly.
-- **FR-ONB-19 (Must, interim)** Until requests ship, the stricter reading is recommended (OI-3): EA's invite and remove become Owner-Admin only, so the gap that approval exists to close is not left open meanwhile. Listing the roster stays available to delegates.
+- **FR-ONB-19 (Must, interim, **pending Femi's confirmation of OI-3**; it revises his 2026-09-23 direction and is not built until he says so)** Until requests ship, the stricter reading is recommended (OI-3): EA's invite and remove become Owner-Admin only, so the gap that approval exists to close is not left open meanwhile. Listing the roster stays available to delegates.
 - **FR-ONB-20 (Should)** HR gets a real terminate path (today there is only an `endDate` set through `PUT /employees/{id}` and no status), so "who is currently employed" is a query, not an inference.
 
 ## 4. Non-functional requirements
@@ -109,7 +109,7 @@ Requester cancels                             ->  CANCELLED
 ## 7. Open issues (each needs an owner and, where marked, Femi)
 - **OI-1 (HR)** Request lives in HR (recommended: HR owns the employment, the request follows the payroll-run pattern) or in EA? Affects who stores the audit trail.
 - **OI-2 (Femi)** Is "delegated" simply holding the HR module at WRITE at that Company (recommended, no new concept), or an explicit switch the Owner Admin turns on for a named person?
-- **OI-3 (Femi)** Interim: tighten EA's invite and remove to Owner-Admin only until requests ship (recommended)?
+- **OI-3 (Femi)** Interim: tighten EA's invite and remove to Owner-Admin only until requests ship (EA's recommendation)? **This is not a decision yet, and it would revise one.** On 2026-09-23 Femi directed that staff management stay available to an HR Officer at ADMIN level ("if the owner admin has HR being managed for him", recorded in EA's `Auth.kt`). His 2026-10-06 rule (an HR Officer may trigger, the Owner Admin gives final approval) keeps the delegate's power to **trigger** but removes the power to act **without approval**; the interim restriction only closes that gap until the request flow exists. Until Femi confirms it, EA's invite and remove stay as they are, so nothing here is a regression by default.
 - **OI-4 (Femi, HR)** Unpaid staff: HR rejects a non-positive pay rate, so volunteers and unpaid staff cannot be employed through HR; a decision on how to model them is needed before HR can be the single door.
 - **OI-5 (HR, Femi)** Final pay on exit: does an approved offboarding with a past or present end date trigger anything in payroll (final run, leave payout, outstanding salary advance)?
 - **OI-6 (EA, CM)** The Approvals Queue's company READ gate is wider than its content warrants (finding; fix is small and ships behind WEB's role-based visibility).
