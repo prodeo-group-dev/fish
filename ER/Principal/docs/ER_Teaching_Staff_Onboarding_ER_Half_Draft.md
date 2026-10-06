@@ -96,3 +96,14 @@ EA read this draft and agrees, pending Femi naming the lead. Nothing is built on
 | `ACCESS_PARENT_GATEWAY` | `canAccessParentGateway` | GUARDIAN, PARENT | Parent view |
 
 `LOOKUP_BY_DPID_IDENTITY` is machine-only and is not returned to humans.
+
+## 7. Pinned wire contract with EA, and the one open decision (2026-10-06)
+
+**Agreed with EA** (EA calls ER as the fan-out caller with the `ea-provisioning` service account; dates UTC, `validUntil` inclusive):
+- `PUT /schools/{schoolId}/staff/{email}/employment` -> `200 {result: APPLIED | UNCHANGED | STALE}` (STALE = an older `version` arrived late, ignored, still 200); `404` unknown school; `409` linked to a *different* `employmentId`; `400` duty outside the allowlist (EA treats it as a bug, no retry); `401/403` for anyone but that service account.
+- `DELETE /schools/{schoolId}/staff/{email}/employment/{employmentId}` -> `204` (also when already ended), `404` unknown school, `409` linked to a different `employmentId`. **Required in v1** (the Owner dismisses through HR).
+
+**OPEN, Femi to decide: the first push for an email that already has a hand-entered ER row (no `employmentId`).** Once linked, the HR window gates *all* that person's duties at the school, so ending a head's teaching employment would also cut a hand-granted `SCHOOL_ADMIN`, a lockout risk if they are the school's only admin.
+- **Proposed default (changed from my first lean, on EA's argument): refuse.** `409` with the fixed token `existing_unlinked_assignment`, so the Owner is told and nothing changes.
+- **Adoption is an explicit, owner-confirmed step:** the same `PUT` with `adoptExisting: true`, answering `result: APPLIED_ADOPTED`. HR/EA show the Owner that this person's existing access is now tied to the employment.
+- Not built; not coded until Femi decides and says go.
