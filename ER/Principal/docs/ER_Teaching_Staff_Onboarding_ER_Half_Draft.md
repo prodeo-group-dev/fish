@@ -53,7 +53,16 @@ If HR saved the employment but the push failed, ER simply does not know yet. v1:
 4. A test that existing manual assignments (no employmentId) behave unchanged.
 
 ## 4. Open questions
-- **EA's role:** is EA willing to be the fan-out caller, and who owns the position-to-`TEACHER` mapping? (EA must be in the conversation; Femi to decide.)
+- **Lead:** Femi has not yet named who leads (EA is willing to be the fan-out caller; see section 5).
 - **Allowlist:** is `TEACHER`-only right for v1, or should a position also be able to default to something like `REGISTRAR`? (My recommendation: no, never via push.)
 - **Does ER mirror HR's `validUntil` exactly,** or may a school admin extend access past it? (My recommendation: no, the window is authoritative while an `employmentId` is linked; unlink first.)
 - **Visibility in WEB:** Femi's rule (a teacher sees only Education Operations) needs the ER role to reach WEB, which today comes from EA only. Separate from this contract, but this contract is where ER's role would be known.
+
+## 5. EA's answers (2026-10-06) - folded in
+
+EA read this draft and agrees, pending Femi naming the lead. Nothing is built on any side.
+- **Fan-out caller: yes**, if Femi confirms. EA does its Membership/grants first, then calls the endpoint in 2.2 with the existing `ea-provisioning` service account, as a thin, stateless, idempotent command keyed on `employmentId` + `version`. EA keeps no queue; HR retries a failed push. A missing Company-to-School link (only Companies registered through the school flow have one) is a clean refusal back to HR, not an ER concern.
+- **Position-to-access mapping:** EA owns the table (position -> EA role + module grants + ER duties); the content is a business decision. v1 has one entry (a teaching position -> `TEACHER` at ER). EA never emits anything outside ER's allowlist, and **ER's allowlist stays the real guard**. No new EA `Role` value.
+- **Invite acceptance:** no need to wait. Identity is the normalised email everywhere, so the link *is* the email; EA stores `employmentId` on the Membership at invite time. ER may be pushed at invite time because it grants nothing until that email signs in. An "accepted" callback to HR is an optional later extra.
+- **End dates:** EA will give its Membership `validFrom/validUntil` too and ignore an out-of-window membership in `/me`, mirroring 2.3, so both layers expire on their own with no sweeper. (Auth-path code in EA, HIGH review by CM.) Immediate cut-off is still an explicit revoke on both.
+- **The ER duty is NOT added to EA's `/me`** (every service decodes it strictly; a school-only field would force a lockstep release across GL/POP/SOP/IM/HR). **WEB should ask ER for the caller's school roles.** That is a **new, small ER item**: a read route returning the caller's own effective roles at a school (`GET /schools/{schoolId}/me`, any authenticated principal at that school, returns roles and the employment window if any). Not built; needed before WEB's role-based visibility can work. WEB to confirm the shape it wants.
