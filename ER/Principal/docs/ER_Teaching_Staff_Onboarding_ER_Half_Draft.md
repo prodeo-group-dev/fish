@@ -107,3 +107,20 @@ EA read this draft and agrees, pending Femi naming the lead. Nothing is built on
 - **Proposed default (changed from my first lean, on EA's argument): refuse.** `409` with the fixed token `existing_unlinked_assignment`, so the Owner is told and nothing changes.
 - **Adoption is an explicit, owner-confirmed step:** the same `PUT` with `adoptExisting: true`, answering `result: APPLIED_ADOPTED`. HR/EA show the Owner that this person's existing access is now tied to the employment.
 - Not built; not coded until Femi decides and says go.
+
+## 8. REVISION after HR: several employments per person per school (2026-10-06)
+
+HR corrected an assumption in 2.2/2.3/2.6/7: overlapping and sequential employments for one email at one school **do** legitimately happen (a rehire is a new HR Employee with the same email; a salaried teaching post plus hourly cover is two concurrent Employees). So a single `employmentId` on `StaffAssignment`, and a hard 409 on a "different employmentId", are wrong. **This supersedes those parts.**
+
+**Model:** one `StaffAssignment` per (school, email) as today, plus a **set of employment links** (new table, e.g. `staff_employments`: school, email, `employmentId`, `duties`, `validFrom`, `validUntil`, `version`). 
+- **Employment-derived duties** = the union of the duties of every link whose window contains today.
+- **Admin-granted roles** stay on the row; for a row that has at least one link they apply only while **at least one link is active** (union of windows). A row with no links behaves exactly as today.
+- A push for one employment never touches another employment's link or duties.
+
+**Responses (replaces the 409 rule in 2.2/7):** same `employmentId` + higher `version` -> `APPLIED`; equal `version`, same content -> `UNCHANGED`; **lower `version` -> `STALE` (200, ignored, safe to retry)**; equal `version` with *different* content -> `409 version_conflict`. A different `employmentId` for the same email is simply another link (no 409). Refuse-by-default for a hand-entered row (section 7) is unchanged.
+
+**DELETE `.../employment/{employmentId}`** now ends **that link only**; someone with a second active contract keeps access, which is the right outcome for "dismiss one contract". Ending the person entirely is ending every link (or the existing assignment revoke).
+
+**New risk to decide (Femi): dormant admin roles revive on rehire.** If all links end and the person is later rehired, the hand-granted roles still on the row (for example `SCHOOL_ADMIN`) become effective again as soon as a new link is active. Options: (a) accept, since an admin re-granting is the deliberate step; (b) on an explicit DELETE of the **last** active link, also clear the admin-granted roles, so a rehire starts clean (date expiry cannot mutate lazily, so it would stay dormant). I lean (b) plus an `adoptExisting`-style explicit re-grant for rehires. Not decided, not built.
+
+**Effect on EA:** EA's 3.2 says a different `employmentId` for the same email at the same Company is `409`; HR's point means EA's Membership needs the same set-of-links treatment (or EA must at least not 409 a rehire). That is EA's to design.
