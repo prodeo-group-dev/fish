@@ -72,3 +72,10 @@ Error tokens below are HR's existing ones (`not_pending`, `not_owner`, `unauthor
 ## UC-ONB-12 Someone without a grant tries to bring a person in
 - **Actor:** any member without the HR grant, or a stranger. **Main flow:** the attempt is refused (`403 forbidden`, with the reason `no_membership`, `insufficient_access` or `module_not_granted` once HR ships it); EA's own invite and remove routes refuse everything except the Owner Admin (interim, OI-3) and later HR's approved execution.
 - **Traces:** FR-ONB-18, 19.
+
+## UC-ONB-13 Delegate proposes a pay change; the Owner Admin approves
+- **Actor:** Delegate (raises), Owner Admin (approves). **Preconditions:** the employee exists and is not ended.
+- **Main flow:** (1) the delegate opens the employee and chooses Change pay or bank details; (2) enters the new pay rate, pay frequency or bank details and a reason; (3) HR stores a `PAY_CHANGE` request as PENDING and the employee's pay stays as it was; (4) the Owner Admin sees it in the one Approvals place, with old and new pay figures (bank details shown only as "bank details changed"); (5) Approve applies it and writes the audit record; Reject keeps the old values and tells the delegate why.
+- **Alternate:** the Owner Admin edits the pay fields directly, which is recorded as raised and approved in one step. A delegate who tries `PUT /employees/{id}` with a pay field gets `403 not_owner`.
+- **Postconditions:** pay changes only after the Owner Admin's approval, always with an audit record of who and when.
+- **Traces:** FR-ONB-3, 5, 21; D7, D8.
