@@ -34,45 +34,25 @@ Femi's rule (FR-OV-S32): every workflow states **who is told**, **what happens i
 tenant-side email or push for a reply (D12); one alert channel (email) with the on-call decision still
 Femi's (D34); the per-source limiter treats everyone behind one bastion as one source.
 
-## 2. Erasure and export on a verified request (D17, v1)
+## 2. Erasure and export on a verified request (D17)
 
-v1 has **no automated retention**. A tenant's ticket content is kept until an operator erases it on a
-**verified** request (the requester is the tenant's Owner Admin, verified out of band by Prodeo, and
-Femi has approved). Do not erase on a chat message or a ticket asking for it.
+**This is now done in the console, under Data requests, not by hand-run SQL.** (The SQL this section used to carry had gone stale: every table
+added since the first release hangs off a ticket, so it would have failed on a foreign key or left content behind. It has been removed on purpose.
+A stale erasure script is worse than none.) See `docs/Omniview_Support_S8_Data_Requests_Contract.md`.
 
-**Export first**, to give the requester a copy and to have a record of what is being removed. Run as the
-database owner through CM's credential-split path. `:tenant` is the tenant's UUID.
+The procedure, for a request from a business's Owner Admin, which must arrive **on a real ticket** (never act on a chat message):
 
-```sql
--- every ticket and message for the tenant, oldest first
-SELECT t.id AS ticket_id, t.subject, t.status, t.created_at, t.closed_at,
-       m.sent_at, CASE WHEN m.from_support THEN 'Prodeo (' || m.operator_name || ')' ELSE 'Owner Admin' END AS from_party,
-       m.body
-FROM support_tickets t JOIN support_messages m ON m.ticket_id = t.id
-WHERE t.tenant_id = :tenant
-ORDER BY t.created_at, m.seq;
-```
+1. **Open the request** (any operator): the business, the ticket it arrived on, export or erasure, and optionally one ticket only. A 30-day statutory clock starts and shows as overdue.
+2. **Confirm who is asking, out of band** (any operator): ring back on a number Prodeo already holds, a video call, a signed letter, or in person. Record **how**, never the evidence.
+3. **Approve** (an administrator; while there is more than one operator, not the person who verified). An approval lasts seven days.
+4. **Export**: an administrator presses Download. The copy is built then, handed over as a file and stored nowhere. Send it to the Owner Admin by the route you verified, then mark the request done.
+   **Erasure**: an administrator reads the preview (how many of each thing), types the phrase naming the business, and presses Erase. It runs in one transaction. The request's own ticket is kept unless
+   you tick the box, so you can still tell them it is done; **tell them first if you do tick it**.
+5. **Tell the requester what was done and what remains.** Backups age out on the database's normal schedule; say so. The operator access log is kept (who looked at what, never content).
 
-**Erase**, in one transaction, children first. Run it with the counts visible and `ROLLBACK` if they do
-not match the export:
-
-```sql
-BEGIN;
-DELETE FROM support_alert_outbox    WHERE ticket_id IN (SELECT id FROM support_tickets WHERE tenant_id = :tenant);
-DELETE FROM support_idempotency_keys WHERE tenant_id = :tenant;
-DELETE FROM support_read_markers    WHERE tenant_id = :tenant;
-DELETE FROM support_messages        WHERE tenant_id = :tenant;
-DELETE FROM support_tickets         WHERE tenant_id = :tenant;
--- check the five counts above against the export, then:
-COMMIT;
-```
-
-To erase a **single ticket** instead, replace each tenant filter with the ticket id
-(`ticket_id = :ticket` / `id = :ticket`) in the same order.
-
-After erasing, record in CM's coordination log: the date, the tenant, who verified, who approved, who
-ran it, and the row counts (never the content). Backups age out on the database's normal schedule; say so
-to the requester. Retention for erasure of backups is a CM/solicitor question (D17), not decided here.
+Every step is in the request's timeline and the operator access log with counts and names, never content. **Correction** of ticket text is not built: a ticket is a record of what was said,
+so a correction is handled by hand and recorded in a note on the request. If the console is unavailable, the request waits (the clock is a month); fix Omniview rather than reaching for SQL.
+**A test reads the real database schema and fails the build if any table holds tenant or ticket data that erasure neither handles nor keeps on purpose**, so this cannot go stale again.
 
 ## 3. First boot: what the log lines mean
 

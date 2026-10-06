@@ -116,10 +116,10 @@ Sizing is qualitative (S, M, L), not a date.
 
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| S8.1 | **Verified-request workflow** as a ticket kind with identity check, approval and execution steps, each logged (FR-SUP-G1, UC-SUP-14) | Omniview | S1.1, S1.6 | M | Not started |
-| S8.2 | **Retention schedule and automatic enforcement** once SD13 is answered with the solicitor (FR-SUP-G3) | Omniview, solicitor | SD13 | M | Not started |
-| S8.3 | **Exit procedure** across services (final export, retention, deletion, confirmation) (FR-SUP-G2, UC-SUP-17) | CM, all services | S9.1 | L | Not started |
-| S8.4 | **Residency statement** per tenant: where its ticket data lives (FR-SUP-G4) | CM, solicitor | SD13 | S | Not started |
+| S8.1 | **Verified-request workflow** as a ticket kind with identity check, approval and execution steps, each logged (FR-SUP-G1, UC-SUP-14) | Omniview | S1.1, S1.6 | M | **Built 2026-10-06** (branch `feat/omniview-support-s5`, awaiting CM): open on a real ticket, identity verified out of band, approved by an administrator (different from the verifier once there is more than one operator), then exported (built on demand, stored nowhere) or erased (preview, typed phrase, one transaction); statutory 30-day clock; counts never content; V15. **A Postgres test reads the schema and fails if any table holding tenant data is not handled by erasure**, which replaces the runbook SQL that had gone stale; contract: `docs/Omniview_Support_S8_Data_Requests_Contract.md` |
+| S8.2 | **Retention schedule and automatic enforcement** once SD13 is answered with the solicitor (FR-SUP-G3) | Omniview, solicitor | SD13 | M | **Blocked on SD13** (Femi and the solicitor: a retention schedule per data class and country). When it exists, enforcement is S8.1's erasure run by a rule |
+| S8.3 | **Exit procedure** across services (final export, retention, deletion, confirmation) (FR-SUP-G2, UC-SUP-17) | CM, all services | S9.1 | L | **Blocked on S9.1** (no subscription system exists; Omniview will not simulate one). Omniview erases only its own data; the other services hold and erase their own |
+| S8.4 | **Residency statement** per tenant: where its ticket data lives (FR-SUP-G4) | CM, solicitor | SD13 | S | **Blocked on SD13 and CM** (the ticket database is in one UK-region instance; an honest statement for an Irish or Nigerian tenant needs the solicitor and a region decision) |
 
 ## Wave S9: Entitlements and billing support (gated on a subscription system)
 
