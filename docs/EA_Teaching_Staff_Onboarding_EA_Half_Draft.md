@@ -28,15 +28,15 @@ PUT body: `{companyId, email, name, position, validFrom, validUntil?, version}`.
 - `tenantId` is in the path and the Company must belong to it; a Company of another tenant is refused (the same integrity rule as company registration). HR is single-tenant per deployment; EA still checks.
 
 Responses (HR surfaces any non-complete outcome as "not synced" and retries; every call is safe to repeat):
-- `200 {membership: APPLIED|UNCHANGED, er: APPLIED|NOT_APPLICABLE|FAILED, complete: bool, reason?}`; `reason` is a fixed token.
-- `404 company_not_found` (not the tenant's), `409 employment_conflict` (this email is already linked to a **different** employmentId at this Company; needs an explicit re-key, never a silent overwrite), `422 position_not_mapped`, `422 school_not_linked` (Education Company with no school link yet), `400 validation_failed`, `401/403` for any caller that is not HR's service identity, `503` if ER or EA's own dependencies are unreachable.
+- `200 {membership: APPLIED|UNCHANGED, er: APPLIED|UNCHANGED|STALE|NOT_APPLICABLE|FAILED, complete: bool, reason?}`; `reason` is a fixed token. ER's `STALE` (an older version arrived late) and `UNCHANGED` count as success.
+- `404 company_not_found` (not the tenant's), `409 employment_conflict` (this email is already linked to a **different** employmentId at this Company, or at ER the person has a hand-entered assignment not yet tied to an employment, ER's token `existing_unlinked_assignment`; needs an explicit re-key or an explicit, owner-confirmed adoption, never a silent overwrite), `422 position_not_mapped`, `422 school_not_linked` (Education Company with no school link yet), `400 validation_failed`, `401/403` for any caller that is not HR's service identity, `503` if ER or EA's own dependencies are unreachable.
 
 ## 3. What EA does with it
 
 ### 3.1 The mapping table (EA owns it; the CONTENT is a business decision)
 `position -> {EA role, EA access level, EA modules, ER duties}`. v1 has one entry: a **teaching position**, mapping to ER duty `TEACHER` and to the `EDUCATION_RUNTIME` module at that Company at READ level. EA never produces anything outside ER's allowlist (`TEACHER` only in v1; never `SCHOOL_ADMIN`, `REGISTRAR`, `BURSAR`, `HEAD_TEACHER`, `HOD`, `HOY`, `FEE_OFFICER`, `TIMETABLER`), and never `OWNER_ADMIN`. A position not in the table is `422 position_not_mapped`: HR is told, nothing is created. Non-teaching staff get no ER duty from a push in v1.
 
-**OPEN, a decision for Femi (the one real blocker): which EA `Role` does a teacher hold?** An EA assignment must name one of `OWNER_ADMIN, ACCOUNTANT, SALES_OFFICER, PURCHASING_OFFICER, INVENTORY_MANAGER, HR_OFFICER`, and none describes a teacher; giving a teacher ACCOUNTANT would be wrong in name and a risk if modules later change. `Role` is a closed enum decoded strictly by GL, POP, SOP, IM, HR and WEB, so a new value is a **lockstep release across all of them**. EA's recommendation: add one generic **`STAFF`** role (no business function implied, so it serves teachers, cleaners and drivers in every industry) in a coordinated change, rather than mislabel teachers.
+**OPEN, a decision for Femi (the one real blocker): which EA `Role` does a teacher hold?** An EA assignment must name one of `OWNER_ADMIN, ACCOUNTANT, SALES_OFFICER, PURCHASING_OFFICER, INVENTORY_MANAGER, HR_OFFICER`, and none describes a teacher; giving a teacher ACCOUNTANT would be wrong in name and a risk if modules later change. `Role` is a closed enum in EA, and a new value must reach the consumers before EA emits it. **Checked in the code on 2026-10-06:** only **GL** converts the role string into a strict enum (`Role.valueOf(it)` in its EA membership gateway, which would throw for an unknown value); POP, SOP, IM and HR hold the role as a plain string and WEB treats it as a string for display. So the lockstep is small (section 7.2). EA's recommendation: add one generic **`STAFF`** role (no business function implied, so it serves teachers, cleaners and drivers in every industry) rather than mislabel teachers.
 
 ### 3.2 Membership
 - The person is found or created by **verified email** (the identity in EA, ER and HR). EA creates a **pending invite** with one assignment at the Company (role, READ access, the mapped modules) and sends the existing invite email. The person accepts with their own identity. `employmentId`, `validFrom` and `validUntil` are stored on the Membership.
@@ -68,3 +68,20 @@ Order: after Support is switched on and the held releases; needs CM for the HR s
 2. The position code vocabulary and which positions map to what (HR + Femi).
 3. May a school admin extend access past HR's `validUntil`? EA's answer: no, HR's window is authoritative while an `employmentId` is linked (same as ER's recommendation).
 4. Two overlapping employments of one email at one Company: modelled as `409` for now; confirm it never legitimately happens.
+
+## 7. Binding, release plan and wiring (CM review notes, 2026-10-06)
+
+### 7.1 How the school is bound (the widening of `ea-provisioning`)
+- **EA can only name the school of one of the tenant's own Companies.** HR never supplies a school id. The route's path names the tenant, the body names a Company, EA checks the Company belongs to that tenant (the company-registration integrity rule), and EA reads the school id from **its own** Company-to-school link. No link means `422 school_not_linked` and no call.
+- **ER side (requested of ER, to confirm):** EA's call also carries the Company id and tenant id; ER already stores `organisationId` (the Company id) and `tenantId` when the school is provisioned, and should **refuse** a staff call whose Company or tenant does not match the school's own record. That turns a wrong id into a refusal on both sides.
+- **The honest limit:** `ea-provisioning` is a platform-wide service credential. These checks stop mistakes and any caller other than EA, but they do not stop a compromised EA from naming a real (tenant, company, school) combination; the credential's reach is "teacher rows at any provisioned school", bounded by ER's allowlist (`TEACHER` only in v1).
+
+### 7.2 Release plan if a generic `STAFF` role is chosen (consumers first, EA last)
+1. **GL:** add `STAFF` to its `Role` enum (the only strict consumer). Deploy, verify the running image.
+2. **WEB (cosmetic, optional before step 4):** a label for `STAFF` and the invite option. Role is a string there, so nothing breaks without it.
+3. **POP, SOP, IM, HR:** no change required (the role is a string and nothing gates on its value; each owner confirms with a grep for any comparison).
+4. **EA:** add `STAFF` to its `Role` enum and the mapping table, and start emitting it. EA ships last.
+Nothing new is added to `GET /me` for the validity window: an expired membership is simply not returned, so no consumer needs to declare a new field.
+
+### 7.3 Wiring for the HR-only route group
+No new Cognito client or audience: HR's service identity already authenticates to EA with the configured HR service audience (`EA_JWT_SERVICE_AUDIENCE_HR`). The new group is mounted under a **service-principal-only provider on that same verifier** (no user or membership lookup, no human fallback, not registered and answering `503 service_unavailable` when the audience is unset), distinct from the existing HR provider that resolves to a user for `/me`. No new environment variable.
