@@ -98,10 +98,10 @@ Sizing is qualitative (S, M, L), not a date.
 
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| S6.1 | **Routing rules** by family, industry, jurisdiction, module and severity to lanes, each with an owner and a backup (FR-SUP-I1); lane owners named (SD12) | Omniview, Femi | S2.3, S1.1 | M | Not started |
-| S6.2 | **Escalation with handoff notes** and its own ageing clock (FR-SUP-A9, UC-SUP-3) | Omniview | S6.1, S1.5 | M | Not started |
-| S6.3 | **Industry playbooks**: School first with the Education owner as L2 (FR-SUP-I2, UC-SUP-20) | Education Runtime, Omniview | S6.1, S3.1 | M | Not started |
-| S6.4 | **Tax lane per jurisdiction**, using the existing tax and currency docs as the reference, with the professional-judgement flag (SD4) (FR-SUP-I3) | Tax specialists, Omniview | S6.1, SD4 | M | Not started |
+| S6.1 | **Routing rules** by family, industry, jurisdiction, module and severity to lanes, each with an owner and a backup (FR-SUP-I1); lane owners named (SD12) | Omniview, Femi | S2.3, S1.1 | M | **Built 2026-10-06** (branch `feat/omniview-support-s5`, awaiting CM): lanes with tier, owner and backup, ordered routing rules on family, industry, country, module and severity, routed at creation and on triage, never over a person's choice, dry run, Lanes tab, V12 starter set; **owners and backups are not named** (Femi, SD12); contract: `docs/Omniview_Support_S6_Lanes_Routing_Escalation_Contract.md` |
+| S6.2 | **Escalation with handoff notes** and its own ageing clock (FR-SUP-A9, UC-SUP-3) | Omniview | S6.1, S1.5 | M | **Built 2026-10-06** (same branch): handoff note, one thread, a staff alert to the lane, its own working-time clock (**provisional**: L2 8h, L3 20h, for Femi to confirm), flag and one alert on a stall, return or resolve with a note, V13; the optional reply to the tenant counts as support's answer, so it is the operator's choice |
+| S6.3 | **Industry playbooks**: School first with the Education owner as L2 (FR-SUP-I2, UC-SUP-20) | Education Runtime, Omniview | S6.1, S3.1 | M | **Machinery built 2026-10-06** (same branch): one live playbook per industry, a Playbook tab on a ticket, Playbooks tab, V14; **no content seeded**, so the **Education owner still has to write the School playbook** |
+| S6.4 | **Tax lane per jurisdiction**, using the existing tax and currency docs as the reference, with the professional-judgement flag (SD4) (FR-SUP-I3) | Tax specialists, Omniview | S6.1, SD4 | M | **Built 2026-10-06** (same branch): per-country tax lanes through routing rules plus a country set at triage, and the professional-judgement flag with an operator-only banner (SD4); **tenant-facing wording about a paid engagement is Prodeo's to write, with legal advice**; which countries need a lane first is for the tax specialists |
 
 ## Wave S7: Consent-gated diagnostic access (waits for SD1)
 
