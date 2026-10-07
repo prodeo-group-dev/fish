@@ -126,3 +126,13 @@ HR corrected an assumption in 2.2/2.3/2.6/7: overlapping and sequential employme
 **Effect on EA:** EA's 3.2 says a different `employmentId` for the same email at the same Company is `409`; HR's point means EA's Membership needs the same set-of-links treatment (or EA must at least not 409 a rehire). That is EA's to design.
 
 **Literal tokens (pinned with EA, 2026-10-06):** every Education Runtime error body is `{"error": "<token>"}`, the same shape as all existing Education Runtime routes. The 409 tokens are exactly `{"error":"version_conflict"}` and `{"error":"existing_unlinked_assignment"}`. Success bodies are `{"result":"APPLIED"}`, `{"result":"UNCHANGED"}`, `{"result":"STALE"}` (and `APPLIED_ADOPTED` if adoption is approved). EA now mirrors the same set-of-links model on its side (its draft, FiSH branch `docs/ea-teaching-staff-onboarding-ea-half`).
+
+## 9. DECIDED (Femi, 2026-10-07): adoption of a hand-entered assignment
+
+**Femi: "Adopt it, but only with explicit owner confirmation."** This settles the open decision in section 7 as follows (no code yet; the build still waits for his go and PR sequencing):
+- **Default stays refuse.** A first push for an email that already has a hand-entered Education Runtime row (no `employmentId`) answers `409 {"error":"existing_unlinked_assignment"}` and changes nothing.
+- **Adoption is allowed only as an explicit, owner-confirmed step:** the same `PUT` with `adoptExisting: true`, answering `{"result":"APPLIED_ADOPTED"}`. EA (the only caller) must send the flag **only after the Business Owner (Owner Admin) has explicitly confirmed adopting that specific person**, shown the consequence that HR's dates will then gate all of that person's duties at the school, including any hand-granted ones.
+- **Proposed refinement, for EA and HR to confirm:** when `adoptExisting` is `true`, the call also carries `adoptionConfirmedBy` (the Owner Admin's email), which the Education Runtime stores with the time on the link. Education Runtime cannot itself verify the Owner's confirmation (EA's service account is trusted, as for every push); this makes the confirmation auditable instead of an unexplained flag. A call with `adoptExisting: true` and no `adoptionConfirmedBy` is a `400`.
+- `adoptExisting: true` on an email with **no** hand-entered row is harmless and answers `APPLIED` (nothing to adopt).
+
+**Still undecided:** dormant admin roles reviving on a rehire (section 8); the EA role for a teacher.
