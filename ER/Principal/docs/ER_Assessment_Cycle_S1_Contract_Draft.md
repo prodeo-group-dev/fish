@@ -1,6 +1,6 @@
 # Assessment cycle, wave S1: domain model and API contract (DRAFT for WEB and Femi)
 
-**Status: DRAFT 1, 2026-10-07. Design only; nothing built, nothing frozen, nothing started until Femi says go.** Written by the Education Runtime (EduSys) against WEB's UX input (`WEB_Education_Assessment_UX_Input_S1_S2.md`, branch `docs/edu-assessment-ux-input`) and the specialty scope (`ER_Education_Specialty_Scope.md`). Requirement ids are the spec's (ER-ASM-001..011). Tags: **[code]** read from `fish-education-runtime` on 2026-10-07; **[WEB]** from WEB's input; **[school]** a rule only a real school can settle (a placeholder default is given, marked, never presented as fact). **Neither this contract nor WEB's input has been validated with a teacher, form master or principal.**
+**Status: DRAFT 2, 2026-10-07 (revised after WEB's review; see section 11). Design only; nothing built, nothing frozen, nothing started until Femi says go.** Written by the Education Runtime (EduSys) against WEB's UX input (`WEB_Education_Assessment_UX_Input_S1_S2.md`, branch `docs/edu-assessment-ux-input`) and the specialty scope (`ER_Education_Specialty_Scope.md`). Requirement ids are the spec's (ER-ASM-001..011). Tags: **[code]** read from `fish-education-runtime` on 2026-10-07; **[WEB]** from WEB's input; **[school]** a rule only a real school can settle (a placeholder default is given, marked, never presented as fact). **Neither this contract nor WEB's input has been validated with a teacher, form master or principal.**
 
 ## 1. Where we start **[code]**
 
@@ -12,6 +12,8 @@ Three write routes and no read route: `POST .../assessments/structures` (a free-
 2. **Small, independent, repeatable writes.** One mark per request. Every write carries a client-chosen `opId`; a repeat of the same `opId` with the same content returns the original result and changes nothing; the same `opId` with different content is `409 op_id_reused`. (This is the claim-first ledger already built for sync, `SyncPushLedger`, reused, not rebuilt.) **[WEB, code]**
 3. **Optimistic concurrency on a mark:** a write may carry the `version` the client last saw; a stale version is `409 stale_mark` with the current value, never a silent overwrite.
 4. **Every refusal is a stable machine code plus a plain message** (section 6), so WEB can show the right words.
+4a. **Every resource that has actions returns server-computed `allowedActions`** (state, capability and deadline already taken into account), so WEB never infers "may I edit?" from several fields. **[WEB]**
+4b. **Positions are numbers**, never formatted strings: `{position, tied}`; WEB formats the ordinal. **Lists** default to 50 per page, maximum 100, return a `cursor` and a `total`; a bad `cursor` or `limit` is `invalid_cursor` / `invalid_limit`. **[WEB]**
 5. **Capability codes, not role lists** (from `GET /schools/{id}/me`, section 7). A person without the capability gets `403`, and the `/me` list is how WEB knows not to show the action at all.
 6. **Children's data:** no mark appears in any notification text; a guardian sees nothing until release.
 7. New routes use **JSON request and response bodies** (every other write route in this service takes pipe-delimited text; the assessment payloads are structured enough that text would be fragile). **Flagged as a convention change for CM's review.**
@@ -43,7 +45,7 @@ Three write routes and no read route: `POST .../assessments/structures` (a free-
 
 ## 5. API (all under `/schools/{schoolId}/assessment`; capability in brackets)
 
-**Set-up** `[MANAGE_ASSESSMENT_SETUP]`
+**Set-up** `[MANAGE_ASSESSMENT_SETUP]` (an admin-only set of plain forms; WEB designs them last, after the teacher, form master and principal screens)
 - `PUT /grading-scales/{id}`, `GET /grading-scales`
 - `PUT /structures/{id}`, `GET /structures?level=&term=` (versioned; `409 structure_in_use` if a mark exists)
 - `PUT /offerings/{id}` (assign class, subject, term, teacher, structure, deadline), `GET /offerings` (paged)
@@ -51,11 +53,13 @@ Three write routes and no read route: `POST .../assessments/structures` (a free-
 **Teacher** `[ENTER_SCORES]`, own offerings only (`403 not_your_offering` otherwise)
 - `GET /my-offerings?term=&cursor=&limit=`: each with class, subject, term, `progress` (`entered`, `expected` per component), `deadline`, `status`, `lockReason`
 - `GET /offerings/{id}`: the structure (components with `maximum` and `weight`, the scale, `decimalsAllowed`), status, deadline, lock reason, completeness counts
-- `GET /offerings/{id}/roster?q=&missing=&cursor=&limit=`: **paged and searchable server-side**; each row has student id, name, admission number (or `externalRef`), each component's cell `{value|code, state, version}`, and `computed {total, grade, asOf}`
-- `PUT /offerings/{id}/marks` body `{opId, studentId, component, value | code, version?}` -> the saved cell; refusals per section 6
+- `GET /offerings/{id}/roster?q=&missing=&cursor=&limit=`: **paged (default 50, maximum 100, with `cursor` and `total`) and searchable server-side**; each row has student id, name, admission number (or `externalRef`), each component's cell `{value|code, state, version}`, and `computed {total, grade, asOf}`
+- `PUT /offerings/{id}/marks` body `{opId, studentId, component, value | code | clear: true, version?}` -> the saved cell **and that student's recomputed `computed {total, grade, position, tied, asOf}`**, so the row updates without refetching the roster. `clear: true` returns the cell to **not entered** (the typo case: a mark on a student who did not sit); it follows the same `opId` and `version` rules and is refused when the offering is locked.
+- `POST /offerings/{id}/marks:batch` body `{marks: [{opId, studentId, component, value | code | clear, version?}, ...]}` (at most 100) -> a **per-item result** (`saved` with the cell, or the refusal code). For flushing after a dropped connection, and later offline; each item is independent and safe to repeat.
 - `POST /offerings/{id}/submit` body `{allowGaps}` -> new status, or `409 gaps_present {counts}`
 
 **Form master** `[APPROVE_RESULTS]`, only for the classes they are form master of
+- `GET /my-classes?term=`: the classes where **I am form master**, each with its state, completeness and `allowedActions`, so the screen shows only my classes and never an error. (A principal with `RELEASE_RESULTS` sees every class.)
 - `GET /classes/{classId}/overview?term=`: subjects by status with who and when, completeness, `blockers`
 - `GET /offerings/{id}/review?sort=outliers`: the class with components, total, grade, position, and an `outlier` flag with its reason (far from class mean, a zero, a missing mark)
 - `POST /offerings/{id}/approve`, `POST /offerings/{id}/return` body `{comment}` (mandatory)
@@ -67,13 +71,13 @@ Three write routes and no read route: `POST .../assessments/structures` (a free-
 - `POST /classes/{classId}/release` body `{confirm: true}`, response says exactly what became visible to whom (counts); `409 not_ready` otherwise
 
 **Corrections** `[ENTER_SCORES]` to request, `[APPROVE_RESULTS]` / `[RELEASE_RESULTS]` to decide
-- `POST /corrections`, `GET /corrections?status=`, `POST /corrections/{id}/approve|reject` (reason mandatory on reject)
+- `POST /corrections`, `GET /corrections?status=&mine=true`, `POST /corrections/{id}/approve|reject` (reason mandatory on reject). `mine=true` lists a teacher's own requests.
 
 **Print (S2, same contract style):** `GET /students/{id}/report-card?term=&format=pdf`, `POST /classes/{id}/report-cards` (renders the whole class as **one server-side PDF**, returns a download), `GET /classes/{id}/broadsheet?term=&format=pdf`; each carries a **"not released" marking** until release. **[WEB]**
 
 ## 6. Refusal codes (stable)
 
-`out_of_range {maximum}`, `unknown_component`, `past_deadline {deadline}`, `locked {reason}`, `not_your_offering`, `stale_mark {current}`, `op_id_reused`, `gaps_present {counts}`, `not_ready {blockers}`, `structure_in_use`, `weights_not_100`, `version_conflict`, `forbidden`. Each response is `{"error": "<code>", "message": "<plain words>", ...fields}`.
+`out_of_range {maximum}`, `invalid_value` (not a number), `too_many_decimals {allowed}`, `unknown_component`, `student_not_in_class`, `past_deadline {deadline}`, `locked {reason}`, `not_your_offering`, `not_your_class` (distinct from `not_your_offering`), `stale_mark {current}`, `op_id_reused`, `gaps_present {counts}`, `not_ready {blockers}`, `comment_required` (return, reject), `reason_required` (correction, promotion override), `confirm_required` (release), `structure_in_use`, `weights_not_100`, `version_conflict`, `invalid_cursor`, `invalid_limit`, `forbidden`. Each response is `{"error": "<code>", "message": "<plain words>", ...fields}`.
 
 ## 7. Capability codes this adds (extends the agreed `GET /schools/{id}/me` list)
 
@@ -110,3 +114,7 @@ Three write routes and no read route: `POST .../assessments/structures` (a free-
 | S2 | Promotion rules and verdicts; server-side PDFs; broadsheet | later | later |
 
 Every task includes real-Postgres tests (the lesson of the outbox fault), and a contract test for each response shape WEB declares strictly. **Review level for CM: high for A3, A5 and A7** (data integrity and a release that changes who may see children's results), medium for the rest. **No contract is final until WEB has shown it to a real teacher, form master and principal and Femi has said go.**
+
+## 11. Revision 2 (after WEB's review, 2026-10-07)
+
+WEB read draft 1 and asked for: **clear a mark** back to not entered (added: `clear: true`); **`GET /my-classes`** (added, so a form master sees only their classes); the missing refusal codes (added: `not_your_class`, `comment_required`, `reason_required`, `confirm_required`, `invalid_value`, `too_many_decimals`, `student_not_in_class`, `invalid_cursor`, `invalid_limit`); the **recomputed `computed` block in the `PUT /marks` response** (added); an optional **batch write** with per-item results (added: `POST .../marks:batch`); server-computed **`allowedActions`** on every resource with actions (added, rule 4a); positions as **number plus `tied`** (added, rule 4b); roster paging **default 50, max 100, cursor and total** (added); a teacher's own correction list, **`mine=true`** (added). WEB confirmed JSON bodies, the coded-mark rule, and that the three legacy routes are unused by it (so A8 breaks nothing on WEB's side; CM still gates A8 on its own). Set-up forms are designed last. Nothing is validated with real users and nothing is frozen on either side.
