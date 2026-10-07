@@ -1,6 +1,6 @@
 GENERAL LEDGER (GL) PLAYBOOK (draft for Omniview's Playbooks tab, service GL)
 
-Written by the GL session, 2026-10-07, from the code on fish-fish-gl-engine master (commit 5fd7db6, PR #60, deployed as task definition fish-gl-engine:97 on 2026-10-06, confirmed live by CM). Plain text so it can be pasted straight into the Playbooks tab. Everything below was read from the code, not from older documents; where a statement is a design intention rather than a fact it says so. Update this sheet in the same change as the code it describes.
+Written by the GL session, 2026-10-07, from the code on fish-fish-gl-engine master (commit b4723da, PR #61, deployed as task definition fish-gl-engine:98 on 2026-10-07, confirmed live by CM; refreshed from the 5fd7db6 / :97 version for the trading profit-and-loss release). Plain text so it can be pasted straight into the Playbooks tab. Everything below was read from the code, not from older documents; where a statement is a design intention rather than a fact it says so. Update this sheet in the same change as the code it describes.
 
 PLAYBOOK CONTENTS (see docs/Playbook_Definition.md; a playbook is this sheet PLUS the SPUTO set)
 1. Operator sheet: this document.
@@ -35,9 +35,9 @@ Posting (callers: SOP, POP, IM, HR, the generic journal for finance):
 - POST /inventory/record-receipt, /inventory/record-issue (IM, with a cost IM supplies).
 - POST /payroll/record-pay-run and /leave-accruals (+ /remeasure, /utilize) (HR).
 - POST /journal-entries (a generic balanced entry), POST /sales/create-invoice (an older direct cash or credit invoice; SOP is the system for sales now).
-- POST /companies/{id}/accounts (create an account), POST /companies/{id}/accounts/{id}/opening-balance.
+- POST /companies/{id}/accounts (create an account), PUT /companies/{id}/accounts/{id}/expense-classification (tag or untag an expense account as cost of sales, interest, income tax and so on), POST /companies/{id}/accounts/{id}/opening-balance.
 Reading: GET /companies/{id}/accounts, /journal-entries, /customers, /sales-invoices, /fixed-assets, /vat-categories, and the posting-context routes (sales, purchase, inventory, payroll) that tell a caller which period and accounts to post to.
-Reports: GET /companies/{id}/reports/balance-sheet, /profit-and-loss, /cash-flow, /working-capital, /fixed-asset-register; GET /expense-velocity, /money-velocity, /sales-to-expense-ratio; POST /accounts-receivable-aging, /accounts-payable-aging, /customer-balances, /supplier-balances.
+Reports: GET /companies/{id}/reports/balance-sheet, /profit-and-loss, /trading-profit-and-loss, /cash-flow, /working-capital, /fixed-asset-register; GET /expense-velocity, /money-velocity, /sales-to-expense-ratio; POST /accounts-receivable-aging, /accounts-payable-aging, /customer-balances, /supplier-balances.
 Tax: GET and POST /companies/{id}/tax (Corporate Income Tax only); POST /companies/{id}/vat-return.
 Other: bank reconciliation (/bank-reconciliations: start, match, unmatch, list, read); fixed assets (create, depreciate, impair, dispose); opening imports (/opening-imports/gl-balances and /fixed-assets, each with a /validate step); POST /tenants/{id}/companies (create a Company); GET /me; GET /jurisdictions; GET /health (no sign-in, shallow: it shows the process is up, not that every dependency is).
 
@@ -81,7 +81,7 @@ A: A Company has one base currency and GL accepts any ISO code. Which currencies
 
 CHART OF ACCOUNTS
 Q: What accounts does a new Company get?
-A: A starter chart by business type (individual, sole trader, partnership, limited company, non-profit): cash 1000, accounts receivable 1100, fixed assets 1200, accounts payable 2000, VAT control 2150, payroll and facility accounts, equity, a suspense account (3910), one revenue account and a few expense accounts, plus an opening period and the opening cash balance. There is ONE revenue account and no bank, deferred-income, pass-through or cost-of-sales account in the starter charts.
+A: A starter chart by business type (individual, sole trader, partnership, limited company, non-profit): cash 1000, accounts receivable 1100, fixed assets 1200, accounts payable 2000, VAT control 2150, payroll and facility accounts, equity, a suspense account (3910), one revenue account and a few expense accounts, plus an opening period and the opening cash balance. Since 2026-10-07 every business type (not individual) also gets three tagged expense accounts: 5010 Cost of Sales, 5600 Interest Expense and 5700 Income Tax Expense; Companies created BEFORE that date do not have them. There is ONE revenue account and no bank, deferred-income, pass-through or school-fee accounts in the starter charts.
 Q: record-sale posts only to one revenue account.
 A: Correct. A single sale credits one revenue account chosen by the caller; it cannot split an invoice across several revenue accounts yet.
 Q: What is the suspense account for?
@@ -89,7 +89,9 @@ A: Opening or unclassified balances that must be sorted out later (for example a
 
 REPORTS
 Q: How are the reports calculated?
-A: From posted entries only. The balance sheet uses everything posted so far (there is no "as at" date). Profit and loss, cash flow and the velocity reports use the Company's single open period. The profit-and-loss route returns only three totals (revenue, expense, net income); there is no cost-of-sales or gross-profit split in the API yet. Reports show what is posted; they are not an audit opinion.
+A: From posted entries only. The balance sheet uses everything posted so far (there is no "as at" date). Profit and loss, cash flow and the velocity reports use the Company's single open period. The profit-and-loss route returns three totals (revenue, expense, net income). The trading profit-and-loss route (since 2026-10-07) splits them: revenue, cost of sales, gross profit, operating expenses, operating profit, interest, profit before tax, income tax and net profit, on the same open period, and its net profit equals the plain route's net income. Reports show what is posted; they are not an audit opinion.
+Q: Gross margin or interest cover shows "not available yet".
+A: The trading report says whether any account is TAGGED as cost of sales (costOfSalesConfigured) or interest expense (interestConfigured). Cost of sales is only what sits in an expense account tagged as cost of goods sold; an untagged account counts as an operating expense, which makes gross profit look too high. Companies created before 2026-10-07 have no tagged accounts. Fix: tag the right expense account with PUT .../accounts/{id}/expense-classification (it only regroups the report, it never changes a balance), or create the accounts. Inventory Management posts its cost of goods sold to the account each stock item names, so those items must point at a tagged account. Tagging has no audit trail yet.
 Q: Is the balance sheet balanced?
 A: It reports an isBalanced flag. Retained earnings is computed from all revenue and expense ever posted, because nothing closes a period into retained earnings.
 
@@ -116,7 +118,7 @@ NOT BUILT, NOT DEPLOYED, OR NOT YET EXERCISED (do not promise these)
 - Reversal over HTTP: the logic exists but no route exposes it, so a posted entry cannot be reversed by a caller yet (void a receipt, cancel an invoice).
 - Audit trail: the store exists and is tested, but nothing writes to it yet. GL cannot answer "who posted this" except the entry's source (manual, integration, reversal); there is no actor on an entry.
 - VAT: Ireland and the UK only are live. Sierra Leone is loaded but unverified (refuses). Liberia, Guinea, Cote d'Ivoire and Nigeria have no rates. No exempt-only path. VAT returns are Irish-shaped. Nothing records who verified or changed a rate (an audit trail for that is required before any country is switched on).
-- Gross profit and operating profit: the split exists in the domain but is not exposed; cost-of-sales, interest and tax accounts are not classified in the starter charts.
+- Trading profit-and-loss: live, but only as good as the tagging. Existing Companies are untagged; re-tagging has no audit trail and moves gross margin; it uses the single open period (no chosen period or date range); no work-in-progress adjustment for manufacturers.
 - School fees: one revenue account per sale, no deferred income, no pass-through liability, no parent-advance or refund posting (a proposal exists: docs/Fee_Billing_Epic13_GL_Posting_Rules.md).
 - Consolidation across Companies, fund accounting, contra-revenue presentation, foreign-currency translation or revaluation.
 - Bulk or batch posting: one call per document.
