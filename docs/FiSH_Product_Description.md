@@ -10,14 +10,16 @@
 
 In plain terms: FiSH is a complete business platform on its own (ledger, sales, purchasing, inventory, HR and payroll, administration). An industry runtime sits on top of it and carries everything FiSH does, then adds what that industry needs.
 
+**Clarification, 2026-10-07 (Femi):** FiSH on its own **is the Enterprise Runtime** (ER). The name was adopted during the Education build and was not spelled out at the time. So the platform is an Enterprise Runtime, and industries that need more are served by **specialist runtimes** on top of it: Education, Banking (for example Purse), and doctors' surgeries (the "Clinical Runtime" above).
+
 ## 2. What exists today (checked 2026-10-07)
 
 | Piece | Status | Evidence |
 |---|---|---|
-| **FiSH on its own** | Live in production. A generic business can use it with no runtime. | GL, SOP, POP, IM, HR, EA and the shared web app are deployed. |
+| **FiSH on its own = the Enterprise Runtime (ER)** | Live in production. A generic business can use it with no runtime. | GL, SOP, POP, IM, HR, EA and the shared web app are deployed. |
 | **Education Runtime** | Built and live. Its school product is **EduSys** ("The Principal's EduSys"). | Own backend (`fish-education-runtime`, repo folder `ER/Principal/EducationRuntime`). A tenant whose industry is `SCHOOL` is granted the `EDUCATION_RUNTIME` module and sees school tabs inside the shared web app. |
-| **Clinical Runtime** | Stated intent. **Nothing exists**: no code, no design document. | No mention anywhere in the repos. |
-| **Banking Runtime** | Stated intent. **Nothing exists** as a runtime. | Purse's core-banking requirements are separate reference material, not a runtime. |
+| **Clinical Runtime** (doctors' surgeries) | Stated intent. **Nothing exists**: no code, no design document. | No mention anywhere in the repos. |
+| **Banking Runtime** (for example Purse) | Stated intent. **Nothing exists** as a runtime. | Purse is the intended banking customer. Its core-banking requirements are separate reference material, not a built runtime. |
 
 Only the Education Runtime is real. Any external wording must not suggest the other two exist (the project's rule is credibility over persuasion).
 
@@ -35,7 +37,7 @@ The Education Runtime is the one worked example, and it shows the shape runtimes
 ## 4. Open questions (not decided; park until the owner decides)
 
 1. **"Inherit" versus "delegate".** The Principal's SRS describes the school product as *delegating* ledger accounting to FiSH and shared operations to a separate layer. This statement is stronger: the runtime *includes* all of FiSH. In practice the Education Runtime calls FiSH over APIs and events. Is that the intended meaning, or should a runtime also reuse FiSH's screens and modules directly?
-2. **Two meanings of "ER".** The SRS defines ER as *Enterprise Runtime* (shared admin, operations and UX services). In use, "FiSH+ER" now means *Education Runtime*. Which name is canonical, and does an Enterprise Runtime layer exist separately?
+2. **ER in the existing requirements document.** *Resolved on the name:* ER is the Enterprise Runtime, and FiSH on its own is the Enterprise Runtime. What still needs aligning is the wording in The Principal's SRS, which uses "FiSH" narrowly (the financial/GL engine) and "ER" for shared admin, operations and UX services. Under the clarified usage the Enterprise Runtime covers both. Whoever owns that SRS should confirm it and update its definitions; this document does not change it.
 3. **Adding a runtime is a platform change.** `IndustryType` is a closed list. A Clinical or Banking runtime means a new industry type, a new module, and a release that every service decodes before Enterprise Administration emits it (strict decoding), plus new runtime-specific labels in the web app.
 4. **Separate app or one app.** Whether a runtime's customers install its own app (EduSys) or use the shared one is parked.
 
