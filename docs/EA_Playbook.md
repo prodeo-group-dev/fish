@@ -52,6 +52,9 @@ Q: "The dashboard says 403."
 A: The dashboard is the Owner Admin's alone (since 2026-10-07). A staff member, even with access to the Company, is refused by design.
 Q: "A dashboard section is missing."
 A: Each section (sales today, inventory, cash flow, profit, ratios) is left out when its source service did not answer; the page still loads. Escalate only if it persists.
+Q: "Why do gross margin, operating margin, return on capital employed and interest cover say 'not available yet'?"
+A: They come from the ledger's trading profit-and-loss report (since 2026-10-07) and need the Company's accounts to be TAGGED in GL: gross margin needs a cost-of-sales account tagged (needs_cost_of_sales); operating margin, return on capital employed and interest cover need the INTEREST account tagged (needs_interest_expense), because untagged interest hides inside operating expenses and would understate operating profit. Companies created before GL release :98 have no tags yet; only newer Companies get cost of sales (5010), interest (5600) and income tax (5700) from the chart template. Existing Companies need GL's re-tag route or new accounts: escalate to the GL session. needs_operating_profit means the report did not answer at all. no_interest_expense means the interest account is tagged but nothing was paid. no_capital_employed means total assets minus current liabilities is zero or negative.
+KNOWN LIMIT: an untagged income-tax account can still understate operating profit (GL's report has no flag for it yet). Do not promise these four ratios are exact for a Company whose tax is untagged.
 
 APPROVALS QUEUE
 Q: "What is in it?"
