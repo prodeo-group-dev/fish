@@ -22,7 +22,7 @@
 | 0.3 | OI-4: how unpaid staff are modelled in HR | 1.4, 2.1 |
 | 0.4 | OI-5: does an offboarding trigger anything in payroll (final pay, leave payout, advances) | 2.4 |
 | 0.5 | OI-8: which EA role a non-function staff member (teacher) holds; `STAFF` recommended | 1.3, 3.3 |
-| 0.6 | OI-9: adopt or refuse a hand-entered ER assignment (ER recommends refuse; if ever approved it is an explicit owner-confirmed `adoptExisting: true` on the same PUT, answered `APPLIED_ADOPTED`, never automatic) | 4.2 |
+| 0.6 | OI-9: **decided (Femi, 2026-10-07)**: refuse by default; adopt only after the Owner Admin explicitly confirms that specific person (`adoptExisting: true` plus `adoptionConfirmedBy`, answered `APPLIED_ADOPTED`); EA checks the confirming email is the tenant's Owner Admin. Adds two optional fields to EA's internal employment route and a confirmation step to HR's screen (WEB) | 3.4, 4.2 |
 | 0.9 | OI-11: dormant admin-granted ER roles reviving on a rehire; ER leans to clearing them when the LAST active link is explicitly DELETEd (undecided) | 4.1 |
 | 0.7 | OI-1: where the request lives (HR proposed); agreed by HR | 2.1 |
 | 0.10 | OI-12: **settled by D7, D8 and D9**: the Owner-Admin-only rule on the three pay fields is adopted immediately (row 1.6); delegates then propose through `PAY_CHANGE` (row 2.5). Audit trail: old and new values for pay rate and frequency, for bank details only that the field changed and by whom (never plaintext). The pay-integrity guard for `UNPAID` is separate and still waits for Femi's go; CM HIGH review | 1.6, 2.5 |
