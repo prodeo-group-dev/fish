@@ -1,5 +1,7 @@
 # The Principal's EduSys — Product Backlog
 
+> **Terminology (aligned 2026-10-07 to `docs/FiSH_Product_Description.md`):** "FiSH" on its own is the Enterprise Runtime; the Education Runtime is built on it, and together they are "FiSH+ER", The Principal's EduSys. In THIS document a bare "ER" means the **Education Runtime** (the school backend). Requirement IDs such as `ER-ATT-008` are identifiers and keep their prefix. New text should write "Education Runtime" or "Enterprise Runtime" out rather than a bare "ER".
+
 **Source:** The Principal SRS (17 Sep 2026); superseded/extended 2026-10-01 by `docs/FiSH-ER-Education-Runtime-Technical-Req-Spec-and-Use-Cases-v0.1.md` (230 requirements, 14 use cases, source-of-truth going forward) — see `docs/Education_Runtime_MVP_Definition.md` for the real-code-vs-spec gap analysis this produced  
 **Owner:** Policy and Strategy Initiatives CIC  
 **Platform:** FiSH+ER (school EMIS, Nigeria)  

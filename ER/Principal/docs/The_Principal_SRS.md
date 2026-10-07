@@ -8,11 +8,11 @@ Sep 17, 2026 · Prepared for @Someone
 
 1.1 Purpose
 
-This Software Requirements Specification (SRS) defines the functional and non-functional requirements for The Principal, the school management product of the FiSH+ER platform. It is intended to guide design, development, QA, and stakeholder sign-off for the initial release, and to serve as the contractual baseline between Policy and Strategy Initiatives CIC (the product owner) and the engineering team.
+This Software Requirements Specification (SRS) defines the functional and non-functional requirements for The Principal, the school management product of FiSH+ER, that is, the Education Runtime built on FiSH (the Enterprise Runtime), together known as The Principal's EduSys. It is intended to guide design, development, QA, and stakeholder sign-off for the initial release, and to serve as the contractual baseline between Policy and Strategy Initiatives CIC (the product owner) and the engineering team.
 
 1.2 Scope
 
-The Principal is the school-operations layer of a larger Education Management Information System (EMIS) SaaS venture targeting Nigerian schools. It unifies admissions, student records, classroom and attendance management, assessment, fee collection, parent communication, and regulatory compliance into a single product, while delegating financial ledger accounting to FiSH (the Financial Spine) and shared administration/operations/UX services to ER (the Enterprise Runtime).
+The Principal is the school-operations layer of a larger Education Management Information System (EMIS) SaaS venture targeting Nigerian schools. It unifies admissions, student records, classroom and attendance management, assessment, fee collection, parent communication, and regulatory compliance into a single product, while building on FiSH, the Enterprise Runtime, for financial ledger accounting (FiSH GL, reached through FiSH SOP) and for shared administration, identity and UX services.
 
 In scope for this SRS:
 
@@ -28,7 +28,7 @@ Out of scope:
 
 FiSH General Ledger accounting logic (posting rules, chart of accounts) — specified separately under the FiSH SRS
 
-ER's cross-product admin/identity services — specified separately under the ER SRS
+FiSH's cross-product administration and identity services (the Enterprise Runtime's shared services) — specified separately under the FiSH SRS
 
 Learning management (course content delivery) — explicitly excluded from The Principal's brand positioning
 
@@ -44,11 +44,19 @@ Education Management Information System — the overall SaaS venture
 
 FiSH
 
-The Financial Spine — the platform's financial/GL engine
+The Enterprise Runtime — FiSH on its own is a complete business platform (ledger, sales, purchasing, inventory, HR and payroll, administration, identity and shared UX); its financial engine is FiSH GL
 
-ER
+FiSH GL
 
-Enterprise Runtime — shared Admin, Operations and UX services
+The ledger and financial engine within FiSH
+
+Education Runtime
+
+The school-specific runtime built on top of FiSH: this product's own services (admissions, records, classes, attendance, assessment, fees). Abbreviated ER only inside "FiSH+ER"; this document writes the name out, because a bare "ER" can also be read as Enterprise Runtime
+
+FiSH+ER
+
+FiSH (the Enterprise Runtime) plus the Education Runtime: The Principal's EduSys
 
 FiSH SOP
 
@@ -96,9 +104,9 @@ Section 2 describes The Principal at a product level — its position in the FiS
 
 The Principal is not a standalone application; it is the school-domain product inside the FiSH+ER ecosystem:
 
-flowchart TD  A[The Principal<br/>School Management UI] --> B[SchoolSOP<br/>domain logic]  B --> C[FiSH SOP<br/>event processor]  C --> D[FiSH GL<br/>financial engine]  A --> E[ER<br/>Admin · Operations · UX]
+flowchart TD  A[The Principal<br/>School Management UI] --> B[SchoolSOP<br/>domain logic]  B --> C[FiSH SOP<br/>event processor]  C --> D[FiSH GL<br/>financial engine]  A --> E[FiSH shared services<br/>Admin · Operations · UX]
 
-The Principal owns school-operations data and UX; it never posts accounting entries directly — it emits domain events (Section 4.2) that FiSH SOP consumes and that FiSH GL turns into ledger postings. ER supplies shared identity, admin, and cross-product UX services The Principal builds on rather than reimplements.
+The Principal owns school-operations data and UX; it never posts accounting entries directly — it emits domain events (Section 4.2) that FiSH SOP consumes and that FiSH GL turns into ledger postings. FiSH's shared services (the Enterprise Runtime) supply identity, admin, and cross-product UX that The Principal builds on rather than reimplements.
 
 2.2 Product Functions (Summary)
 
@@ -212,7 +220,7 @@ Must support low-bandwidth and intermittent-connectivity conditions typical of N
 
 FiSH GL and FiSH SOP are available as backing services and their event contracts are stable at integration time
 
-ER provides authentication, role-based access control, and shared navigation chrome that The Principal consumes rather than builds
+FiSH (the Enterprise Runtime) provides authentication, role-based access control, and shared navigation chrome that The Principal consumes rather than builds
 
 The EMIS business plan's scaling targets (5,000 schools, 1,000,000 students by Year 3) inform capacity planning (Section 6.5) but are business, not functional, requirements
 
@@ -608,7 +616,7 @@ Indirect, via FiSH SOP
 
 The Principal never calls FiSH GL directly
 
-ER identity/admin services
+FiSH identity/admin services (Enterprise Runtime)
 
 Inbound
 

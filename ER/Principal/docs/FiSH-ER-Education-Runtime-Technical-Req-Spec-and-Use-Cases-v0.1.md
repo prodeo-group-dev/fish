@@ -1,5 +1,7 @@
 # FiSH+ER Education Runtime — Technical Requirements Specification and Use Case Document
 
+> **Terminology (aligned 2026-10-07 to `docs/FiSH_Product_Description.md`):** "FiSH" on its own is the Enterprise Runtime; the Education Runtime is built on it, and together they are "FiSH+ER", The Principal's EduSys. In THIS document a bare "ER" means the **Education Runtime** (the school backend). Requirement IDs such as `ER-ATT-008` are identifiers and keep their prefix. New text should write "Education Runtime" or "Enterprise Runtime" out rather than a bare "ER".
+
 **The Prodeo Group Ltd**
 
 ## 1. Document control and executive summary
