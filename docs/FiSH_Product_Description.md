@@ -10,7 +10,7 @@
 
 In plain terms: FiSH is a complete business platform on its own (ledger, sales, purchasing, inventory, HR and payroll, administration). An industry runtime sits on top of it and carries everything FiSH does, then adds what that industry needs.
 
-**Clarification, 2026-10-07 (Femi):** FiSH on its own **is the Enterprise Runtime** (ER). The name was adopted during the Education build and was not spelled out at the time. So the platform is an Enterprise Runtime, and industries that need more are served by **specialist runtimes** on top of it: Education, Banking (for example Purse), and doctors' surgeries (the "Clinical Runtime" above).
+**Clarification, 2026-10-07 (Femi):** FiSH on its own **is the Enterprise Runtime** (ER). The name was adopted during the Education build and was not spelled out at the time. Industries that need more are served by **specialist runtimes** on top of it: Education, Banking (for example Purse), and doctors' surgeries (the "Clinical Runtime" above). The first specialist runtime to inherit FiSH is **Education**. FiSH (an Enterprise Runtime) plus the Education Runtime is written **"FiSH+ER"**, and that combination is **The Principal's EduSys**. So "ER" on its own means Enterprise Runtime (FiSH), while in "FiSH+ER" the ER is the Education Runtime. Runtimes add special industrial abilities to the Enterprise abilities.
 
 ## 2. What exists today (checked 2026-10-07)
 
@@ -34,15 +34,18 @@ The Education Runtime is the one worked example, and it shows the shape runtimes
 
 "Inherit" here therefore means: everything FiSH offers stays available and unchanged to a runtime's customers, the runtime adds to it, and the runtime never replaces or duplicates FiSH's financial core.
 
-## 4. Open questions (not decided; park until the owner decides)
+## 4. Questions raised, and Femi's answers (2026-10-07)
 
-1. **"Inherit" versus "delegate".** The Principal's SRS describes the school product as *delegating* ledger accounting to FiSH and shared operations to a separate layer. This statement is stronger: the runtime *includes* all of FiSH. In practice the Education Runtime calls FiSH over APIs and events. Is that the intended meaning, or should a runtime also reuse FiSH's screens and modules directly?
-2. **ER in the existing requirements document.** *Resolved on the name:* ER is the Enterprise Runtime, and FiSH on its own is the Enterprise Runtime. What still needs aligning is the wording in The Principal's SRS, which uses "FiSH" narrowly (the financial/GL engine) and "ER" for shared admin, operations and UX services. Under the clarified usage the Enterprise Runtime covers both. Whoever owns that SRS should confirm it and update its definitions; this document does not change it.
-3. **Adding a runtime is a platform change.** `IndustryType` is a closed list. A Clinical or Banking runtime means a new industry type, a new module, and a release that every service decodes before Enterprise Administration emits it (strict decoding), plus new runtime-specific labels in the web app.
-4. **Separate app or one app.** Whether a runtime's customers install its own app (EduSys) or use the shared one is parked.
+These four were put to Femi as open questions. His answers are recorded as given. **They are for information, not a direction to build.**
+
+1. **"Inherit" versus "delegate".** Is it right that the runtime calls FiSH over APIs and events? *Answer: yes.* FiSH does what it would normally do within that industry, and the industry adds its own events and the rest.
+2. **Two meanings of "ER".** *Answer:* FiSH is an Enterprise Runtime on its own. Its first industry runtime that inherited it is Education, making FiSH an ER + ER (Enterprise + Education), which is the "FiSH+ER" we call The Principal's EduSys. Both runtimes abbreviate to "ER", so the context decides which is meant: standing alone it is the Enterprise Runtime, in "FiSH+ER" it is the Education Runtime. *Still for the SRS owner:* The Principal's SRS defines FiSH narrowly (the financial engine) and ER as shared admin, operations and UX services, which is narrower than "FiSH on its own is the Enterprise Runtime". It should be aligned. This document does not change it.
+3. **Adding a third runtime** (a new industry type and module in Enterprise Administration, released consumers first). *Answer: not at the moment.* Nothing is planned for Clinical or Banking.
+4. **Separate app or shared app.** *Answer given:* "Runtimes will add special industrial abilities to Enterprise abilities." The question of EduSys as its own installable app was not answered by this and **remains parked**.
 
 ## 5. Wording to use
 
 - Short: "FiSH runs on its own, or with an industry runtime that builds on all of FiSH."
 - Examples: "FiSH + Education Runtime" is available today. Clinical and Banking are planned, not built.
 - Do not say a runtime "includes its own accounting"; the ledger is FiSH's.
+- Say "Enterprise Runtime" when you mean FiSH on its own, and "Education Runtime" or "FiSH+ER (The Principal's EduSys)" when you mean the school product. Do not write a bare "ER" where either could be meant.
