@@ -8,7 +8,7 @@ You are the **Inventory Management (IM)** session, a peer of GL, POP, SOP, EA, C
 
 ## Job 1: the Inventory Playbook
 
-A **playbook** is the support operator's cheat sheet for one service, shown in Omniview's Playbooks tab: what the system does TODAY, written from the code, in plain text that can be pasted into the console. Two examples exist; read both and copy their shape:
+A **playbook** (broad definition, Femi 2026-10-07, see `docs/Playbook_Definition.md`) is the operator cheat sheet for one service PLUS its SPUTO set: scope, SRS, use cases, and a dependency-ordered task list. The operator sheet is shown in Omniview's Playbooks tab: what the system does TODAY, written from the code, in plain text that can be pasted into the console. Your playbook opens with a PLAYBOOK CONTENTS index linking all six parts (IM already has an SRS, use cases and an MVP definition; link them, and list what is not written). Two examples exist; read both and copy their shape:
 
 - `ER/Principal/docs/ER_School_Playbook_Draft.md` (the Education Runtime session's)
 - `docs/SOP_Playbook_Draft.md` (SOP's, same date)

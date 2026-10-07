@@ -2,6 +2,15 @@ SALES ORDER PROCESSING (SOP) PLAYBOOK (draft for Omniview's Playbooks tab, servi
 
 Written by the SOP session, 2026-10-07, from the code on fish-sales-order-processing master (commit a83581d, deployed as task definition fish-sales-order-processing:40, and :41 since the invoice-email switch-on that day). Plain text so it can be pasted straight into the console. Everything below is what the code does TODAY. The last section lists what is NOT built, not deployed yet, or not yet exercised, so nobody promises it to a customer. Re-check the date before trusting an answer, and update this when the code changes. Where this says "not verified in production", the code does it but nobody has watched it happen live.
 
+PLAYBOOK CONTENTS (see docs/Playbook_Definition.md; a playbook is this sheet PLUS the SPUTO set)
+1. Operator sheet: this document.
+2. Scope: SOP/docs/SOP_MVP_Definition.md (in the SOP repo).
+3. Plan / SRS: SOP/docs/Sales_Order_Processing_Requirements_Use_Cases.md, docs/Sales_Order_Processing_DDD_Design.md, SOP/docs/Trade_Finance_Collection_Software_Requirements_Specification.md, docs/Sales_Processing_Requirements_Specification.md.
+4. Use cases: SOP/docs/Sales_Order_Processing_Requirements_Use_Cases.md (UC-SO1 to 7), SOP/docs/Trade_Finance_Collection_Use_Cases.md.
+5. Tasks: SOP/docs/Trade_Finance_Collection_Backlog.md, docs/GL_POP_IM_SOP_Backlog.md, docs/IM_Goods_Issue_Idempotency_SPUTO.md.
+6. Order: docs/GL_POP_IM_SOP_Backlog.md (dependency-ordered waves), docs/Fee_Billing_Epic13_SPUTO_Scope.md (school billing, SOP half in progress).
+Not written yet: a single SOP SRS that merges the order-to-cash and invoice-email/cash-sale/idempotency requirements; invoice emailing and cash sales were built from a contract agreed with the screen owner, not from an SRS (a gap Femi has called out: foundations must be ordered first).
+
 OWNING SERVICE
 Sales Order Processing (repo fish-sales-order-processing). The SOP session is the L2 for anything below. SOP posts every financial effect to the General Ledger (GL); stock effects go through Inventory Management (IM); who may do what comes from Enterprise Administration (EA). Deploys, task definitions and secrets belong to Configuration Management (CM), never to SOP.
 
@@ -40,7 +49,7 @@ Q: "stock_check_failed" or "item_has_no_selling_price".
 A: A line tied to a stock item could not be checked or issued at Inventory Management (item unknown, not enough stock, IM down), or the item has no selling price set. Fix the item in Inventory first. Stock lines are issued BEFORE the ledger posting; if the sale then fails, the stock has already been issued. Escalate such cases so someone checks stock.
 
 Q: The customer clicked twice, or the request timed out, and now there are two sales.
-A: Today there is NO protection against that: two identical requests are two sales. A fix (a client "Idempotency-Key" on sales and collections) is built and waiting for review and deployment, and the screen sending it is held back until then. Until it is deployed there is no quick undo: an ordinary sale is invoiced and posted the moment it is recorded, so the duplicate cannot be cancelled; the correction is a credit note through the returns flow. Escalate rather than improvising.
+A: Today there is NO protection against that: two identical requests are two sales. A fix (a client "Idempotency-Key" on sales and collections) is built and waiting for review and deployment, and the screen sending it is held back until then. Even once deployed it only protects a screen that sends the key, and a retried sale with stock-tracked lines can still issue the stock twice until Inventory makes its issue idempotent (being built). Until it is deployed there is no quick undo: an ordinary sale is invoiced and posted the moment it is recorded, so the duplicate cannot be cancelled; the correction is a credit note through the returns flow. Escalate rather than improvising.
 
 Q: What does the status mean?
 A: Sales (ordinary) go straight to INVOICED when recorded. INVOICED means billed and not paid. PARTIALLY_COLLECTED means some money has been recorded, COLLECTED means paid in full. Other statuses (DRAFT, AVAL_CONFIRMED, FULFILLED...) belong to the trade-finance order flow. CANCELLED is final.
@@ -109,7 +118,8 @@ ERROR GLOSSARY (what the "error" field means)
 unauthorized - bad or missing sign-in. forbidden - signed in but not allowed (read the reason). service_unavailable - cannot reach EA. bad_request - something in the request is wrong; the detail names the field. invalid_transition - that step is not allowed from the current status. *_not_found - no such record for this Company. posting_context_unavailable - ledger accounts or period missing. gl_engine_call_failed - the ledger refused or is down; read the detail. stock_check_failed / item_has_no_selling_price - Inventory problem. order_not_ready_to_invoice / order_not_ready_to_collect / sales_order_not_yet_invoiced - the order is in the wrong state. cash_account_not_configured - no cash account 1000. email_not_configured / invalid_email / duplicate_send / rate_limited / email_failed - invoice email (see above). inventory_posting_failed / inventory_adjustment_failed - a returns step failed at Inventory. internal_error - a bug; always escalate with the time.
 
 NOT BUILT, NOT DEPLOYED YET, OR NOT YET EXERCISED (do not promise these)
-- Protection against a double click or retry creating two sales (built, in review, not deployed).
+- Protection against a double click or retry creating two sales (built, in review, not deployed; stock-line retries also need Inventory's own fix, in progress).
+- Fixes built and in review, NOT deployed: a refused ledger post will no longer leave an invoiced order behind, and the Sales list, order lookup, collections and cancel will be limited to the Companies the caller may use. Until they deploy, the two behaviours described in this sheet (phantom order after a failed sale; the Sales list showing every Company) still happen. Orders recorded before the fix carry no reliable Company and will disappear from lists when it deploys (they are legacy test data).
 - Cash sales on any screen (route deployed, no screen uses it yet).
 - Delivery, bounce and complaint tracking for emailed invoices; the first real invoice email had not been sent when this was written.
 - RMA notice emails to customers.
