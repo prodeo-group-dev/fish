@@ -1,0 +1,112 @@
+# Assessment cycle, wave S1: domain model and API contract (DRAFT for WEB and Femi)
+
+**Status: DRAFT 1, 2026-10-07. Design only; nothing built, nothing frozen, nothing started until Femi says go.** Written by the Education Runtime (EduSys) against WEB's UX input (`WEB_Education_Assessment_UX_Input_S1_S2.md`, branch `docs/edu-assessment-ux-input`) and the specialty scope (`ER_Education_Specialty_Scope.md`). Requirement ids are the spec's (ER-ASM-001..011). Tags: **[code]** read from `fish-education-runtime` on 2026-10-07; **[WEB]** from WEB's input; **[school]** a rule only a real school can settle (a placeholder default is given, marked, never presented as fact). **Neither this contract nor WEB's input has been validated with a teacher, form master or principal.**
+
+## 1. Where we start **[code]**
+
+Three write routes and no read route: `POST .../assessments/structures` (a free-text name per term and subject), `POST .../assessments/grades` (**one text value** per student, assessment and term) and `POST .../assessments/publish` (releases grades to the parent gateway and emits `AssessmentCompleted`). No scores, components, weights, scales, positions, ratings, remarks, approval, locking, report cards, broadsheets or promotion. Production holds only legacy test data and no screen uses these routes, so S1 **replaces** them (new tables and routes; the three old routes are removed after S1, not kept alive).
+
+## 2. Design rules (apply to every route below)
+
+1. **The server computes; WEB never does** (totals, averages, grades, positions, verdicts), each with an `asOf` time. **[WEB]**
+2. **Small, independent, repeatable writes.** One mark per request. Every write carries a client-chosen `opId`; a repeat of the same `opId` with the same content returns the original result and changes nothing; the same `opId` with different content is `409 op_id_reused`. (This is the claim-first ledger already built for sync, `SyncPushLedger`, reused, not rebuilt.) **[WEB, code]**
+3. **Optimistic concurrency on a mark:** a write may carry the `version` the client last saw; a stale version is `409 stale_mark` with the current value, never a silent overwrite.
+4. **Every refusal is a stable machine code plus a plain message** (section 6), so WEB can show the right words.
+5. **Capability codes, not role lists** (from `GET /schools/{id}/me`, section 7). A person without the capability gets `403`, and the `/me` list is how WEB knows not to show the action at all.
+6. **Children's data:** no mark appears in any notification text; a guardian sees nothing until release.
+7. New routes use **JSON request and response bodies** (every other write route in this service takes pipe-delimited text; the assessment payloads are structured enough that text would be fragile). **Flagged as a convention change for CM's review.**
+
+## 3. Domain model
+
+| Aggregate | What it holds | Notes |
+|---|---|---|
+| **GradingScale** | School-level, versioned: ordered bands (`minScore`, `maxScore`, `grade`, `remark`) | Per level and country (ER-ASM-002). Seeded by the school; **no built-in country scale**, since the real scales are a **[school]** input. |
+| **ScoreStructure** | Per level and term: components (`code`, `name`, `maximum`, `weight`), which one is the exam, `positionsEnabled`, `decimalsAllowed`, `absentRule`, `excusedRule`, the `gradingScaleId` | ER-ASM-001. **Immutable once any mark exists; a change is a new version** that applies from the next term. Weights must sum to 100 (checked on save). |
+| **SubjectOffering** | A class section × subject × term: the teacher(s), the structure used, `deadline`, `status` | The unit a teacher enters scores for and a form master approves. Statuses: `OPEN`, `SUBMITTED`, `RETURNED`, `APPROVED`. |
+| **Mark** | `(offering, student, component)` → a number **or** a code `ABSENT` / `EXCUSED`; `state` `SAVED` / `LOCKED`; `version`; who and when | "Not entered" is the *absence of a mark*, never a blank value (so it is never confused with "did not sit"). **[WEB]** |
+| **Computed result** | Per student per subject: total, grade, subject position; per student: term total, average, class position; `asOf` | Recomputed when marks change; **frozen at approval**; the frozen copy is what a release publishes. |
+| **RatingScale / StudentRating** | The allowed values per affective or psychomotor item, and a student's rating | A fixed set per item (tapped, not typed) (ER-ASM-006). |
+| **Remark** | Form master's and principal's remark per student per term | A character limit, returned in the response. |
+| **ClassResultState** | Per class and term: `OPEN`, `READY`, `APPROVED`, `RELEASED`; who and when; the **blockers** list | Approval of the class is possible only when every offering is `APPROVED`. |
+| **CorrectionRequest** | After a lock or release: student, component, new value, reason, requester, approver, status | Never a silent edit. **[WEB]** |
+| **PromotionVerdict** (S2) | Verdict, reason and any override with its mandatory reason and author | Sketched here; contract in S2. |
+
+**New data the model needs that does not exist today:** a **form master** per class section (ER-CLS-002; today a class section is only a name and a year), a **subject catalogue** (S3 gives it structure; S1 can use the existing `subjectCode` strings), and an **admission number** (S4; until then the roster shows `externalRef`).
+
+## 4. Workflow (state machines)
+
+- **Offering:** `OPEN` → (teacher *submits*) `SUBMITTED` → (form master *approves*) `APPROVED`, or (form master *returns* with a comment) `RETURNED` → (teacher edits, resubmits) `SUBMITTED`. Marks are editable only in `OPEN` and `RETURNED`; `SUBMITTED` and `APPROVED` are read-only (`LOCKED`).
+- **Submit** refuses with `gaps_present` and the counts per component unless the structure allows submitting with gaps **[school]** (default: not allowed) and the request says `allowGaps: true`.
+- **Class:** `OPEN` → `READY` (every offering approved, ratings and remarks present) → `APPROVED` (form master) → `RELEASED` (principal). A release **freezes** the computed results and makes them visible to guardians.
+- **After a lock:** a mark changes only through a `CorrectionRequest` approved by the person who can approve that stage (form master before release; principal after release), recorded with before and after.
+- Whether a release can be **undone**, and how long a correction window stays open after release, are **[school]** rules; the contract exposes the rule in the response and never implies one. Default for the draft: not undoable; corrections only by request.
+
+## 5. API (all under `/schools/{schoolId}/assessment`; capability in brackets)
+
+**Set-up** `[MANAGE_ASSESSMENT_SETUP]`
+- `PUT /grading-scales/{id}`, `GET /grading-scales`
+- `PUT /structures/{id}`, `GET /structures?level=&term=` (versioned; `409 structure_in_use` if a mark exists)
+- `PUT /offerings/{id}` (assign class, subject, term, teacher, structure, deadline), `GET /offerings` (paged)
+
+**Teacher** `[ENTER_SCORES]`, own offerings only (`403 not_your_offering` otherwise)
+- `GET /my-offerings?term=&cursor=&limit=`: each with class, subject, term, `progress` (`entered`, `expected` per component), `deadline`, `status`, `lockReason`
+- `GET /offerings/{id}`: the structure (components with `maximum` and `weight`, the scale, `decimalsAllowed`), status, deadline, lock reason, completeness counts
+- `GET /offerings/{id}/roster?q=&missing=&cursor=&limit=`: **paged and searchable server-side**; each row has student id, name, admission number (or `externalRef`), each component's cell `{value|code, state, version}`, and `computed {total, grade, asOf}`
+- `PUT /offerings/{id}/marks` body `{opId, studentId, component, value | code, version?}` -> the saved cell; refusals per section 6
+- `POST /offerings/{id}/submit` body `{allowGaps}` -> new status, or `409 gaps_present {counts}`
+
+**Form master** `[APPROVE_RESULTS]`, only for the classes they are form master of
+- `GET /classes/{classId}/overview?term=`: subjects by status with who and when, completeness, `blockers`
+- `GET /offerings/{id}/review?sort=outliers`: the class with components, total, grade, position, and an `outlier` flag with its reason (far from class mean, a zero, a missing mark)
+- `POST /offerings/{id}/approve`, `POST /offerings/{id}/return` body `{comment}` (mandatory)
+- `PUT /classes/{classId}/ratings`, `PUT /classes/{classId}/remarks` (the allowed rating values are returned by `GET /rating-scales`)
+- `POST /classes/{classId}/approve` -> `409 not_ready {blockers}` if anything is outstanding
+
+**Principal** `[RELEASE_RESULTS]`
+- `GET /release-board?term=`: one row per class with state and blockers
+- `POST /classes/{classId}/release` body `{confirm: true}`, response says exactly what became visible to whom (counts); `409 not_ready` otherwise
+
+**Corrections** `[ENTER_SCORES]` to request, `[APPROVE_RESULTS]` / `[RELEASE_RESULTS]` to decide
+- `POST /corrections`, `GET /corrections?status=`, `POST /corrections/{id}/approve|reject` (reason mandatory on reject)
+
+**Print (S2, same contract style):** `GET /students/{id}/report-card?term=&format=pdf`, `POST /classes/{id}/report-cards` (renders the whole class as **one server-side PDF**, returns a download), `GET /classes/{id}/broadsheet?term=&format=pdf`; each carries a **"not released" marking** until release. **[WEB]**
+
+## 6. Refusal codes (stable)
+
+`out_of_range {maximum}`, `unknown_component`, `past_deadline {deadline}`, `locked {reason}`, `not_your_offering`, `stale_mark {current}`, `op_id_reused`, `gaps_present {counts}`, `not_ready {blockers}`, `structure_in_use`, `weights_not_100`, `version_conflict`, `forbidden`. Each response is `{"error": "<code>", "message": "<plain words>", ...fields}`.
+
+## 7. Capability codes this adds (extends the agreed `GET /schools/{id}/me` list)
+
+`ENTER_SCORES`, `APPROVE_RESULTS`, `RELEASE_RESULTS`, `MANAGE_ASSESSMENT_SETUP`, `OVERRIDE_PROMOTION` (S2). **Mapping to today's roles is a proposal:** `TEACHER` enters scores for their own offerings; the **form master** is a new per-class assignment, not a role string, and approves their class; `HEAD_TEACHER` (the principal) releases and overrides promotion; `SCHOOL_ADMIN` manages set-up. **[school: who may approve in a form master's absence]**
+
+## 8. What this asks of WEB and what it asks of others
+
+- **WEB** (section 7 of its input, answered): score structure with maxima and weights (**yes**, `GET /offerings/{id}`); a paged, searchable roster (**yes**); each cell's value, state, deadline and lock reason (**yes**); computed values with `asOf` (**yes**); completeness counts, approval and release state (**yes**); capability codes (**yes**); every write safe to repeat (**yes**, `opId`); server-rendered PDFs (**S2**); storage for a crest and signatures (**no, not in S1 or S2**: needs an object store, a CM and Femi decision; headers are text only until then).
+- **CM:** a PDF renderer is a new dependency and a CPU/memory cost on the school service (S2); object storage for crests and signatures (S2+); the JSON-body convention (rule 7).
+- **A real school** (Femi): the score structure, the grading scale and the report-card template from one past term; see the open list.
+
+## 9. Open decisions **[school]** (placeholders in section 4 stand until answered)
+
+1. A real score sheet, scale and report card from a past term (everything above is a guess until then).
+2. Number of components, decimals allowed, how ties show in positions, positions on or off.
+3. Treatment of `ABSENT` (counts as zero?) and `EXCUSED` (excluded from the weighting?).
+4. Submit with gaps allowed or not; deadline rules.
+5. Who approves when the form master is absent.
+6. Whether a release can be undone; the correction window.
+7. Whether teachers share a phone (changes how "who entered this" is shown).
+
+## 10. Backend tasks and order (none started)
+
+| # | Task | Migration (planned; V31 is the latest) | Tests drive |
+|---|---|---|---|
+| A1 | `GradingScale`, `ScoreStructure` (versioned, weights = 100, immutable once used) and set-up routes | V32 | real Postgres |
+| A2 | `SubjectOffering` and `GET /my-offerings` | V33 | real Postgres |
+| A3 | `Mark` entry: `PUT /marks` with `opId` (reusing the sync ledger), versions, range, deadline, lock rules; the paged roster read | V34 | real Postgres, including concurrent writers |
+| A4 | Computation: totals, grades, positions (switchable, tie rule), `asOf`; frozen copy at approval | V35 | unit + real Postgres |
+| A5 | Submit, return, approve (offering and class), form master assignment, overview and review reads | V36 | real Postgres |
+| A6 | Ratings, remarks | V37 | real Postgres |
+| A7 | Release (freeze, guardian visibility, `AssessmentCompleted` without any result in the payload) and corrections | V38 | real Postgres |
+| A8 | Remove the three old routes and old tables | V39 | n/a |
+| S2 | Promotion rules and verdicts; server-side PDFs; broadsheet | later | later |
+
+Every task includes real-Postgres tests (the lesson of the outbox fault), and a contract test for each response shape WEB declares strictly. **Review level for CM: high for A3, A5 and A7** (data integrity and a release that changes who may see children's results), medium for the rest. **No contract is final until WEB has shown it to a real teacher, form master and principal and Femi has said go.**
