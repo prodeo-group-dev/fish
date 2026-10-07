@@ -48,7 +48,7 @@ Lesson that shapes the tasks below: this epic moves money-relevant events across
 - **UC-FE7** A fee officer requests a waiver; a **different person** approves it; `WaiverApproved` goes to SOP, which posts the discount. A refund follows the same path. *(FR-F8)*
 - **UC-FE8** Overnight, the reconciliation finds an invoice in SOP that the Education Runtime has not seen and raises it to the Bursar. *(FR-F10)*
 - **UC-FE9** An operator or engineer finds events stuck in the failed state and **replays** them. *(FR-F1)*
-- **UC-FE10** A guardian views the family balance and statements in the Parent Gateway (read only; payment goes through SOP). *(FR-F4, F11)*
+- **UC-FE10** A guardian views the family balance and statements in the Parent Gateway (payment goes through SOP's payment session, never through the Education Runtime). *(FR-F4, F11)*
 
 ## 4. Tasks (Education Runtime; dependency-ordered)
 
@@ -84,7 +84,7 @@ Every task that writes or reads the outbox, inbox or a posting-adjacent table in
 - **Waiver and refund approver (Femi to decide):** my recommendation is that a fee officer or bursar requests, a **school administrator** (not the requester) approves, recorded with an approver reference per FIN-INT-008, honouring ER-FEE-009.
 - **Clearance lawfulness** is marked TBC per country in the spec; no clearance block ships for a country until it is settled. **[spec]**
 - **Currency and VAT** (S section 4): NGN is not an onboarded currency and Nigeria has no VAT rows in GL; both gate the first live fee. Not an Education Runtime decision.
-- **Guardian side:** the Parent Gateway already resolves a guardian by the **email on the student's record** and shows invoices read-only; payment goes through SOP's session. WEB has no guardian sign-in, so that use case is **not scoped**. **[code, WEB]**
+- **Guardian side:** the Parent Gateway already resolves a guardian by the **email on the student's record** and shows the student's invoices and outstanding balance; today a linked guardian can also confirm payment through the stub, which must go when payment moves to SOP's payment session. WEB has no guardian sign-in, so that use case is **not scoped**. **[code, WEB]**
 - **Order of events across the two services** is per billing account, so E1.1 (the ordering key) must precede any delivery code.
 
 ## 7. Decisions for Femi (Education Runtime half only)
