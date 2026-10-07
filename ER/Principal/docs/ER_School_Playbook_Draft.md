@@ -43,13 +43,13 @@ A: No. Office staff record what the guardian told them (the decision, optionally
 GUARDIAN FEE BILLING
 
 Q: "Email or phone required to resolve a guardian account".
-A: A guardian is billed through an account found by school plus email or phone. At least one of the two is required, plus a name. A guardian with two children at the school reuses the same account when the email or phone matches.
+A: A guardian account is found or created by school plus email or phone. The Guardians list therefore shows every guardian account set up, which can include one with no invoice yet. At least one of the two is required, plus a name. A guardian with two children at the school reuses the same account when the email or phone matches.
 
 Q: "This school is not yet linked to an institution ... cannot bill a guardian until EA provisioning completes".
 A: The school was not created through the normal school set-up, so it has no link to the business that bills. This is not something the school can fix. Escalate to the Education Runtime owner and EA (the link is made when the business is set up as a school). Older schools set up before that flow are the likely cause.
 
 Q: "SOP customer creation failed" or "SOP customer gateway not configured".
-A: The first time a guardian is billed, the product creates a customer record in Sales Order Processing. If that fails, the invoice cannot be tied to the guardian. Retry once; if it persists, escalate with the full message. "Not configured" is a deployment problem, escalate immediately.
+A: When a guardian account is set up (the "resolve guardian" step, which comes BEFORE issuing an invoice and is a separate action), the product creates a customer record in Sales Order Processing the first time that guardian has none. Issuing an invoice does not itself create a customer; an invoice can even be issued with no guardian attached. If the customer creation fails, the guardian account cannot be used to bill. Retry once; if it persists, escalate with the full message. "Not configured" is a deployment problem, escalate immediately.
 
 Q: "Duplicate invoice for student+cycle+schedule".
 A: One invoice per student, per billing cycle, per fee item. The first one already exists; look in the invoice list rather than issuing again.
