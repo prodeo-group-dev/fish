@@ -49,3 +49,9 @@ These four were put to Femi as open questions. His answers are recorded as given
 - Examples: "FiSH + Education Runtime" is available today. Clinical and Banking are planned, not built.
 - Do not say a runtime "includes its own accounting"; the ledger is FiSH's.
 - Say "Enterprise Runtime" when you mean FiSH on its own, and "Education Runtime" or "FiSH+ER (The Principal's EduSys)" when you mean the school product. Do not write a bare "ER" where either could be meant.
+
+## 6. Go-to-market note (Femi, 2026-10-07; for information, not a build direction)
+
+"FiSH+ER" (FiSH plus the Education Runtime, The Principal's EduSys) is the vehicle for entering the Nigerian market, used as an **arrowhead**. Femi's reasoning rests on his previous experience of Nigeria. This is consistent with the earlier recorded strategy (Nigeria as the Education product's target market, and the Education product as an arrowhead for the wider FiSH and Purse offering). It does not by itself decide the parked question of whether EduSys is delivered as its own installable app.
+
+What this does not change: Nigeria's legal, hosting and currency prerequisites are tracked separately (`docs/FiSH_Localization_Principle.md`, `docs/Nigeria_Compliant_Hosting_Opportunity.md`, `docs/NG/NG_Tax_And_Currency_Settings.md`) and are not resolved by this note.
