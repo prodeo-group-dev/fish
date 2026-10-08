@@ -86,5 +86,6 @@ table. It shrinks the collision window; it doesn't eliminate it.
 ## Format for a new row
 
 ```
+| Sales Order Processing - SOP | 2026-10-08 | **RBAC safe-now branch, CM's explicit go 2026-10-08:** T1 (deny-all service provider when SOP_JWT_SERVICE_AUDIENCE_SCHOOLADMISSIONS is unset; a human verifier never doubles as a service provider; loud start-up warning; test that a human token is refused where only a service token is allowed) and T4 (explicit NONE for a Company absent from /me; no behaviour change since modules are empty). NOT T2, NOT S-T1 (needs Femi's go), no other authorization change (freeze stands). Branch `fix/rbac-t1-t4-fail-closed` in the SOP checkout. **Peer dependencies:** CM (review, merge, deploy; the owner of the RBAC SPUTO); no GL/IM/POP/EA dependency. | SOP: `infrastructure/web/Auth.kt`, `Application.kt`, `infrastructure/ea/ea_membership_gateway.kt`, tests |
 | <session name from ListAgents> | <ISO 8601 timestamp> | <one-line description> | <paths/repos, or "TBD"> |
 ```
