@@ -55,3 +55,16 @@ Release modes use the same names SOP uses: STORE, CLEAN (nothing happened), UNKN
 ## Order from here
 
 1. CM reviews and deploys IM (this branch). 2. Verify live: issue with a key twice, expect the same `journalEntryId` and one stock decrement. 3. SOP ships T5, POP ships T6 (with its own retry path and stored posted marker). 4. Undo route SPUTO. 5. Lock on the other Item mutators. 6. Receipt-side idempotency, re-scoped.
+
+## CM's HIGH review, 2026-10-08: released with no blocker, and the follow-ups
+
+The stack (idempotency `c0cf5be` + the Company fix `4131961`) was reviewed together and released. Follow-ups, none blocking, now IM's next increment:
+
+1. **Extend the Item lock to every Item save path** (goods receipt, adjustment approval, transfer, opening stock). Today a receipt concurrent with an issue can overwrite the issue's decrement. Highest priority; foundation work.
+2. **CORRECTION to the contract above: "No header | exactly as before" is only half true.** A call without the header is still serialised per Item, so SOP and POP, which do not send keys yet, **can now get 409 `item_busy`** where they used to succeed. The cap is **poolSize/2 concurrent lock holders service-wide** (5 by default, `IM_DB_POOL_SIZE` / 2), not per Item; a sixth concurrent issue waits up to 10 seconds, then gets 409. Callers must treat 409 `item_busy` as "retry shortly".
+3. **Add an explicit `HttpTimeout` to the GL client.** The engine default (about 15 seconds, per CM) is what bounds the lock hold today.
+4. **Move the 30-day purge off the per-claim hot path** (SOP purges only when a new key arrives).
+5. **A key freed after an unknown outcome and then claimed with a different request** should be rejected explicitly, as SOP does, rather than taken over.
+6. **After deploy, watch IM's logs for GL 4xx on the posting-context lookup.** Items of a Company under a different Tenant than IM's configured one now fail cleanly instead of posting to the wrong Company. Fixing that needs a Company-to-Tenant lookup (Phase 2), on hold until CM's RBAC SPUTO lands.
+
+POP has the same deploy-time Company bug (`POP_GL_ENGINE_COMPANY_ID`, `PurchaseOrderFulfillmentRoutes.kt:229`); CM passes that to POP.
