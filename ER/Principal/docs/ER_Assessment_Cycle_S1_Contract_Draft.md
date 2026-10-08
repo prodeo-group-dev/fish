@@ -118,3 +118,62 @@ Every task includes real-Postgres tests (the lesson of the outbox fault), and a 
 ## 11. Revision 2 (after WEB's review, 2026-10-07)
 
 WEB read draft 1 and asked for: **clear a mark** back to not entered (added: `clear: true`); **`GET /my-classes`** (added, so a form master sees only their classes); the missing refusal codes (added: `not_your_class`, `comment_required`, `reason_required`, `confirm_required`, `invalid_value`, `too_many_decimals`, `student_not_in_class`, `invalid_cursor`, `invalid_limit`); the **recomputed `computed` block in the `PUT /marks` response** (added); an optional **batch write** with per-item results (added: `POST .../marks:batch`); server-computed **`allowedActions`** on every resource with actions (added, rule 4a); positions as **number plus `tied`** (added, rule 4b); roster paging **default 50, max 100, cursor and total** (added); a teacher's own correction list, **`mine=true`** (added). WEB confirmed JSON bodies, the coded-mark rule, and that the three legacy routes are unused by it (so A8 breaks nothing on WEB's side; CM still gates A8 on its own). Set-up forms are designed last. Nothing is validated with real users and nothing is frozen on either side.
+
+
+## 12. Revision 3 (as built: A1 to A3, 2026-10-08)
+
+Steps A1 (grading scales, score structures), A2 (subject offerings) and A3 (mark entry) are built and tested against real Postgres. A1 and A2 are live in production (ER task `:74`); A3 was reviewed by CM and releasing the same day. This section records **where the built API differs from, or decides, what sections 3 to 7 left open**, so WEB codes against the real shapes. Nothing here is validated with real users; section 9's school questions are still open.
+
+### 12.1 Routes as built (all under `/schools/{schoolId}/assessment`)
+
+| Route | Who | Notes |
+|---|---|---|
+| `PUT /grading-scales/{id}` body `{name, bands:[{minScore, grade, remark?}]}`; `GET /grading-scales` | write: SCHOOL_ADMIN; read: SCHOOL_ADMIN and teaching roles | **Bands state only `minScore`** (no `maxScore`): a band runs to the next band's `minScore`; the first must be 0; the last runs to 100. Overlaps and gaps are impossible by construction. |
+| `PUT /structures/{id}` body `{level, term, components:[{code,name,maximum,weight}], gradingScaleId, examComponentCode?, positionsEnabled, decimalsAllowed, absentRule, excusedRule}`; `GET /structures?level=&term=` | as above | `version` is assigned by the server (max+1 per level and term); a replace of the same id keeps its version. A structure keeps its level and term. |
+| `PUT /offerings/{id}` body `{classSectionId, subjectCode, structureId, teacherIds[], deadline?}`; `GET /offerings?term=&cursor=&limit=` | SCHOOL_ADMIN | `deadline` is a UTC instant (`2026-12-04T15:00:00Z`). The **term comes from the structure**; there is no separate term field to send. |
+| `GET /my-offerings?term=&cursor=&limit=` | any teaching role | **Always the caller's own**, whatever their role. Each item has `progress:[{component, entered, expected}]` (`expected` = students in the class). |
+| `GET /offerings/{id}` | the offering's teacher, or SCHOOL_ADMIN | structure, scale, status, `lockReason`, `deadline`, `completeness` (same shape as `progress`), `allowedActions` (`["ENTER_MARKS","SUBMIT"]` for its teacher while it accepts marks, otherwise `[]`; always `[]` for an administrator). |
+| `GET /offerings/{id}/roster?q=&missing=&cursor=&limit=` | as above | Section 5's roster. Sorted by family name, given name. `q` matches name or admission reference; `missing=true` keeps students with any part not entered. `nextCursor` is **opaque**. |
+| `PUT /offerings/{id}/marks` body `{opId, studentId, component, version?}` plus exactly one of `value`, `code` or `clear` | a teacher **of that offering** | Reply `{studentId, cell, computed}`. |
+| `POST /offerings/{id}/marks:batch` body `{marks:[...same item...]}` | as above | At most 100. Reply `{results:[{opId, studentId, status:"saved"\|"refused", cell, computed, error, message, fields}]}`; every field present, `null` where it does not apply. A refusal carries only that item's own data. |
+| `POST /offerings/{id}/submit` body `{allowGaps}` | as above | Reply is the offering detail (status now `SUBMITTED`). |
+| `GET /offerings/{id}/marks/history?studentId=&component=` | SCHOOL_ADMIN | The audit trail of one cell, oldest first: old and new value or code, version, actor, time, `opId`. |
+
+Wire numbers (`value`, `total`, `maximum`, `weight`, `minScore`) are JSON numbers (doubles). CM accepted this for non-money assessment values. **Section 5's `my-classes`, ratings, remarks, class approval, release board and corrections are not built** (A4 to A7).
+
+### 12.2 Decisions made while building
+
+1. **A cell is never deleted.** Entering a mark creates it at version 1; **clearing keeps the row** (value and code both empty) and the version keeps counting. The API reports a cleared cell as `state:"NOT_ENTERED"` with its real (non-zero) `version`; a cell nobody ever wrote is `NOT_ENTERED`, version 0. This stops a stale client winning by reusing an old version after a clear and re-entry.
+2. **`version` rules.** To change a cell you must send the version you last saw. Sending no `version` is accepted **only** while the cell holds nothing. Anything else is `409 stale_mark`. Writing exactly what the cell already holds changes nothing and adds no history.
+3. **`stale_mark` carries the current cell as string fields:** `currentVersion`, and `currentValue` or `currentCode` when entered. Other extra fields in refusals (`maximum`, `allowed`, `deadline`, `status`, `reason`, `total`, `missing_<COMPONENT>`) are also strings.
+4. **Replay comes before the rules.** A retry of an operation that was already saved returns the cell as it stands now, even after the offering was submitted or its deadline passed. Only new work meets the lock, deadline, component, class and range checks. A refused attempt is **not** remembered: the same `opId` can be sent again once the cause is fixed. An `opId` is 1 to 56 characters of letters, digits, `.`, `_`, `-`, `:`; the same `opId` with a different mark is `409 op_id_reused`; one still in flight is `409 op_in_progress` (retry shortly).
+5. **No administrator bypass.** Writing a mark or submitting needs the teaching capability **and** being one of the offering's named teachers. A SCHOOL_ADMIN who teaches the offering may; otherwise it is `403 not_your_offering`. A later fix to a locked mark goes through a correction request (A7), never an edit.
+6. **`student_not_in_class` is deliberately uniform** for a student who does not exist and for one in another class, so it reveals nothing about other classes.
+7. **Computed results.** Total is out of 100: for each counted part, `value / maximum x weight`. `ABSENT` counts as zero or drops out of the weighting per `absentRule`; `EXCUSED` per `excusedRule`; dropped parts' weight is spread over the rest. **A part that is simply not entered keeps the whole total `null`** (as do a student with every part dropped), with `complete:false`; the grade follows the total. Positions are competition ranking (1, 2, 2, 4) over the non-null totals, with `tied:true` for equal totals, or `null`/`false` when the structure turns positions off. `asOf` is when the figures were computed. Nothing is stored yet: freezing at approval is A5.
+8. **Structures and offerings freeze once a mark exists.** Replacing a structure used by marked offerings is `409 structure_in_use` (new code made real); changing an offering's class, subject or structure is `409 offering_in_use`; its teachers and deadline stay editable while it is open.
+9. **The audit trail is append-only and enforced by the database** (no update, delete or truncate), written in the same transaction as every change. It is what A5's freeze and A7's corrections build on.
+10. **Lock order** (for anyone writing a second client of the store): the offering first, then the cell, in every path. A submit takes the offering exclusively; a mark takes it shared. So a mark cannot land after a submit commits and the two cannot deadlock.
+
+### 12.3 Refusal codes added or made precise
+
+| Code | Status | Meaning |
+|---|---|---|
+| `offering_not_found` | 404 | no such offering (also returned for a missing structure behind it) |
+| `not_your_offering` | 403 | not one of this offering's teachers (no administrator bypass) |
+| `locked` | 409 | offering is `SUBMITTED` or `APPROVED`; fields `status`, `reason` |
+| `past_deadline` | 409 | field `deadline`; compared with **server arrival time** (see 12.4) |
+| `stale_mark` | 409 | see 12.2 (3) |
+| `op_id_reused`, `op_in_progress`, `invalid_op_id` | 409, 409, 400 | see 12.2 (4) |
+| `out_of_range` {`maximum`}, `too_many_decimals` {`allowed`}, `unknown_component`, `student_not_in_class`, `invalid_value` | 400 | as section 6; `invalid_value` also covers "give exactly one of value, code or clear" |
+| `gaps_present` | 409 | fields `missing_<COMPONENT>` = how many students lack that part |
+| `empty_batch`, `too_many_items` | 400 | batch of zero, or more than 100 |
+| `invalid_scale`, `invalid_structure`, `weights_not_100` {`total`}, `unknown_grading_scale`, `scale_in_use` | 400/409 | set-up |
+| `structure_in_use`, `structure_identity_fixed`, `offering_in_use`, `offering_locked`, `duplicate_offering` | 409 | freezing rules and the one-offering-per-class-subject-term rule |
+| `unknown_structure`, `unknown_class_section`, `unknown_teacher` {`teacher`}, `invalid_offering`, `invalid_deadline` | 400 | offering set-up; a teacher must be an **active member of staff who can enter scores** |
+| `invalid_cursor`, `invalid_limit`, `invalid_json` | 400 | paging (default 50, maximum 100) and body shape |
+
+### 12.4 Still open (for Femi and the school)
+
+- **Deadline against offline entry.** Today the deadline is compared with server arrival time, so a batch entered offline before the deadline and synced after it is refused whole (replays of already-saved items still succeed). Options: arrival time (strict, simple) or the client's capture time with a sanity bound (for example not earlier than 7 days before arrival). Recommended: capture time within a bound, once an offline client exists. On CM's list as D11.
+- The approval and release chain (A4, A5, A7) needs a per-class form-master assignment and approve/release capabilities; see `docs/ER_RBAC_SPUTO.md` section 2.4 and 6, and the school questions D-ER1 to D-ER7 there. Not started.
+- Everything in section 9 (a real score sheet, scale, ties, absent and excused treatment, gaps, absent form master, undoing a release, shared phones).
