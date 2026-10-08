@@ -40,6 +40,7 @@
 | F7 Owner-Admin / Company-missing fall-back (GL returns READ) | **CONFIRMED** | `ea_membership_gateway.kt:80-82`; deliberate since 2026-09-28 (a bug fix for an Owner-Admin 403 when EA omitted a Company from `/me`). |
 | "GL's ADMIN gate is unused" | **CONFIRMED** | `authorizeTenantForAdmin` (`Auth.kt:423`) has no callers (grep). |
 | Module grants | **CONFIRMED, not in the survey list** | Only the TAX routes check a module. The `GL` grant is never enforced: a person with WRITE at a Company and no GL module can post (documented in the comment above `Auth.kt:439` as a known gap). |
+| **F9 (new, raised by the FA session, widened by GL): the period is not compared with the authorized Company on body-periodId posting routes** | **CONFIRMED, HIGH in design, hard to exploit** | Routes authorize at the body `companyId` (or at `period.companyId` for the fixed-asset actions and the generic journal), while each use case takes the body `periodId` and checks accounts only against that **period's** Company (`RecordSaleUseCase.kt:131-137`, `RecordCollectionUseCase.kt:87-90`, `PostJournalEntryUseCase.kt:97`, the other `record-*` use cases likewise; the fixed-asset use cases check accounts against `fixedAsset.companyId`, `DisposeFixedAssetUseCase.kt:86-98`). The only comparison of a period's Company with the request's is `ComputeTaxUseCase.kt:74`. So a caller authorized at Company A who supplies Company B's period and account ids posts into B's books, and `X-Tenant-Id` does not stop it (it is compared with the Tenant of the body's Company). Needs B's period and account UUIDs; service credentials have the same reach. A P6 gap (a decision is made at the record's own Company), across about 30 routes. |
 
 ---
 
@@ -53,6 +54,7 @@
 | R2 approvals | None in GL | **T12** | See section 3.1. |
 | R3 thresholds and policy | GL has none yet (no manual-journal limit) | T12 | with T12 |
 | R7 scoped service credentials | F6 above, plus the header | **T15** | Medium (two to three days) after D5; see section 3.2. |
+| P6 per-Company everywhere (F9) | Body-periodId posting routes do not check the period belongs to the authorized Company | **new safe-now task (proposed T19)** | Small to medium (about half a day to one day with tests): one shared check (the period must belong to the authorized Company, otherwise treated as period not found), applied to the thin posting routes, the generic journal, the leave accruals and the fixed-asset actions, plus a cross-Company test per route family. It adds a deny and changes no role, so it fits CM's "safe now" bucket next to T1 to T4; it is CM's call. |
 | R10 audit | The store exists with no writers; no actor on entries; re-tagging, VAT and exempt-only changes unaudited | **T17** | Large: the GL Audit Trail Wave 2 (same-transaction, fail-closed writes across about 30 use cases, already designed in `GL/docs/GL_Audit_Trail_Software_Requirements_Specification.md`). The pre-Live audit rows in `docs/GL_POP_IM_SOP_Backlog.md` (re-tag, VAT rows) belong here. |
 | R1 (module grants "within granted modules") | The GL module grant is not enforced | new (see objection 4) | Small once T6 exists |
 | R9 canonical email | GL passes the token's email to EA unchanged; matching is EA's | T2 (EA) | none in GL |
@@ -95,7 +97,7 @@ The two options are written out in `docs/GL_Tenant_Header_Service_Account_Option
 
 ## 6. Proposed order for GL's part (all subject to the freeze)
 
-1. **T1** (fail closed), independent of every decision: first.
+1. **T1** (fail closed) and **T19** (period must belong to the authorized Company), independent of every decision and of each other: first.
 2. **T5a (consumer side)** with EA's capability set; **T6** (EA) before any change that depends on the Owner's explicit assignments.
 3. **T4** and **GL-module enforcement**, after T6.
 4. **T15** (scoped credentials plus the endpoint allow-list), after D5.
