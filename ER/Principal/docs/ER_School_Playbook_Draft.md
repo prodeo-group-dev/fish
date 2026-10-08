@@ -1,4 +1,4 @@
-PLAYBOOK CONTENTS (Education Runtime, "EduSys"; per docs/Playbook_Definition.md). Verified against master on 2026-10-07. Paths are in the FiSH repo unless noted.
+PLAYBOOK CONTENTS (Education Runtime, "EduSys"; per docs/Playbook_Definition.md). Verified against master on 2026-10-08 (assessment set-up, subject offerings and the first-admin route are live; mark entry, S1 step A3, was reviewed and was being released the same day: confirm it is live before relying on the Assessment section). Paths are in the FiSH repo unless noted.
 
 1. Operator sheet: THIS document (below). Written from the code at fish-education-runtime commit 5a890cc, updated after the V31 outbox fix (ER PR #12).
 2. Scope (S): ER/Principal/docs/The_Principal_MVP_Definition.md; ER/Principal/docs/Education_Runtime_MVP_Definition.md (floor versus enhancement); ER/Principal/docs/ER_Education_Specialty_Scope.md (what only a school needs, and the specialty-first order); ER/Principal/docs/ER_Terminology_Alignment_SPUTO.md; docs/Fee_Billing_Epic13_SPUTO_Scope.md (cross-service, fees).
@@ -24,6 +24,7 @@ None written yet. Do not invent links; say so if asked.
 HOW ROLES WORK (needed for most "I can't do X" tickets)
 A person can only act at a school if a school administrator has given them a role there. Roles are a school-level list, separate from their sign-in. Admissions screens need the admissions role (school admin, registrar or admissions officer). Enrolling a student needs register rights (school admin or registrar): an admissions officer alone cannot enrol. Fees need a fee role (school admin, fee officer or bursar). Timetable needs school admin or timetabler. Marking attendance and entering grades need a teaching role (teacher, head teacher, head of department, head of year) or school admin.
 Fact for the operator: someone with no role at a school gets a 403 on everything there, shown as "cross-tenant" (not "forbidden"; "forbidden" means they have a role but not the right one). So "cross-tenant" on every screen in a school usually means they have no role at that school yet. Roles are currently added by a school admin by hand (a person's sign-in email is the key); linking this to HR employment is being designed, not built.
+Added 2026-10-08: (1) For a school registered from now on, EA gives the business owner the first school admin role automatically (the owner's sign-in email, lower-cased). Schools registered before that have no admin until the platform team adds one by hand; do not tell a school it can do this itself. The automatic grant happens only while the school has no active admin; it will not replace or add a second admin, and a different email once an admin exists is refused. If the school's only admin was removed, the platform team can run the same grant again for the owner; that is by design. (2) A person's sign-in email is matched ignoring capital letters for school staff, so "Ada@School.org" and "ada@school.org" are the same person. Guardians are still matched exactly, so a parent whose email was recorded with different capitals than they sign in with will see nothing; fix the record, do not change the sign-in. Two rows for the same person differing only in capitals can exist; they are harmless and count as one person. (3) Role names must be exactly the upper-case names (SCHOOL_ADMIN, TEACHER and so on). A role typed as "Teacher" or "school admin" is accepted but grants nothing, with no error: if a person has a role and still gets "forbidden", ask for the exact role text as stored. (4) A school admin is NOT automatically a teacher of anything: to enter marks the person must be one of the teachers named on that subject offering (see Assessment below).
 
 COMMON QUESTIONS AND HOW TO ANSWER
 
@@ -59,7 +60,7 @@ Q: "This school is not yet linked to an institution ... cannot bill a guardian u
 A: The school was not created through the normal school set-up, so it has no link to the business that bills. This is not something the school can fix. Escalate to the Education Runtime owner and EA (the link is made when the business is set up as a school). Older schools set up before that flow are the likely cause.
 
 Q: "SOP customer creation failed" or "SOP customer gateway not configured".
-A: When a guardian account is set up (the "resolve guardian" step, which comes BEFORE issuing an invoice and is a separate action), the product creates a customer record in Sales Order Processing the first time that guardian has none. Issuing an invoice does not itself create a customer; an invoice can even be issued with no guardian attached. If the customer creation fails, the guardian account cannot be used to bill. Retry once; if it persists, escalate with the full message. "Not configured" is a deployment problem, escalate immediately.
+A: When a guardian account is set up (the "resolve guardian" step, which comes BEFORE issuing an invoice and is a separate action), the product creates a customer record in Sales Order Processing the first time that guardian has none. Issuing an invoice does not itself create a customer; an invoice can even be issued with no guardian attached. If the customer creation fails, the guardian account cannot be used to bill. Retry once; if it persists, escalate with the full message. "Not configured" is a deployment problem, escalate immediately. Added 2026-10-08: before that date this step failed EVERY time, whatever the school did: the Education Runtime was calling a Sales Order Processing address that SOP had removed on 2026-09-30, and it also could not read SOP's reply. That is fixed (ER branch fix/sop-customer-company-path, released 2026-10-08). So a failure from this step reported before the release is explained; one reported after it is not. If it fails after the release, collect the exact message and escalate; do not blame the school. The two usual real causes now: the school is not linked to a business (see the previous answer), or SOP refused the request (the message then carries SOP's own code, for example invalid_customer).
 
 Q: "Duplicate invoice for student+cycle+schedule".
 A: One invoice per student, per billing cycle, per fee item. The first one already exists; look in the invoice list rather than issuing again.
@@ -87,6 +88,51 @@ A: The timetable lists every lesson for the school, and a lesson can be deleted 
 Q: A teacher only sees some classes / no classes on the register.
 A: For class rosters, plain teachers see only classes where they have a timetabled lesson; heads (head teacher, head of department, head of year) and admins see all. If a new teacher sees nothing, they either have no timetabled lesson yet or no role at the school (see roles above).
 
+ASSESSMENT: SET-UP, SUBJECT OFFERINGS AND MARK ENTRY (added 2026-10-08; step A3, mark entry, was being released the same day)
+Say this first: these are server features only. The web app has no screens for them yet (the screens are being designed by the web team), so a school cannot do any of this on its own today. Do not promise screens, report cards or results for parents; none exist. The older "assessments" actions (define a structure, enter a grade, publish a grade set) still exist and are a different, simpler thing that is being replaced; a ticket that mentions "publish" is about the old one.
+
+Q: Who can set up grading scales, score structures and subject offerings?
+A: School admins only. Teachers can look at scales and structures but not change them. Parents and other roles see nothing.
+
+Q: What is a grading scale?
+A: A list of bands, each starting at a score. The first band must start at 0; each band runs up to where the next one starts; the last runs to 100. There is no built-in national scale: the school supplies its own. Saving a scale again with the same id replaces it, UNLESS a score structure already uses it ("scale_in_use"): then create a new scale instead. Messages "invalid_scale" mean the bands are out of order, do not start at 0, or a grade or remark is too long.
+
+Q: What is a score structure, and why won't mine save?
+A: It says, for one level and term, which parts make up a subject's total (for example class work out of 40 and exam out of 60), how much each part is worth, how many decimals a mark may have (0 to 2), whether positions are shown, what an absent or excused student counts as, and which grading scale to use. The weights must add up to exactly 100: "weights_not_100" says what they do add up to. By default an ABSENT mark counts as zero and an EXCUSED mark is left out of the total; the school can choose the other way for each. Once any mark has been entered against a structure it can no longer be changed ("structure_in_use"): create a new structure (a new id) for the next term. A structure also keeps the level and term it was created with ("structure_identity_fixed").
+
+Q: What is a subject offering and why won't it save?
+A: One subject taught to one class section in one term: it names the teacher or teachers (up to ten), the structure and an optional deadline. The term comes from the structure. "duplicate_offering": the class already has that subject for that term. "unknown_teacher": the person is not an active member of staff with a teaching role at this school; add their role first. "unknown_class_section" or "unknown_structure": the id does not exist at this school. After marks exist, the class, subject and structure can no longer change ("offering_in_use"), but teachers and the deadline can. After the teacher submits it cannot be edited at all ("offering_locked").
+
+Q: A teacher gets "not_your_offering" (403).
+A: Marks can be entered, and an offering submitted, only by one of the teachers named on that offering. This applies to a school admin too: an admin who wants to enter marks must be named as a teacher on the offering. Add the person to the offering (admin only), do not give them a bigger role.
+
+Q: How does a teacher enter a mark, and what is "not entered"?
+A: One mark is one student, one part of the structure (for example "CA"). It is a number within that part's maximum, or a code: ABSENT (did not sit) or EXCUSED. Taking a mark back to "not entered" (the typing-mistake case) is different from ABSENT, and nothing is shown as zero unless it was entered as zero. After each save the reply carries that student's total, grade and, if positions are on, their position, so the screen can update without reloading the list.
+
+Q: "stale_mark".
+A: Someone else (or the teacher on another phone) changed that mark since this person last looked. The reply gives the current value and version. They should look at the current value and enter again; nothing was lost, and nothing of theirs was saved over it. Every change needs the version the person last saw; a first entry on an empty mark needs none.
+
+Q: "out_of_range", "too_many_decimals", "student_not_in_class", "unknown_component".
+A: The mark is above the part's maximum (the reply gives the maximum) or below zero; it has more decimals than this structure allows (the reply gives how many); the student is not in this class; or the part name is not in this structure. All are fixable by the teacher; none is a fault.
+
+Q: "locked" or "past_deadline". Can the teacher change a mark after submitting?
+A: No. Once an offering is submitted it is read-only. There is NO way to send it back yet: the form master's review, return and approval are not built. Escalate with the offering; do not suggest workarounds. The deadline is compared with the time the server receives the mark, not the time the teacher typed it. A teacher who entered marks offline before the deadline and syncs after it will be refused. How to treat that is an open decision; escalate such cases and say so.
+
+Q: Why is a student's total blank?
+A: A total only appears once every part has been entered (or coded). A student with a part still not entered, or whose every part is excused or left out, has no total, no grade and no position. That is correct, not a fault. Totals are out of 100. Positions run 1, 2, 2, 4 for ties and say "tied"; a structure can switch positions off.
+
+Q: The phone lost signal and sent the same mark again.
+A: Safe. Every mark carries a unique operation id; the same one sent again returns the saved mark and does not save twice, even if the offering has been submitted since. "op_in_progress": the first send is still being processed; try again in a moment. "op_id_reused": the same operation id arrived with a different mark, which means a fault in the app: escalate.
+
+Q: Can the teacher submit with marks missing?
+A: Submitting normally refuses ("gaps_present") and says how many are missing for each part. The teacher can choose to submit with gaps. Submitting locks the offering for everyone.
+
+Q: Who can see the list of students and marks, and who can see who changed what?
+A: The list (with names, marks, totals) is for the offering's teachers and the school admin. The full history of every change to a mark (before, after, who, when, which operation) is school admin only. It is kept permanently and the database refuses any edit or delete of it. If a school disputes a grade, the history is the evidence: collect the student, subject, part and term and escalate.
+
+Q: Has anything reached the parents?
+A: No. Approval by the form master, release by the head teacher, report cards and corrections after release are not built. Parents see nothing of this.
+
 ATTENDANCE (short; the full register is still being designed)
 Q: How does attendance work today?
 A: A teacher marks one student at a time with a code (present, late, unexplained, illness, medical, authorised other, educational visit, off site, excluded). Marking the same student and day again REPLACES the earlier mark; there is no history of the earlier code yet. Card-reader (DPID) marks come in separately per lesson. A page for taking a whole class register is not built yet.
@@ -99,6 +145,8 @@ NOT BUILT, OR STILL BEING DESIGNED (do not promise these)
 - Onboarding teachers from HR automatically; staff roles are added by hand today.
 - The offline phone app for teachers (the server side exists; there is no client yet).
 - Reopening or undoing an admissions step.
+- Anything after a teacher submits marks: the form master's review, return and approval, ratings and remarks, release to parents, report cards, corrections after a lock. Screens for set-up and mark entry. A rule for marks entered offline and synced after the deadline.
+- School admins choosing roles per person beyond the fixed list is not controlled yet: a person who can manage staff can currently give any role, including school admin. This is a known weakness being fixed (see the Education Runtime RBAC plan, docs/ER_RBAC_SPUTO.md); do not rely on it as a control.
 
 BEFORE ESCALATING, COLLECT
 The school name, the person's sign-in email and their role at that school, the exact message shown, the applicant reference or invoice number, and the time it happened.
