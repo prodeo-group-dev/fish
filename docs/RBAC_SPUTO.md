@@ -1,6 +1,6 @@
 # RBAC across FiSH: Scope, Plan, Use cases, Tasks, Order (SPUTO)
 
-**Owner:** Configuration Manager (CM). **Status:** DRAFT v0.1, 2026-10-08, for Femi's decisions. **Trigger (Femi, 2026-10-08):** he withdrew the idea that the Owner Admin gets full ADMIN on every module ("full administrative access comes not only with read access but write access; the writing into financial data is wrong") and asked CM to write a full SPUTO on RBAC across the FiSH system. Each runtime (Education Runtime/EduSys and the ones that follow) writes its own RBAC SPUTO as it comes onboard. When this one is settled, CM works through how it applies to each peer, one by one.
+**Owner:** Configuration Manager (CM). **Status:** DRAFT v0.2, 2026-10-08. Femi answered D1-D4 and D6 the same day (section 2); D5 awaits his go. **Trigger (Femi, 2026-10-08):** he withdrew the idea that the Owner Admin gets full ADMIN on every module ("full administrative access comes not only with read access but write access; the writing into financial data is wrong") and asked CM to write a full SPUTO on RBAC across the FiSH system. Each runtime (Education Runtime/EduSys and the ones that follow) writes its own RBAC SPUTO as it comes onboard. When this one is settled, CM works through how it applies to each peer, one by one.
 
 **Freeze while this is open:** no service changes its authorization model (role floors, owner uplifts, access levels, grants, new capabilities) without CM. The unmerged EA branch `feat/ea-owner-admin-all-modules` is withdrawn.
 
@@ -68,9 +68,9 @@ Severity is CM's reading for a system that will hold real money.
 ### Requirements (R-numbers are for the tasks)
 
 - **R1 Definitions.** READ = see within granted modules at that Company. WRITE = create/edit drafts and non-approval operational records. APPROVE = approve or reject another person's money-affecting record within granted modules. ADMIN = administer access and configuration for that Company/module (grant roles, set thresholds, set policy); **ADMIN does not include posting or approving**. *(Proposed; D1.)*
-- **R2 Approvals.** Every approval route requires APPROVE (not WRITE), refuses when approver = creator, and stores the approver's identity from the token, never from a body field.
+- **R2 Approvals.** Every approval route requires the approve capability (not write), refuses when approver = creator **except for the Owner**, whose self-approval is allowed and flagged in the audit record (D6), and stores the approver's identity from the token, never from a body field.
 - **R3 Thresholds and policy** (POP approval threshold, HR expense policy, tax settings) are ADMIN-only and audited.
-- **R4 Owner Admin.** Exactly what EA reports for an Owner Admin is decided once in EA (R1 semantics), and every service consumes it as is: no local uplifts. SOP's 2026-10-06 Sales WRITE uplift is removed or re-expressed through EA once D2/D3 are decided.
+- **R4 Owner Admin (decided).** At registration of a Company, EA gives the Owner Admin every role at that Company as explicit assignments (post, approve, administer, per module). The approver role cannot be removed from the Owner. Everything EA reports for the Owner comes from those assignments; no service applies a local uplift. SOP's 2026-10-06 Sales WRITE uplift is removed once the assignments exist.
 - **R5 Delegation is capped.** A delegate can grant at most their own level, only for Companies they administer, never to themselves, and never an APPROVE/ADMIN they do not hold.
 - **R6 Fail closed.** Services refuse to start if a required verifier audience is unset; no `?: verifier` fall-backs.
 - **R7 Service accounts.** Each service credential is bound to a declared Tenant/Company scope and endpoint set; the Tenant header (or equivalent) is validated, not trusted. GL's Tenant-header options note (`docs/GL_Tenant_Header_Service_Account_Options.md`) is input.
@@ -81,16 +81,18 @@ Severity is CM's reading for a system that will hold real money.
 - **R12 Runtime contract.** A runtime declares: its role names, how each maps to platform capabilities (view, enter, approve, administer), its service identities, and where it keeps role data; it must meet R2-R9 for its own approvals.
 - **R13 Operators.** Operator tokens: minimum length, throttle, named per operator (EA to match Omniview); two-person rule for destructive/exposing actions.
 
-### Decisions needed from Femi
+### Decisions (Femi, 2026-10-08)
 
-| # | Decision | CM recommendation |
-|---|---|---|
-| D1 | Is **ADMIN** "administer access and configuration only" (no posting, no approving)? | Yes. It matches "administrative access comes with write" being the problem. |
-| D2 | Who may **approve** money records: holders of APPROVE only, and may the Owner Admin hold it? | APPROVE is a separate grant; the Owner Admin may be given it explicitly per Company (so the owner can approve staff-created records) but never approves their own creations. |
-| D3 | The Owner Admin's **default** at a Company: READ everywhere (today), plus what? | READ on everything plus oversight/people-management routes; any WRITE or APPROVE is an explicit assignment. SOP's WRITE uplift then goes. |
-| D4 | May the Owner Admin do **day-to-day posting** at all (small businesses with no staff)? | Only via an explicit role assignment to themselves (e.g. ACCOUNTANT/SALES_OFFICER at WRITE), visible and audited, never implicit. |
-| D5 | **Service credentials:** one Tenant per credential, a list, or all? | One Tenant per credential, Company-set optional. |
-| D6 | Separation of duties **for a one-person business**: block or allow-with-warning when creator = approver? | Allow with an explicit "self-approval" flag recorded, only if the Tenant has a single staff member; otherwise block. |
+| # | Question | Femi's answer | Recorded as |
+|---|---|---|---|
+| D1 | Is ADMIN "administer access and configuration only", with no posting and no approving? | **Yes.** | ADMIN never includes posting or approving. |
+| D2 | Who may approve money records? | The Owner Admin **holds the approver role from the beginning and cannot take himself out of it**; he can delegate approval to others. | Approval is a distinct capability. The Owner always holds it; delegates hold it by his grant. |
+| D3 | The Owner Admin's default at a Company? | "He is the Owner, the CEO, the Boss." | Confirmed in the next row: the Boss holds every capability, as explicit roles created automatically (see D4 clarification). |
+| D4 | May the Owner Admin do day-to-day posting? | He may delegate it, but as a single user with no employees he will do everything himself. | **Clarified with Femi: "explicit role, created automatically".** At registration the Owner is given every role at his Company as visible assignments (post, approve, administer). Nothing is implicit, so it is auditable and can be narrowed per Company later; he can add staff and delegate; he can never remove his own approver role. |
+| D5 | Should a service credential cover one Tenant, a list, or all? | **Pending.** Femi asked for a plain explanation (a service credential is the login one FiSH service uses to call another, e.g. SOP posting a sale to GL; today it is not limited to any business). CM recommends one Tenant per credential. | Awaiting Femi's go. |
+| D6 | One-person business: block or allow creator = approver? | The creator is the Owner, so he cannot be blocked; he may delegate to an employee. | The creator = approver rule applies to **employees**. The Owner may approve what he created; the audit record flags it as a self-approval. Where an employee created the record, someone else (the Owner or another approver) approves. |
+
+**Design consequence of D1 (CM, important).** EA's `AccessLevel` is a linear ladder (NONE < READ < WRITE < APPROVE < ADMIN compared by ordinal), so ADMIN today implies WRITE and APPROVE. Making ADMIN "administer only" means the model must change from one ordered level to a **set of capabilities** (read, write, approve, administer), or ADMIN must be re-defined together with a migration of every existing assignment. Every service consumes `/me`'s `accessLevel`, so this is a platform-wide contract change, to be done consumers-first (strict decoding: each service declares the new field before EA ships it). See T5a.
 
 ---
 
@@ -100,19 +102,19 @@ Severity is CM's reading for a system that will hold real money.
 |---|---|---|---|
 | UC-R1 | Owner Admin | Sees dashboards, ledgers, reports, staff, configuration at every Company of the Tenant | READ; people/config via ADMIN routes; no financial write (P1, P2) |
 | UC-R2 | Accountant / officer | Creates and edits operational records (sales, POs, journals, adjustments) | WRITE at the Company with the module granted |
-| UC-R3 | Approver | Approves or rejects a record created by someone else (PO, return/credit note, adjustment, payroll, expense) | APPROVE; refused if approver = creator (R2/D6); approver stored from the token |
+| UC-R3 | Approver (the Owner, or someone he delegates to) | Approves or rejects a record (PO, return/credit note, adjustment, payroll, expense) | approve capability; for employees creator != approver; the Owner's self-approval is allowed and flagged (R2/D6); approver stored from the token |
 | UC-R4 | HR officer / Owner | Invites staff and assigns Company roles | R5 cap; cannot self-escalate; audited |
 | UC-R5 | Service (POP/SOP/IM/HR/ER → GL, IM; EA → ER) | Posts or reads on behalf of a Tenant | R7 scoped credential, endpoint set, Tenant validated |
 | UC-R6 | Runtime user (e.g. School Admin, Registrar, Teacher) | Acts inside the runtime | Runtime roles mapped per R12; approvals follow P3 in the runtime |
 | UC-R7 | Support operator (Omniview) | Handles tickets, diagnostics with consent | R13; two-person rule; access log |
 | UC-R8 | Read-only viewer / auditor | Reads within a granted module | READ only; no write controls shown (R11) |
-| UC-R9 | A one-person business | Owner does everything | D4/D6: explicit self-assignment, self-approval flag, audit |
+| UC-R9 | A one-person business | Owner does everything | D4/D6: the Owner's explicit roles are created at registration; self-approval is allowed and flagged in the audit record |
 
 ---
 
 ## 4. Tasks (dependency-ordered; owner in brackets)
 
-Task severity maps to the findings in section 1. Nothing is built until Femi decides D1-D6; tasks marked **(safe now)** change no policy and can start with CM's go.
+Task severity maps to the findings in section 1. Femi has decided D1-D4 and D6 (D5 pending); tasks marked **(safe now)** change no policy and can start with CM's go.
 
 **Foundation (no policy decision needed)**
 - **T1 (safe now) Remove the fail-open verifier fall-backs** in GL, IM, SOP: refuse to start (or register a deny-all provider) when a service audience is unset; test it. [GL, IM, SOP sessions; CM reviews, HIGH]
@@ -121,9 +123,10 @@ Task severity maps to the findings in section 1. Nothing is built until Femi dec
 - **T4 (safe now) Consistent "Company missing from /me" = NONE** in GL and SOP. [GL, SOP]
 
 **Definitions and the owner model (after D1-D4)**
-- **T5 Write the platform capability definitions** (R1) and the Owner Admin rule (R4) into this document as the settled text; Femi signs off. [CM]
-- **T6 EA: implement the settled Owner Admin default and remove nothing else;** keep the explicit-assignment path for owners who also work. [EA; HIGH]
-- **T7 SOP: remove or re-express the Sales WRITE uplift;** WEB shows what EA reports. [SOP, WEB]
+- **T5 Write the platform capability definitions** (R1) as settled text; Femi signs off. [CM]
+- **T5a EA: change the access model from a linear level to a capability set** (read, write, approve, administer) with a migration of existing assignments, reported on `/me` consumers-first. Needed because ADMIN no longer implies write/approve (D1). [EA, then GL/POP/SOP/IM/HR/WEB declare the new field; HIGH]
+- **T6 EA: registration creates the Owner's explicit assignments** (every role at the Company, approver role not removable) and a one-off backfill for existing Companies. [EA; HIGH]
+- **T7 SOP: remove the Sales WRITE uplift** once T6 is live; WEB shows what EA reports. [SOP, WEB]
 
 **Separation of duties (after D2, D6)**
 - **T8 SOP: derive `approvedBy` from the caller (APPROVE + role), drop the body field;** creator ≠ approver on returns/credit notes. [SOP; HIGH]
@@ -147,7 +150,7 @@ Task severity maps to the findings in section 1. Nothing is built until Femi dec
 ## 5. Order (foundations first)
 
 1. **Now, no decisions needed:** T1-T4 (fail-closed, canonical email, operator tokens, consistent fall-backs). These remove risk without changing who can do what. The freeze stays for everything else.
-2. **Femi decides D1-D6** (this document is the agenda). CM then writes T5 as the settled definitions.
+2. **D1-D4 and D6 are decided (section 2); D5 awaits Femi.** CM writes T5 as the settled definitions, then T5a is designed with EA before any service changes (it is a platform-wide contract change).
 3. **Owner model and separation of duties:** T6/T7, then T8-T13 in this order of risk: SOP (F2), POP (F3), HR, IM, ER (F4), GL.
 4. **Delegation and service scope:** T14, T15, T16.
 5. **Audit and runtimes:** T17, T18, then each runtime's own RBAC SPUTO.
