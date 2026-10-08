@@ -95,3 +95,56 @@ One Cognito service-account user for **GL** (all Companies, Tenant fixed by `SOP
 - **D7** (which SOP acts need a second person; my recommendation: credit notes, cancellation after fulfilment, Bill collections and write-offs yes; ordinary and cash sales and collections no) goes to Femi, with "view financial data" as its own capability.
 - The legacy `POST /record-sale` `confirmedBy` body field is recorded as **F2b**, the facility-limit WRITE as **F9**. Epic 13: a scoped credential (R7/T15) comes before the ER inbox.
 
+## 7. Impact analysis: what SOP adopts as written, and what breaks (with proposals to the author)
+
+Femi, 2026-10-08: "analyse the overall RBAC and see how it impacts your own work. Where it is adoptable, we adopt; where it breaks things we work out and propose a solution to the author." Read against SOP's live code and in-flight work (idempotency, Company scoping, invoice email, cash sales, decimal quantity, service invoices, the Epic 13 school-billing half, WEB's Sales screens, EA's dashboard reads). Proposals are addressed to CM as author of `docs/RBAC_SPUTO.md`.
+
+### 7.1 Adopted as written (no conflict with anything SOP does)
+
+| RBAC item | Why it fits SOP |
+|---|---|
+| P1, P2 read is not write; the Owner is not a financial writer by virtue of being owner | SOP already gives no role posting rights by title; the only owner rule is the Sales uplift, which T7 removes. |
+| P4, R6 (as refined by CM: deny-all) | T1. SOP keeps starting; service routes reject every token. |
+| P5 one vocabulary, R1 definitions | SOP uses only READ and WRITE today, so adopting four capabilities is additive (T5a consumer). |
+| P8 the server decides | Every SOP route already checks; the UI never relied upon. |
+| P9, R10 attribution | S-T1; SOP has the gap (no actor recorded) and wants the fix. |
+| R8 absent Company = NONE | T4, effectively already true. |
+| R9 canonical email | T2. |
+| R3 thresholds and policy are ADMIN-only | Applies to facility limits (F9) and, if made configurable, the invoice-email daily cap and retention. |
+| P3 with D6 (Owner exempt, flagged) | Fits the one-person business; SOP's Owner records his own sales and collections. |
+| P7, R7 scoped service credentials | Wanted for ER's credential before the Epic 13 inbox is built. |
+| P10, R12 runtime contract | Epic 13 is the first real use: ER maps its Bursar and cashier roles to SOP capabilities. |
+
+### 7.2 What breaks, and the proposed fix
+
+**B1. T5a's migration can lock out every existing administrator at SOP (HIGH).** Today ADMIN sits above WRITE on a ladder, so a person at ADMIN passes every SOP write. If the migration turns existing ADMIN assignments into "administer only" (D1), every current ADMIN loses write at SOP, including the Owner if his explicit roles are not yet created and backfilled. *Proposal:* the migration maps each legacy level to the full set it implied: READ gives {read}; WRITE gives {read, write}; APPROVE gives {read, write, approve}; ADMIN gives {read, write, approve, administer}. Behaviour is unchanged on day one. Only assignments created afterwards can be narrower (for example "administer only"). Consumers declare the new field first (nullable with a default), then EA ships it, then services switch from level to capability. Narrowing existing people is a separate, deliberate step per Company.
+
+**B2. Interim hole until T5a: ADMIN still implies WRITE.** A person given ADMIN only to administer (an HR officer, say) passes every SOP write today. SOP cannot close this without the capability set. *Proposal:* record it as an accepted interim risk and make T5a's cut-over order explicit: consumers first, then EA, then narrowing.
+
+**B3. Approvals by a service or on behalf of a human (R2 meets Epic 13).** R2 says the approver is stored from the token. For ER-originated acts (a Bursar's payment, a waiver, a void) the token is the ER service credential, not the person. Two rules are missing. *Proposal:* (a) a service principal may enter but **never approve**; approvals are only by a human token with the approve capability. (b) Every service-originated money act carries an `actedBy` block (the origin system's stable user id and role at origin) that SOP stores as attributed-by-service, next to the service identity. Add both to R2/R7. SOP's own legacy equivalent is the constant `SALES_ADMIN` it writes as the aval authority on every ordinary sale: replace it with the acting user and drop the constant (S-T1/T8).
+
+**B4. P6/R7 "the Tenant comes from the Company" breaks SOP's fixed Tenant (and is the multi-tenant decision).** SOP fixes the Tenant in two variables and sends it to GL as a header. Deriving it per Company needs a Company-to-Tenant answer for **service** calls (a human call already carries the Tenant in the caller's membership). *Proposal:* EA exposes an internal route for service principals, `GET /api/internal/companies/{companyId}`, returning `{tenantId}` (same family as the owner-contact route); GL validates `X-Tenant-Id` against the Company's real Tenant and against the credential's declared Tenant set; SOP then sends the Tenant it was told by EA instead of a variable. This is exactly the prerequisite EA found for Epic 13; **settle it with that decision, not separately.**
+
+**B5. SOP uses one service identity for GL and EA (P7).** The EA owner-contact route accepts the same Cognito app client SOP uses for GL, so a token minted for GL is valid at EA (and the reverse). *Proposal:* a distinct app client and audience per recipient (SOP to EA gets its own), as SOP already has for IM. Cheap, and it belongs in T15's list.
+
+**B6. R2's creator-versus-approver rule needs a creator.** SOP stores no creator on any money act, so the rule cannot be enforced or even audited. *Proposal:* S-T1 is an explicit prerequisite of T8 (CM accepted); the audit columns are `created_by`, `approved_by`, `self_approved` (true only for the Owner, per D6), each holding the stable id and canonical email.
+
+**B7. Segregation of duties inside payments (Epic 13, ER-FEE-009) needs action-level capabilities, not just a level.** "The person who records a payment cannot void a receipt or approve a waiver" is expressible with four capabilities **only if** record-payment is `write` and void, waiver and refund are `approve` and the creator-differs rule applies to them. *Proposal:* state in R1 that `approve` covers voids, waivers, refunds and write-offs for every module, and that `write` never does. SOP's Epic 13 half is written to that.
+
+**B8. A class of read is financial (point 6, accepted).** `customers-with-balances` and the reports show receivable balances to any reader of the Sales module. *Proposal:* define `read` as "non-financial detail" and add `view-financial` as its own capability in R1, with the migration giving it to every legacy READ and above (so nothing disappears on day one).
+
+**B9. T7 can be unsafe if it runs before the capability cut-over.** The uplift also decides which Companies a person may list in Sales. *Proposal:* remove it only after (a) EA's explicit Owner assignments are verified in production for every existing Company (CM is checking) and (b) B1's mapping is live. Until then keep it as is. The change is one function in SOP.
+
+**B10. Idempotent replays are safe, no change needed.** A keyed replay passes the same authorization as the first call (access is checked before the claim), so a revoked capability blocks a replay. Noted so nobody adds a second check.
+
+### 7.3 Effects on SOP's roadmap if the RBAC plan is adopted
+
+| SOP item | Effect |
+|---|---|
+| Epic 13 school billing (SOP half) | Gains a hard prerequisite: a scoped ER credential (R7/T15) and `actedBy` (B3) before the inbox is built; payments, voids, waivers and refunds are written against the capability split (B7). |
+| Services / decimal quantity / cash sales | None. They are `write` acts by the Owner or an employee. |
+| Invoice email | None. It stays human-only and `write`; Reply-To still resolves to the Owner. |
+| Stock-line key (T5) with IM | None (service to service). |
+| Safe-now branch (T1, T4, T2) | Ready to build on CM's go: about 0.75 day in one reviewed branch. |
+| S-T1, T8, S-T3 | Follow in that order after T5a is declared; S-T1 needs Femi's go. |
+
