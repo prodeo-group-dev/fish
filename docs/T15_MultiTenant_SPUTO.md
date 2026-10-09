@@ -29,7 +29,7 @@
 | Service | Binding to one Tenant | Real leak when a 2nd Tenant arrives | Estimate (own) |
 |---|---|---|---|
 | **EA** | none for people; `/me` carries each Tenant's Companies; a Company belongs to one Tenant (index `ux_tenant_companies_company_id` to be confirmed in production, E1) | support thread open to staff (FIXED, owner-only, live); no add-assignment route (RBAC backlog) | E6 tests DONE |
-| **GL** | none (its Tenancy tables dropped, V23); callers' header only | service credentials blanket (G2 tests DONE, G3 allow-list in log mode, G4 pending); F-T15-2 company creation open to services (built, held) | G3/G4 ~2-3 d left |
+| **GL** | none (its Tenancy tables dropped, V23); callers' header only | service credentials blanket: G2 tests DONE, G3 allow-list live in log mode, **G4 built and handed over (7f485a1)**; F-T15-2 company creation open to services (built, held) | **0 d of build left for M1**; remaining is CM's (read the log lines, set enforce, merge G4); F-T15-2 release ~0.5 d, M3 clean-up ~0.5 d |
 | **POP** | authorizer (`POP_EA_TENANT_ID`), GL header (`POP_GL_ENGINE_TENANT_ID`), 2 service principals | none: every route and table is Company-scoped, no cross-Company query | 3.5-4 d |
 | **IM** | `IM_EA_TENANT_ID`, `IM_GL_ENGINE_TENANT_ID` | pending-adjustments read loads other Companies' rows (filters in route); 4 unscoped `findAll()` without callers; child tables carry no company_id | 7-8 d |
 | **SOP** | `SOP_EA_TENANT_ID`, `SOP_GL_ENGINE_TENANT_ID` | **Education Runtime credential reads/writes every order (`SopCompanyScope.All`)**; facility headroom has no Company at all; `GET /api/sales` and returns/complaints lists use `findAll()` and filter in memory; 5 tables without their own company key | ~6.25 d |
@@ -48,7 +48,7 @@
 ## 5. Milestones and order (Tasks, dependency order)
 
 **M0: foundations. DONE or in flight.** GL G0 fail-closed service verifiers (live), G1 isolation matrix (live), G2 service-login matrix (live), G3 allow-list (live, `FISH_SERVICE_ALLOWLIST_MODE=log`), EA E6 isolation tests (live), POP and SOP/IM/WEB statements and addenda (merged).
-- M0 remaining: read the G3 log lines after real traffic, set enforce (CM); EA E1 index check in production (needs Femi's read-only script run).
+- M0 remaining: read the G3 log lines after real traffic, set enforce (CM); EA E1 index check in production (needs Femi's read-only script run). Keep log mode until each service has run its RARE paths (HR month-end, leave-accrual remeasure/utilize, returns): each service names them; short windows can miss them.
 
 **M1: a second Tenant can use Sales, Stock, Purchases and Payroll (the UAT tester unblocked).** This is the smallest slice that makes the new owner's day work, and it ships only with the minimum isolation the leaks above demand:
 1. GL **G4** (services may omit the header), after enforce.
@@ -85,3 +85,11 @@ Acceptance for M1: the isolation suites pass (both walls) in POP, IM, SOP, HR, G
 ## 8. Estimates
 
 Per statements: POP 3.5-4 d, IM 7-8 d (authorizer slice ~3 d), SOP ~6.25 d, GL 2-3 d remaining, HR unknown, WEB small. Services run in parallel; with reviews, **M1 is realistically 1-1.5 weeks of calendar time, M2 another week**. These are the sessions' own estimates, not commitments.
+
+## 9. Amendments (v1.1, 2026-10-09, after GL's reading)
+
+- **Header handling (section 6, binding):** a service drops the `X-Tenant-Id` it sends to GL in the SAME release as its per-request authorizer, and only after CM confirms GL G4 is live. Until G4 is live a service that omits the header gets 400, and a service that keeps its env Tenant gets 403 for any Company of another Tenant. G4 is additive, so nothing breaks while it waits.
+- **G3 log-mode window:** the lists come from reading each service's GL client; the log-mode cycle is the real confirmation. It stays in log mode until each service has exercised its rare paths; each service names them.
+- **GL remaining (all small, after G4):** F-T15-2 release (7168c0a, ~0.5 d, once HR confirms it never calls `POST /tenants/{id}/companies`), M3 playbook/KDoc clean-up (~0.5 d).
+- **M2 / RLS for GL: no estimate in this plan.** It depends on whether GL's database role is the table owner (RLS is bypassed unless FORCE is set), the per-request tenant session setting, and Flyway/integration-test interaction. When CM and Femi re-open `docs/Database_Tenant_Isolation_RLS_Scope.md`, GL writes its piece of that scoping first.
+- **E3 reconciliation (EA `tenant_companies` vs GL's Companies):** no new GL route. Femi's read-only scripts list both sides (EA: Tenants and their Companies; GL: every Company with its `tenant_id`), and CM compares them. Re-run after each release that registers Companies.
