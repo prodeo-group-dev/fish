@@ -102,3 +102,31 @@ All are API-level tests with two Tenants and two Companies in the EA stub, so th
 - **Deployment-time Tenant for audit and operations:** several runbooks and the playbook say "one Tenant per deployment". Those need updating together with step 1.
 - **No row-level security:** isolation is application-enforced in POP, as the platform decided (`docs/Database_Tenant_Isolation_RLS_Scope.md`). The tests above are the only guard against a future query written without a Company check. A Company column on the child tables (waybills, proposals, reports, returns) would let those queries filter by Company directly. That is an optional hardening I can add in step 4's wake if you want it, about 1 day with a backfill.
 - **T6 (return-dispatch idempotency, V17)** is held for IM's verification and is unaffected: its key already contains the Company.
+
+---
+
+## Addendum (2026-10-09): the second wall, Company against Company inside one Tenant
+
+Femi's definition of T15 has two walls: Tenant against Tenant, **and** Company against Company inside one Tenant (each business has its own GL and its own data; consolidation comes later). The statement above covers the first wall. This covers the second.
+
+### Does any POP query join across Companies today? No.
+
+- I searched POP's persistence layer for `innerJoin`, `leftJoin`, `crossJoin`, `join(`, `JOIN` and `union`: **no matches.** Every query reads one table, filtered by an id or by one Company.
+- The only multi-table read is the audit helper `AuditRecorder.companyOfPurchaseOrder`, which looks up one order by its id to learn its Company. It does not combine Companies.
+- Every list is filtered by exactly one Company: `findAll(companyId)` (suppliers), `findByStatuses(companyId, …)` (orders), `findUnsettled(companyId)` (vendor invoices, aging), `findByCompanyId` (settings). There is no "all my Companies" read anywhere, and no total across Companies.
+- The authorization check is already per Company, not per Tenant, for the module and the level: `membership.accessLevelAt(companyId)` and `"POP" in membership.grantedModulesAt(companyId)`. An owner with Companies A and B who has the module granted on A only is refused on B (an existing test covers a caller granted at a different Company than the path).
+- Posting is per Company too: the GL posting context (period, accounts) is fetched for the path Company on every match, payment and dispatch, and IM is called with the order's own Company.
+- **One real consequence for "each business has its own GL":** because the Tenant is fixed in the environment today, the same GL Tenant header is sent for A and B. After T15 the Tenant comes from the authorized Membership, and A and B in one Tenant share it correctly. Nothing in POP would put A's posting into B's GL: the Company id in every GL call is the order's, and the order was checked against the path Company.
+
+### Same-owner cross-Company isolation tests to add (to section 5)
+
+Setup: one user, one Tenant, an Owner Admin or staff member with the module granted on **both** Company A and Company B, so authorization passes on both and only the record checks stand in the way.
+
+10. **Lists never mix:** create suppliers, orders, returns, proposals, reports and vendor invoices under A and under B. Each list route under A's path returns only A's rows, and under B's path only B's (suppliers, `pending-action`, `fulfillment`, aging, settings, and the PO numbers: each Company counts from 1 on its own).
+11. **A record id under the other Company's path is 404:** with the same authorized user, a B-scoped call using an A record id answers 404 (the same body as a missing record, never 403 or the record) on get, send, approve, cancel, amend, match, pay, receive-line, every nested route (proposals, reports, returns approve/reject/dispatch/credit-note) and supplier activate/deactivate. The same for A-scoped calls with B's ids.
+12. **Cross-references are refused:** an order created under B with A's supplier id is `supplier_not_found`; an amend or an accepted proposal never makes a replacement order under a different Company than the original.
+13. **Settings stay separate:** changing A's approval threshold or match tolerance changes nothing for B, and an order over A's threshold needs approval in A and not in B.
+14. **Posting goes to the right ledger:** for each Company, the GL gateway receives that Company's id and its own posting context on match, pay and dispatch, and IM receives the order's Company on dispatch, with calls for A and B interleaved.
+15. **Audit rows carry the right Company** for records created by the same user in A and in B.
+
+These need no new production code; they extend the same two-Company fixture as tests 1 to 9. The first wall's tests (different Tenants) and these (same Tenant) should be one table-driven suite parameterised by "same Tenant" and "different Tenant", so a future route cannot pass one and skip the other.
