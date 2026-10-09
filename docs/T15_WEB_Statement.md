@@ -83,3 +83,15 @@ Where a call has no Company in the path, the Company comes from the body, a quer
 - From the services, the T15 convention (derive the Tenant from the Company, or a header), stated before it ships so WEB declares it first.
 - From EA: whether `EA_ONBOARDING_CLOSED` goes ahead, and the per-Company chat routes confirmed live (item 3).
 - Lesson recorded 2026-10-09: any request header WEB sends must be checked with a real browser preflight against every service that receives it. A live sweep today found every current header and method accepted except two (both fixed), so the current state is clean.
+
+## 7. Tenancy ID: where WEB would show it (CM, 2026-10-09; for EA's design)
+
+A human-readable Tenancy ID the owner can quote to support. Placement options, in the order WEB suggests:
+
+1. **App header, next to the company name** (small, with a copy button). Always visible while signed in, so it is at hand on a support call and in any screenshot a customer sends. It appears once per Tenant, not per Company, so the header text must read "Organisation ID", not "Company ID".
+2. **The support form** (product-support ticket compose): pre-filled and read-only, and sent with the ticket so Omniview can search by it. The owner never has to type it.
+3. **The Help Centre footer and the "Contact support" area**: the same value, with copy.
+4. **Printed document headers**: not by default (it is an internal identifier, not a legal one). If Femi wants it, it belongs in the print footer only, never in the header block with the registered name, number and address.
+5. **Administration > Verification**: where the business and identity checks already live; a natural home for "Your organisation ID" for an owner who looks for it there.
+
+Two cautions: (a) it identifies the Tenant, so a person in two Tenants sees the one for the Company they have selected, and the chooser should show it beside each Tenant name; (b) it must be safe to read aloud and to paste (no confusable characters, a check digit if EA wants one). WEB needs the field on `GET /me` (`tenants[].tenancyId`) and would declare it before EA ships it, as with every `/me` change.
