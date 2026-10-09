@@ -33,14 +33,15 @@ This is not a new posting mechanism — it's `RecordOpeningBalanceUseCase` calle
 
 ### 2.1 Which accounts get redirected
 
-A company's four "itemized-elsewhere" accounts are resolvable today without new configuration — they're already named, per-company account IDs the platform already knows about:
+A company's "itemized-elsewhere" accounts are resolvable today without new configuration — they're already named, per-company account IDs the platform already knows about. The design named four; **a fifth, Accumulated Depreciation, was added 2026-10-09** (see below), so the importer recognises five accounts by fixed code: `1100` AR control, `2000` AP control, `1200` Fixed Assets, `1300` Inventory, `1210` Accumulated Depreciation.
 
-- **Inventory** — `Company`'s inventory asset account (already referenced by `CreateItemUseCase.Request.inventoryAssetAccountId` and IM's own posting gateway).
+- **Inventory** — `Company`'s inventory asset account, code `1300` in the default chart (added 2026-10-08, UAT v2.2). Until then the importer could not recognise it (the account is supplied per-`Item` on IM's side, `CreateItemUseCase.Request.inventoryAssetAccountId`, with no company-wide default), so a lump balance imported to it was accepted rather than redirected; recognised by code from 2026-10-09.
 - **Fixed Assets** — the fixed-asset account(s) `CreateFixedAssetUseCase.Request.fixedAssetAccountId` posts against.
+- **Accumulated Depreciation** *(added 2026-10-09)* — code `1210`, the contra to Fixed Assets. Its detail is the per-asset register's depreciation, so a lump imported balance is redirected to Suspense for the same reason Fixed Assets is.
 - **AR control** — the account `RecordSaleUseCase`/`RecordCollectionUseCase` post against with `DimensionType.CUSTOMER`.
 - **AP control** — the account `RecordVendorObligationUseCase`/`RecordVendorPaymentUseCase` post against with `DimensionType.VENDOR`.
 
-The GL-balance importer resolves these four account IDs per company (the same way `ComputePurchasePostingContextUseCase`/its Sales-side equivalent already do) and checks the CSV's target account against that set before deciding whether to redirect.
+The GL-balance importer resolves these account IDs per company (the same way `ComputePurchasePostingContextUseCase`/its Sales-side equivalent already do) and checks the CSV's target account against that set before deciding whether to redirect.
 
 ---
 
