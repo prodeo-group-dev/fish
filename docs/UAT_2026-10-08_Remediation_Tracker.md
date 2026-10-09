@@ -61,3 +61,36 @@ Change who can do what; remove the "Welcome back" check; guess the trial-balance
 | **SOP / POP / IM / HR** | Only if they want their own printable documents on the shared wrapper (SOP customer statements and invoice; POP purchase order and goods-received note; IM stock valuation; HR payslips). Each says whether it wants one; WEB builds them on the same wrapper in the order they ask. |
 | **CM** | Release path only. |
 | **Femi** | **DECISIONS:** (a) should reports allow an "as at" date other than today (needed for month-end and year-end packs); (b) is CSV export wanted now or after print; (c) which documents beyond reports must be printable first (payslips, purchase orders, statements). |
+
+---
+
+## Status 2026-10-09 (after UAT v2.1 and v2.2; Femi: "top priority from all of us")
+
+**Decisions from Femi:** "Financial Systems Handler" is the name; keep the "Welcome back" dialog (L8 closed); original journals are never deleted, reversal journals correct errors; the dev environment's test data is housekeeping, not a defect (H2 downgraded); the MVP navigation needs VAT, invoices, bills, contacts, audit log and settings; reports must accept an as-at date; every document prints and exports, sequenced by dependency; stock-adjustment approval gets a proper fix through EA's approve capability (no Cognito stopgap).
+
+**Root cause of the Critical (W-C1, sales cannot be recorded):** SOP's and IM's CORS did not allow the `Idempotency-Key` header that WEB sends; the browser's preflight was refused ("Failed to fetch"). WEB's stock issue had the same fault since it was released. Fixed in both services (SOP :46, IM :28, live and verified by a live preflight). The same class of fault explained M4 (WEB sent `X-Tenant-Id` to EA, which refuses it): fixed in WEB. **Lesson recorded:** any new request header must be checked with a real browser preflight against every service that receives it.
+
+| ID | Status | Where |
+|---|---|---|
+| W-C1 sales | Fixed on the service side; needs a re-test in a browser at Femi's sitting | SOP :46 |
+| W-H1 UK tax | Rules seeded (UK tiered, Ireland TRADING/PASSIVE, Sierra Leone 30%); bad input answers 400 | GL :102-105 |
+| W-H2 pay runs | HR > Pay runs built: list, preview, approve/reject, resume, retry | WEB, merged |
+| W-H3 stock approval | Proper fix via EA capability (RBAC T11); IM sends allowedActions, WEB hides buttons and explains | IM, EA, WEB (branch with CM) |
+| W-M2 bank rec | GL building status + cancel + complete; balance tie-out awaits Femi | GL |
+| W-M3 internal ids | Depreciation text fixed for new entries (GL); item shown by name, PO shown as PO-000123 (WEB, POP live) | GL, WEB, POP :34 |
+| W-M4 accumulated depreciation | 1210 and Inventory added to the default chart for new Companies; script for existing ones in preparation; WEB to send 1210 | GL, CM, WEB |
+| W-M6 register vs reversals | Waits for Femi's evidence run (design merged) | GL |
+| W-M7 archive / cancel | PO cancel exists (POP) and WEB has the button; the rest needs one cross-service design | all, to be scoped |
+| W-L2 PO currency | WEB to default to the Company's currency | WEB |
+| W-L3 cash flow Uncategorized | Fixed for ordinary entries; opening-balance and suspense entries stay uncategorized by design | GL |
+| UX-H1 action hierarchy | Built: Cancel is text, confirmations before supplier sends, danger confirm on removals | WEB (branch with CM) |
+| UX-H2 phone tables | Built for Purchases, Fixed assets, bank reconciliation; tab rows wrap | WEB (branch with CM) |
+| UX-M1 journals as columns | Built | WEB (branch with CM) |
+| UX-M3/M4 contrast, dark mode | Built | WEB (branch with CM) |
+| UX-M2 navigation depth | Not started; needs a design decision (flatten to three levels, one selected style) | WEB |
+| M6 Trial balance, as-at dates | Trial balance and as-at on balance sheet built; P&L and cash-flow from/to wait for GL's branch to deploy | WEB (branch with CM), GL |
+| M1/M2/M3/M5/M7/L3-L5/L7 | Built (wave 1), held until CM's SPA rewrite is applied (deep links need it) | WEB, CM |
+| Services S1/S2 | Hours as decimal quantity, reference and service period built; awaits a real call | WEB (branch to hand over) |
+| MVP navigation | VAT returns, audit log, settings, contacts: scoped next; needs GL audit-log route and EA settings screen | WEB, GL, EA |
+| Print and CSV | Planned in order: Balance Sheet, P&L, Trial Balance, Cash Flow, then the rest; header from EA's Company profile (live) | WEB |
+| Second UAT pass | Needs a test environment (CM scoping) | CM |
