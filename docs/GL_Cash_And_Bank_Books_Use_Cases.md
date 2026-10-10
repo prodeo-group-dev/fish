@@ -6,16 +6,16 @@ Actors: **Owner** (Business Owner / Owner-Admin), **Accountant** (staff with WRI
 
 ## UC-CB1 Add a cash or bank account
 - **Actor:** Owner, Accountant (WRITE). **Pre:** signed in; a Company selected.
-- **Main flow:** (1) Opens Cash and Bank. (2) Chooses "Add a bank account" or "Add a cash account (till, petty cash)". (3) Enters a name (and optionally a code; default is the next free `10xx`). (4) GL creates an ASSET account, CURRENT, with the kind set. (5) It appears in the list with a zero balance.
+- **Main flow:** (1) Opens Cash and Bank. (2) Chooses "Add a bank account" (a bank, or a mobile-money wallet such as Orange Money or MTN MoMo, which is simply another bank account) or "Add a cash account (till, petty cash)". (3) Enters a name (and optionally a code; default is the next free `10xx` from `1010`). (4) GL creates an ASSET account, CURRENT, with the kind set. (5) It appears in the list with a zero balance.
 - **Alternate:** code already used by another account: 409 `account_code_in_use`, suggests the next free code. Name empty: 400.
 - **Post:** an ordinary GL account exists with `cashBookKind`; trial balance unchanged (zero balance).
 - **Traces:** FR-CB01, CB02, CB06, CB61.
 
-## UC-CB2 Mark an existing account as cash or bank
-- **Actor:** Owner, Accountant (WRITE). **Pre:** an ASSET account exists (for example the seeded `1000 Cash`, which the owner uses as their bank).
+## UC-CB2 Mark an existing account as cash or bank (not `1000`)
+- **Actor:** Owner, Accountant (WRITE). **Pre:** an ASSET account exists that is not `1000` (account `1000` is always the Cash Book and its kind cannot be changed: 409 `prime_cash_book_kind_fixed`).
 - **Main flow:** (1) Opens the account, chooses "This is a bank account" (or cash). (2) GL sets the kind. (3) A bank account can now be reconciled.
 - **Alternate:** non-ASSET account: 409 `kind_requires_asset_account`. Clearing BANK when a reconciliation exists: 409 `reconciliations_exist`.
-- **Traces:** FR-CB01, CB02, CB05; Risk 4.
+- **Traces:** FR-CB01, CB02, CB06; Risk 4.
 
 ## UC-CB3 See my cash and bank accounts
 - **Actor:** Owner, Accountant, Reader (READ). **Main flow:** (1) Opens Cash and Bank. (2) Sees each cash/bank account with its kind, balance, and for banks the date last reconciled. (3) Chooses one to open its book.
@@ -71,15 +71,15 @@ Actors: **Owner** (Business Owner / Owner-Admin), **Accountant** (staff with WRI
 
 ## UC-CB12 Add missing standard accounts to an existing Company
 - **Actor:** Owner (Owner-Admin) or CM (one-off). **Pre:** an existing Company whose chart predates the current template.
-- **Main flow:** (1) Triggers "Add missing standard accounts". (2) GL compares the Company's chart with its template and adds what is missing (`1010 Bank`, `2150` VAT control, others as defined), never overwriting. (3) Returns what was added and what was skipped (code already used by another account).
+- **Main flow:** (1) Triggers "Add missing standard accounts". (2) GL compares the Company's chart with its template and adds what is missing (the VAT control account `2150`, kind CASH on `1000`), never overwriting. It does not add a Bank account. (3) Returns what was added and what was skipped (code already used by another account).
 - **Post:** idempotent; running twice adds nothing the second time.
 - **Traces:** FR-CB60, CB61; the 2150 gap found on Company `13de72e4`.
 
-## UC-CB14 A new Company gets its prime account
+## UC-CB14 A new Company gets its Cash Book and its currency
 - **Actor:** Owner creating a Company (or GL on their behalf). **Pre:** the Company has a jurisdiction.
-- **Main flow:** (1) The Company is created. (2) GL seeds the chart as before, and the prime account `1000` and the second account `1010` take their kind and name from the jurisdiction (UK, IE, NG: `1000` is the bank, `1010` is cash; SL, LR, GN, CI: `1000` is cash, `1010` is the bank). (3) The Company's first opening balance, sales, collections, payments and payroll default to `1000`.
-- **Alternate:** unknown or disabled jurisdiction: `1000` is cash, `1010` is bank. A country added later by CM as reference data gets its own prime kind with no deploy.
-- **Traces:** FR-CB04, CB05, D4.
+- **Main flow:** (1) The Company is created. (2) Its currency is the jurisdiction's currency (UK GBP, IE EUR, NG NGN, SL SLE; LR, GN and CI follow the standing SLE-only decision unless Femi says otherwise). (3) GL seeds the chart as before, with account `1000 Cash` as the Company's Cash Book (kind CASH) in that currency. (4) First opening balance, sales, collections, payments and payroll default to `1000`. No bank account is seeded: the owner adds one when wanted (UC-CB1).
+- **Alternate:** the request names a currency that is not the jurisdiction's: 409 `currency_not_supported_for_jurisdiction`. Unknown or disabled jurisdiction: refused as today.
+- **Traces:** FR-CB04, CB07, D3, D4.
 
 ## UC-CB13 Opening balance of a cash or bank account
 - **Actor:** Owner, Accountant (WRITE). Uses the existing opening-balance route for the account; the book's first row shows the opening balance; the contra is Opening-balance equity as today.
@@ -95,4 +95,4 @@ Actors: **Owner** (Business Owner / Owner-Admin), **Accountant** (staff with WRI
 | One book per account | UC-CB3, 4 |
 | Services settle into them | UC-CB10 |
 | Existing Companies | UC-CB2, 12 |
-| The prime account depends on jurisdiction | UC-CB14 |
+| The Company's currency comes from its jurisdiction; `1000` is its Cash Book | UC-CB14 |

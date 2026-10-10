@@ -16,7 +16,7 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 
 | # | Item | Owner | Depends on | Status |
 |---|---|---|---|---|
-| C0 | Femi confirms D2, D3, D5 to D8 and the per-country mapping in D4 (SRS section 3). Already confirmed: D1 (one book per account) and the D4 rule (the prime account is `1000` and depends on the jurisdiction). | Femi via CM | none | open |
+| C0 | Decisions state: D1, D3, D4 are Femi's own words; D2 and D5 to D8 confirmed via CM on 2026-10-10. **Still open for Femi:** the currencies for LR, GN and CI (SRS section 8, item 7) and the foreign-currency questions in SRS section 9.7. Neither blocks Phase 1 except T1b. | Femi via CM | none | partly open |
 | C1 | CM releases GL code work (held until after the UAT sitting) and picks the migration number (V33 or later; the Period and fixed-asset-link work also want one). | CM | C0 | open |
 | C2 | Claim row in `docs/GL_POP_IM_SOP_Coordination.md` (done in this docs branch). | GL | none | done |
 | C3 | Check consumers of `JournalSource` and of `GET accounts` for strict decoding (SOP, POP, IM, HR, EA, WEB) before `CASH_BOOK` and `cashBookKind` ship. Output: yes/no per consumer. | GL with each session | none | open |
@@ -25,9 +25,10 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| T1 | `CashBookKind` and `Account.cashBookKind` with the ASSET-only invariant; migration (`cash_book_kind`, CHECK; `jurisdictions.prime_cash_book_kind` and `prime_account_name` with the proposed per-country seed; backfill each existing `1000` to its Company's jurisdiction kind); repository mapping; domain and persistence tests. | GL | C1, C0 | 1.5 | open |
+| T1 | `CashBookKind` and `Account.cashBookKind` with the ASSET-only invariant; migration V33 (`cash_book_kind`, CHECK, backfill every account `1000` to CASH; no jurisdiction dependency); repository mapping; domain and persistence tests. **Started.** | GL | C1 | 1 | in progress |
 | T2 | Account routes: optional `cashBookKind` on create; `PUT .../accounts/{id}/cash-book-kind`; field on `GET accounts`; BANK cannot be cleared while a reconciliation exists; route-inventory and isolation-matrix classification (people-only, WRITE). | GL | T1 | 1 | open |
-| T3 | "Add missing template accounts" use case and route (the second account `1010` of the kind the jurisdiction does not give the prime account, and `2150`; skips and reports codes already used; idempotent) with tests including the 13de72e4 shape (chart without 2150). | GL | T1 | 1 | open |
+| T1b | Jurisdiction currency: `jurisdictions.currency` column and seed (UK GBP, IE EUR, NG NGN, SL SLE; LR, GN, CI as Femi decides, proposed SLE); `AddCompanyToTenantUseCase` derives the Company currency; `companyBaseCurrency` optional and validated; tests. **Held until the SRS redraft is merged and Femi confirms the LR, GN, CI currencies.** | GL | C0 | 1 | held |
+| T3 | "Add missing standard accounts" use case and route (the VAT control account `2150`, kind CASH on `1000`; no Bank seeded; skips and reports codes already used; idempotent) with tests including the `13de72e4` shape (chart without 2150). | GL | T1 | 1 | open |
 
 ## W2: books and cash flow (Release A, part 2)
 
@@ -38,7 +39,7 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 | T6 | **Cash-flow statement over all CASH and BANK accounts** (IAS 7 cash and equivalents; transfers excluded); regression: a `1000`-only Company gives identical output to today. | GL | T1 | 1 | open |
 | T7 | Posting contexts (sales, purchase, payroll) return additive `cashAndBankAccounts`; existing `cashAccountId` unchanged. | GL | T1 | 0.5 | open |
 | T8 | `reconciled` flag per row for bank accounts from completed reconciliations (Should). | GL | T5 | 0.5 | open |
-| T9 | Seed the prime account `1000` and the second account `1010` in all five chart templates and `AddCompanyToTenantUseCase`, kinds and names from the jurisdiction (D4); `accountsFor` takes the jurisdiction; fallback for an unknown jurisdiction. **Last item of Release A**: only after T6 is live and verified. | GL | T6, T1 | 1 | open |
+| T9 | Seed `1000 Cash` with kind CASH in all five chart templates and `AddCompanyToTenantUseCase` (D4). No Bank account is seeded. **Last item of Release A**, after T6 is live and verified (the first Bank account any owner creates must already appear in cash flow). | GL | T6, T1 | 0.5 | open |
 | W-A | WEB: Cash and Bank section (list, book with range, print/CSV), "Add a bank account" prompt, honest empty states, layout checklist. | WEB | T2, T5 | WEB to size | open |
 
 **Release A gate:** T6 live and verified before T9. First Tenant's cash-flow figures unchanged (snapshot regression on `1000`-only Companies).
@@ -57,7 +58,7 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| T14 | Reconciliation start requires a BANK account: log-first flag, then enforce (`FISH_CASHBOOK_BANKONLY_MODE`, the G3 pattern). Grandfather: owners flag `1000` BANK first (UC-CB2). | GL | T2, C0 | 0.5 | open |
+| T14 | Reconciliation start requires a BANK account: log-first flag, then enforce (`FISH_CASHBOOK_BANKONLY_MODE`, the G3 pattern). Grandfather: existing reconciliations on `1000` stay readable; an owner who reconciles `1000` today creates a bank account and moves the balance by a transfer (SRS section 8, item 4). | GL | T2, C0 | 0.5 | open |
 | T15 | Settlement account for collection/payment/pay run must be a cash/bank account of the Company: log-first, then enforce. | GL | T7, SOP/POP/HR consumers | 0.5 | open |
 
 ## W5: services choose the account (Release C, part 2)
@@ -73,12 +74,12 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 
 | Release | GL days |
 |---|---|
-| A: T1 to T9 | 9 (T1 1.5, T2 1, T3 1, T4 1, T5 1.5, T6 1, T7 0.5, T8 0.5, T9 1; T9 closes the release) |
+| A: T1 to T9 incl. T1b | 9 (T1 1, T1b 1, T2 1, T3 1, T4 1, T5 1.5, T6 1, T7 0.5, T8 0.5, T9 0.5; T9 closes the release) |
 | B: T10 to T13 | 3.75 |
 | C: T14, T15 | 1 |
-| **Total GL** | **about 13.75 days** |
+| **Total GL** | **about 13.75 days for Phase 1; foreign-currency accounts (SRS section 9) are Phase 2, about 2 days of design plus about 14.5 provisional** |
 
-WEB, SOP, POP and HR sizes are theirs. A shorter first slice if Femi wants something fast: **T1, T2, T4, T5, T6, T9 (about 7 days)** gives owners a bank account and a book, with cash flow correct, before any entry-side work.
+WEB, SOP, POP and HR sizes are theirs. A shorter first slice if Femi wants something fast: **T1, T2, T4, T5, T6, T9 (about 6 days)** gives owners a bank account and a book, with cash flow correct, before any entry-side work.
 
 ## What each session is asked
 
@@ -86,7 +87,7 @@ WEB, SOP, POP and HR sizes are theirs. A shorter first slice if Femi wants somet
 - **WEB:** read the SRS and use cases; design the Cash and Bank section and the pickers with the section-7 layout checklist; plain-language labels; tell GL anything the API shape should change before T5 and T11 are built.
 - **SOP, POP, HR:** nothing before Release C; they should read FR-CB50 to CB52 and confirm they can send a chosen account.
 - **EA:** no change expected; confirm no cash tile depends on `1000` alone.
-- **Femi:** confirm D2 to D8; say whether the seven-day slice is the first release.
+- **Femi:** confirm D2 to D8; say whether the six-day slice is the first release.
 
 ## Verification before each release
 

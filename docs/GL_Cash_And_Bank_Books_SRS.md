@@ -17,7 +17,7 @@ What GL has today (verified):
 - `Account` has no field saying an account is a cash or bank account. It carries type, classification, code, name, parent, active flag and an expense classification.
 - Bank reconciliation (`BankReconciliation`, V32) works on **any** account id of the Company. Nothing requires a bank account. It matches whole statement lines to whole posted entries and can tie out the balance (`enforceBalanceTieOut`, currently off).
 - No cash book or per-account ledger exists. The nearest read is `GET /companies/{id}/journal-entries` (all entries, newest first, no account or date filter, no running balance).
-- Cash and bank are never an original-entry point. All postings come from a generic journal, or from SOP/POP/IM/HR through the posting routes.
+- **Correction (found while starting the build, 2026-10-10):** a domain command for exactly this already exists, `CashBookEntry` (`domain/ledger/cash_book_entry.kt`, built 2026-08-12 as the original Ledger feature, with `CashDirection` RECEIVED/PAID, an IAS 7 `cashFlowActivity` tag defaulting to OPERATING, and `toJournalEntry()`). It was never wired: no use case, route, persistence or screen exposes it, and it posts with `JournalSource.MANUAL` (its KDoc says a new enum value was "not worth it"; Femi's confirmed D6 now overrides that with `CASH_BOOK`). So cash and bank are books of original entry in the **domain** but not in the product. Release B reuses `CashBookEntry` rather than inventing a new command. All other postings come from a generic journal, or from SOP/POP/IM/HR through the posting routes.
 - Services hard-wire the cash account by code: SOP's cash sale (`CreateSalesInvoiceUseCase`, posting-context `cashAccountId`), the purchase and payroll posting contexts, and `ComputeCashFlowUseCase` all look up code `"1000"` and nothing else. **A Bank account added today would be invisible to the cash-flow statement and to every service's cash settlement.**
 - POP supplier payments already take a `settlementAccountId` from the caller; HR's pay run takes `cashAccountId`; WEB's reconciliation screen offers all ASSET accounts.
 
@@ -31,7 +31,7 @@ What GL has today (verified):
 ## 2. Overall description
 
 - **Users:** Business Owner and accountants (record and read books, reconcile); non-accountants record "money in" and "money out" in plain words; services (SOP/POP/IM/HR) choose a cash or bank account when they settle.
-- **The prime account:** `1000` is where the services default to (SOP cash sale, POP payment, HR pay run use it today), so it remains the default settlement account whatever its kind. A UK Company's `1000` is a bank account; a Sierra Leone Company's is cash.
+- **Account `1000`:** is where the services default to (SOP cash sale, POP payment, HR pay run use it today), so it remains the default settlement account. It is always the Cash Book (D4); the owner's bank accounts are further cash books and are chosen explicitly.
 - **Principle kept:** GL stays generic (Ledger knows no business type). The kind is a ledger concept (as an expense classification is), not a Purse or school concept.
 - **Assumptions:** the Company's base currency is the only currency (Decision D3). Tenant and Company isolation exactly as every other route (T15). RBAC freeze: new routes use the existing `authorizeTenantFor{Read,Write}` levels, no new roles or permissions; new refusals only (see 7).
 
@@ -41,8 +41,8 @@ What GL has today (verified):
 |---|---|---|
 | D1 | One book **per account**; no combined book. | **Femi, 2026-10-10** |
 | D2 | Books are books of original entry: receipts, payments and transfers are recorded in the book and post the journal. | Femi's requirement; mechanics proposed here |
-| D3 | Base currency only for now (reconciliation already refuses other currencies). | Proposed, confirm |
-| D4 | **The prime account is `1000`, the first account every new Company is seeded with, and what it is depends on the Company's jurisdiction** (Femi, 2026-10-10). The jurisdiction decides the prime account's kind (BANK or CASH) and its name. A second account of the other kind is seeded at `1010` so every Company has both a cash and a bank account. The mapping is reference data on the `jurisdictions` table (a new `prime_cash_book_kind` and `prime_account_name` per row), so adding a country is a data insert by CM with no deploy. **Proposed mapping, Femi to confirm per country:** UK, IE, NG: prime `1000` = BANK named "Bank", `1010` = CASH named "Cash"; SL, LR, GN, CI: prime `1000` = CASH named "Cash", `1010` = BANK named "Bank". Mobile money (the real digital channel in SL and LR) is not a third kind here; parked, see section 8. | Femi's rule confirmed; mapping proposed |
+| D3 | **The Company's primary cash and bank currency is the currency of its tax jurisdiction, determined and seeded when the Company is created** (Femi, 2026-10-10: "every company has its tax jurisdiction; the currency in which that tax jurisdiction operates is the primary cash and bank account currency"). The currency is reference data on `jurisdictions` (new `currency` column), not a free choice at creation. **Later in the same day Femi extended this: a Company may open other cash/bank accounts in other currencies.** That is phased (section 9): **Phase 1 is primary-currency books only, and no foreign-currency account is built until an IAS 21 design exists.** | Femi's rule confirmed; extension phased; currency mapping for LR, GN, CI open (section 8, item 7) |
+| D4 | **Account `1000` is the Cash Book in every country, and bank accounts are further cash books created as needed** (Femi, 2026-10-10: "A Cash Book is account 1000 and further cash books that have the feature of Bank reconciliation can be created as needed, i.e. Bank Accounts. They are all books of original entry"). No kind split by jurisdiction. Every chart template seeds `1000 Cash` with kind CASH; a bank account is a further account created by the owner (default code the next free `10xx` from `1010`), kind BANK, reconcilable. A Bank account is **not** seeded for every Company. Account `1000` stays CASH and its kind cannot be changed. A mobile-money wallet (Orange Money, MTN MoMo) "is just another bank account in our own books": a BANK cash book like any other, created as needed; there is no third kind. | **Femi, 2026-10-10** |
 | D5 | Trade receipts and payments are **not** recorded through a book against module-owned control accounts (AR 1100, AP 2000, VAT 2150, Inventory 1300, Fixed Assets 1200/1210, Opening-balance equity 3900, Suspense 3910); they go through SOP collection / POP payment so AR/AP stay itemised. The cash book refuses them with a message naming the right screen. | Proposed, confirm |
 | D6 | New `JournalSource.CASH_BOOK` for entries from the books, so the audit trail shows original entry. Falls back to `MANUAL` if a consumer cannot take a new value (T-check in backlog). | Proposed |
 | D7 | Bank reconciliation only on BANK accounts, introduced log-first (as G3 was), then enforced. | Proposed |
@@ -52,11 +52,12 @@ What GL has today (verified):
 
 **Account kind**
 - **FR-CB01 (M)** An `Account` of type ASSET may carry `cashBookKind` = `CASH` or `BANK`; any other type may not (domain invariant, tested). Other accounts have none.
-- **FR-CB02 (M)** The kind is set when the account is created (`POST /companies/{id}/accounts` gains optional `cashBookKind`) and can be changed by `PUT /companies/{id}/accounts/{accountId}/cash-book-kind` (same shape as `expense-classification`). BANK cannot be cleared while a reconciliation exists for the account.
+- **FR-CB02 (M)** The kind is set when the account is created (`POST /companies/{id}/accounts` gains optional `cashBookKind`) and can be changed by `PUT /companies/{id}/accounts/{accountId}/cash-book-kind` (same shape as `expense-classification`), except on account `1000` (FR-CB06). BANK cannot be cleared or changed to CASH while a reconciliation exists for the account.
 - **FR-CB03 (M)** `GET .../accounts` returns `cashBookKind` (additive, nullable field).
-- **FR-CB04 (M)** Every chart template seeds the prime account `1000` and the second account `1010`, both CURRENT ASSET; their kinds and names come from the Company's jurisdiction (D4), read from `jurisdictions.prime_cash_book_kind` / `prime_account_name`. `ChartOfAccountsTemplate.accountsFor` therefore takes the jurisdiction; `AddCompanyToTenantUseCase` already has it. An unknown or disabled jurisdiction falls back to `1000` CASH "Cash" and `1010` BANK "Bank".
-- **FR-CB05 (M)** Existing accounts coded `1000` of type ASSET are backfilled by migration to the kind their Company's jurisdiction gives the prime account (UK, IE, NG BANK; SL, LR, GN, CI CASH). Names are not changed. No other account is auto-flagged. An owner can flip the kind (FR-CB02).
-- **FR-CB06 (M)** An owner can create further cash and bank accounts (several bank accounts, petty cash) with ordinary account creation.
+- **FR-CB04 (M)** Every chart template seeds `1000 Cash` as a CURRENT ASSET account with kind CASH (D4). No Bank account is seeded. A Company's currency, and therefore the currency of `1000`, is seeded at creation from its jurisdiction (FR-CB07).
+- **FR-CB05 (M)** Existing accounts coded `1000` of type ASSET are backfilled to CASH by migration, for every Company, regardless of jurisdiction. No other account is auto-flagged. Existing reconciliations against `1000` stay readable (section 8, item 4).
+- **FR-CB06 (M)** An owner can create further cash books and bank accounts (several bank accounts, a mobile-money wallet as BANK, petty cash as CASH) with ordinary account creation, in the Company's currency. Account `1000`'s kind cannot be changed (409 `prime_cash_book_kind_fixed`).
+- **FR-CB07 (M)** The Company's base currency is derived from its jurisdiction at creation (D3): `AddCompanyToTenantUseCase` reads `jurisdictions.currency`. The `companyBaseCurrency` field of the create-Company request becomes optional; if sent it must equal the jurisdiction's currency, otherwise 409 `currency_not_supported_for_jurisdiction`. Existing Companies keep their stored currency.
 
 **The book (read)**
 - **FR-CB10 (M)** `GET /companies/{id}/cash-books/{accountId}?from=&to=` returns the account's book: opening balance at `from`, rows in date order (date, entry id, description, source, counter-account(s), money in = debit, money out = credit, running balance), totals, closing balance. Only POSTED entries (those with historical effect, the predicate reconciliation uses) appear; a reversal appears as its own row, flagged `reversalOf`.
@@ -66,7 +67,7 @@ What GL has today (verified):
 - **FR-CB14 (S)** Each row carries `reconciled` for BANK accounts (matched in a COMPLETED reconciliation) so the book shows what is cleared.
 
 **Original entry (write)**
-- **FR-CB20 (M)** `POST /companies/{id}/cash-books/{accountId}/receipts` records money in: date, amount, counter-account, description, optional reference. Posts a balanced two-line entry: debit the book account, credit the counter-account. Source `CASH_BOOK` (D6).
+- **FR-CB20 (M)** `POST /companies/{id}/cash-books/{accountId}/receipts` records money in: date, amount, counter-account, description, optional reference. Built on the existing `CashBookEntry` (optional `cashFlowActivity`, default OPERATING, so IAS 7 categorisation is explicit and not only inferred). Posts a balanced two-line entry: debit the book account, credit the counter-account. Source `CASH_BOOK` (D6).
 - **FR-CB21 (M)** `POST .../payments` records money out: debit the counter-account, credit the book account.
 - **FR-CB22 (M)** Counter-account rules: belongs to the same Company, is not the book account, is active, and is not a module-owned control account (D5). Violations are named errors (`counter_account_not_allowed`, with which screen to use).
 - **FR-CB23 (M)** Every entry route honours the `Idempotency-Key` mechanism GL already has (a money-posting foundation, per Femi's order of work: guards before features).
@@ -76,7 +77,7 @@ What GL has today (verified):
 - **FR-CB27 (C)** Optional dimensions on a receipt/payment (customer, supplier, employee) where the counter-account is not a control account; deferred.
 
 **Bank reconciliation**
-- **FR-CB30 (M)** Starting a reconciliation requires a BANK account (D7, log-first, then enforce). Existing reconciliations are unaffected.
+- **FR-CB30 (M)** Starting a reconciliation requires a BANK account (D7, log-first, then enforce). Existing reconciliations are unaffected. Account `1000` is the Cash Book and is not reconcilable.
 - **FR-CB31 (S)** The reconciliation screen's account list is BANK accounts only.
 
 **Cash flow and reports**
@@ -90,8 +91,8 @@ What GL has today (verified):
 - **FR-CB52 (S)** Settlement accounts must be cash/bank accounts of the Company (D7-style, log-first, then enforce) so a payment cannot be settled into an arbitrary account.
 
 **Existing Companies**
-- **FR-CB60 (M)** A use case adds missing template accounts to an existing Company, idempotently and reporting what it added or skipped (a code already used by a different account is skipped and reported, never overwritten): the second account `1010` (of the kind the jurisdiction does not give the prime account) and also the VAT control account `2150` (the same fix queued after the Period scoping). No unique constraint on `(company_id, code)` exists, so the use case checks in code.
-- **FR-CB61 (S)** WEB offers "Add a bank account" or "Add a cash account" when a Company lacks the second kind (Companies created before this change have only `1000`), using ordinary account creation, so no mass backfill of `1010` is needed for the first owners.
+- **FR-CB60 (M)** A use case adds missing standard accounts to an existing Company, idempotently and reporting what it added or skipped (a code already used by a different account is skipped and reported, never overwritten): the VAT control account `2150` (the same fix queued after the Period scoping) and the kind CASH on `1000`. It does not add a Bank account (D4). No unique constraint on `(company_id, code)` exists, so the use case checks in code.
+- **FR-CB61 (S)** WEB offers "Add a bank account" (and "Add a cash account") when the owner wants another book, using ordinary account creation with the kind, so Companies need no seeded second account.
 
 **Opening figures**
 - **FR-CB70 (S)** A cash or bank account's opening balance uses the existing opening-balance route (`POST .../accounts/{id}/opening-balance`), and the book's opening row shows it.
@@ -125,8 +126,61 @@ What GL has today (verified):
 1. **Cash flow** reads only `1000` today: if a Bank account is created before FR-CB40 ships, the cash-flow statement silently omits it. So FR-CB40 must ship **with or before** the first Bank account is created (backlog order enforces it; the Bank template seed is the last step of Release A, not the first).
 2. **`JournalSource.CASH_BOOK`:** a strict consumer decoding the enum would fail; T-check before the value is used.
 3. **Module-owned control account list (D5)** is by code today; a Company that renamed or re-coded them could slip a counter-account through. Identify them by the same resolvers the posting contexts use, not by code literals.
-4. **Reconciliation grandfathering:** a Company that reconciles `1000 Cash` today must be able to flag it BANK before D7 enforces (FR-CB02 allows CASH to BANK).
+4. **Reconciliation grandfathering:** a Company that reconciles `1000 Cash` today cannot flag it BANK (D4 fixes `1000` as CASH). Such a Company creates a bank account and moves its balance by a transfer; existing reconciliation records on `1000` stay readable. Whether any exist in production is not known to GL; a read-only count for CM or Femi before D7 is enforced: `select count(*) from bank_reconciliations br join accounts a on a.id = br.account_id where a.code = '1000'`.
 5. **Period interaction:** entries use the open-Period lookup the other posting routes use; when Period management lands, the books adopt its resolver with no change here.
-6. **Unconfirmed decisions:** D2 mechanics, D3, D5 to D8, and the per-country mapping in D4 need Femi's confirmation before the dependent tasks start.
-7. **Mobile money (parked, not guessed).** `docs/External_Regulatory_And_Banking_API_Integrations_Requirements_Specification.md` finds mobile money (Orange Money, MTN MoMo) the only accessible digital channel in SL and LR. Whether a wallet is a CASH account, a BANK account (reconcilable against a wallet statement) or a third kind is a question for Femi; this SRS does not decide it. It needs no schema change to defer: a wallet can be created today as a CASH or BANK account.
-8. **Jurisdiction currency.** The prime account carries the Company's base currency, which is set per Company at creation; this SRS does not map currency to jurisdiction (only SLE is onboarded for the Mano River four, per the existing currency decision).
+6. **Decision state:** D2 mechanics and D5 to D8 are confirmed by Femi (2026-10-10, via CM). D1, D3 and D4 are Femi's own words. Open: item 7 and the questions in section 9.7.
+7. **Currency mapping (needs Femi).** The jurisdiction YAMLs give: UK GBP, IE EUR, NG NGN, SL SLE. For Liberia, Guinea and Cote d'Ivoire they record LRD, GNF and XOF as `onboarded: false`, with the standing decision (2026-08-22) that this system recognises only SLE across the Mano River operation. Proposed seed, following that decision: LR, GN, CI = SLE. If Femi's rule ("the currency in which that tax jurisdiction operates") should mean the native LRD, GNF, XOF, those currencies must first be onboarded (GNF and XOF are zero-decimal and would be `Money`'s first), a larger change this SRS does not make.
+8. **Mobile money is closed.** A wallet is an ordinary BANK cash book (Femi, 2026-10-10); there is no wallet kind and nothing parked.
+
+## 9. Foreign-currency accounts (Femi, 2026-10-10): scope extension, phased
+
+Femi added: "A company can then open other cash/bank accounts denominated in other currencies as they wish." This reverses the earlier base-currency-only decision (D3). It is a real extension with a known dependency, so it is phased and **no foreign-currency account is built in Phase 1**.
+
+### 9.1 What the code has today (verified on master)
+
+- `Money` always carries a currency and refuses to combine two currencies. `Company.baseCurrency` is the one currency a Company reports in.
+- `Account` has **no currency**. `JournalLine.amount` is a `Money`; `JournalEntry.validateLines` requires the lines **of each currency to balance on their own**, so an entry that mixes GBP and USD lines must balance in GBP and in USD separately. There is no stored base-currency equivalent and no rate on a line.
+- Some IAS 21 pieces exist: an `FXRate` value (`domain/ledger/fx_rate.kt`) and `RecordFXRevaluationUseCase`, a period-end revaluation of a **foreign-currency receivable**, where the caller supplies the rate and the currently recorded home value and GL posts only the delta to a caller-named FX gain/loss account. Nothing stores an FX position, an account's currency, a rate table, or a realised-gain calculation.
+- Bank reconciliation refuses any currency other than the Company's base currency (`CurrencyMismatch`).
+- The trial balance, balance sheet, cash-flow statement, working capital and the new cash book all assume one currency (they build `Money` with the base currency and would throw on a foreign line).
+- Standing decision (2026-08-22): only SLE is onboarded across the Mano River operation; LRD, GNF and XOF are reference only. GBP, EUR and NGN are named in the jurisdiction YAMLs; USD is named in the spec's v1 currency list.
+
+### 9.2 What an account currency means
+
+Proposal: each cash and bank account carries its own `currency` (an ISO code). For `1000`, and for every account the owner opens without choosing, it is the Company's primary currency from its jurisdiction (D3). A foreign-currency account holds its balance in its own currency; the Company still reports in its base currency, so every report needs a translation rule (9.4).
+
+### 9.3 How a foreign receipt, payment or transfer posts (the design choice)
+
+Two shapes are possible, and the choice is architectural, so it is for the IAS 21 design pass and not made here:
+- **A. Dual-amount lines.** A line keeps its amount in the account's currency and gains a stored base-currency equivalent and the rate used. Reports sum the base equivalent. Cleanest for reporting; changes `JournalLine` and every consumer that reads lines.
+- **B. Per-currency clearing pairs.** Use only the existing per-currency balancing: debit the USD bank and credit an FX clearing account in USD; debit the FX clearing account in GBP and credit sales in GBP. No change to lines, but the clearing account's two currency balances must be revalued, and reports need a translation layer anyway.
+
+**Rate source and who enters it** (Femi's call): a rate typed by the person at entry (simple, auditable, but error-prone for non-accountants), or a daily rate table GL keeps and offers as the default, with a manual override. A transfer between a base-currency and a foreign account needs the rate and the amount on **both** sides; the difference to the rate on the books is the realised gain or loss.
+
+**Realised and unrealised.** A realised FX gain or loss arises when a foreign balance is spent or converted at a rate different from the rate it was booked at. An unrealised gain or loss arises at period end on the open foreign balance, revalued at the closing rate (IAS 21.23 and .28). Both need FX gain and loss accounts in the chart (today `RecordFXRevaluationUseCase` takes a caller-named account and the templates seed none), and the unrealised one needs a revaluation run per foreign cash/bank account per period, extending the existing use case from receivables to bank balances.
+
+### 9.4 Reporting currency
+
+The books report in the Company's base currency. Each foreign account shows two figures in its book: its own currency (the real balance) and the base-currency equivalent (at the book rate for the running balance, and at the closing rate for the period-end figure). The trial balance and balance sheet translate foreign accounts at the closing rate, with the revaluation difference in FX gain/loss. The cash-flow statement (IAS 7) translates foreign cash flows at the rate on the date, with the effect of exchange-rate changes on cash shown as its own line (IAS 7.28). None of this exists.
+
+### 9.5 Reconciling a foreign account
+
+A bank statement for a USD account is in USD. Reconciliation must compare the statement and the account in the **account's** currency, so `CurrencyMismatch` becomes "statement currency must equal the account's currency", the tie-out compares account-currency balances, and matching is by account-currency amounts. Realised FX differences on matched lines post as a separate adjustment, not inside the match.
+
+### 9.6 Phasing and sizes
+
+| Phase | Contents | Size (GL, rough) |
+|---|---|---|
+| **1: primary-currency books** (this SPUTO as drafted; the first slice already started) | Account kind, books, cash-flow fix, entries, reconciliation, all in the Company's one currency. The Company's currency comes from its jurisdiction. No account currency field. | as in the backlog, about 13.75 days |
+| **2a: IAS 21 design** | Decide A or B, rate source, FX accounts, translation rules, reporting; a SPUTO of its own. | about 2 days, docs only |
+| **2b: foreign-currency accounts** | Account `currency` field and migration (1); translation in books, trial balance, balance sheet, cash flow (3); foreign receipts, payments, transfers with rate capture and realised gain/loss (3); period-end revaluation of foreign bank balances (2); reconciliation in account currency (1.5); SOP/POP/HR settle into a foreign account with a rate (2); tests, isolation, mutation checks (2). | about 14.5 days, **provisional until 2a**, plus WEB |
+
+Phase 1 is unaffected by Phase 2 except for one cheap precaution: new cash-book code never assumes the Company currency in a place Phase 2 would have to untangle (the book reads the account's currency through a single accessor that returns the base currency until the field exists).
+
+### 9.7 Questions for Femi (his call)
+
+1. **Which currencies may a Company open?** Any ISO currency, or a curated list per jurisdiction (for example GBP, EUR, USD, NGN, SLE)? The standing decision names only SLE for the Mano River four; "as they wish" needs his explicit word on LRD, GNF and XOF, which are zero-decimal (GNF and XOF would be `Money`'s first) and not onboarded.
+2. **Rate source and entry:** typed per entry, a rate table with override, or both?
+3. **Is the Company's base currency still the single reporting currency**, with foreign accounts translated into it (the assumption above)?
+4. **A and B in 9.3:** does he want the architectural choice made in the IAS 21 design pass (recommended), or a view now?
+5. **Order of work:** Phase 1 first and ship, then 2a and 2b (recommended), or hold the Cash Book until foreign accounts are designed?
