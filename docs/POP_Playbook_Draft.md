@@ -1,6 +1,6 @@
 PURCHASE ORDER PROCESSING (POP) PLAYBOOK (draft for Omniview's Playbooks tab, service POP)
 
-Written by the POP session, first 2026-10-07, refreshed 2026-10-10 from the code on fish-purchase-order-processing master (commit 52d01cd, deployed as task definition :36, the T15 multi-Tenant slice P1 to P4). Plain text so it can be pasted straight into the console. Everything below is what the code does TODAY. The last section lists what is NOT built or not deployed, so nobody promises it to a customer. Update this in the same change as the code it describes. The multi-Tenant slice is deployed and verified by tests, but its first real run against a second Tenant is the combined UAT sitting, so treat that part as not yet exercised in production.
+Written by the POP session, first 2026-10-07, refreshed 2026-10-10 from the code on fish-purchase-order-processing master (commit b47c0e5, deployed as task definition :37: the T15 multi-Tenant slice P1 to P4 and T7, the GL-first posting). Plain text so it can be pasted straight into the console. Everything below is what the code does TODAY. The last section lists what is NOT built or not deployed, so nobody promises it to a customer. Update this in the same change as the code it describes. The multi-Tenant slice is deployed and verified by tests, but its first real run against a second Tenant is the combined UAT sitting, so treat that part as not yet exercised in production.
 
 PLAYBOOK CONTENTS (per docs/Playbook_Definition.md)
 1. Operator sheet: this document.
@@ -52,11 +52,14 @@ A: Every order line must carry a VAT category before it can be matched; the mess
 Q: Three-way match: 409 invalid_match.
 A: The match is not allowed from the order's current status (it must be fully received) or the match came back MISMATCHED. Nothing was posted. If the Company has a match tolerance set and the request carried the supplier invoice's quantities and prices, POP works out the verdict itself: invoiced quantity is compared with what was RECEIVED, price with the ordered price, and a different currency is always a mismatch. If either is missing, the person's own MATCHED/MISMATCHED verdict is used.
 
+Q: The match or the payment timed out or failed. Can pressing it again post twice?
+A: Not for an identical request: both calls send the ledger a key built from the order and everything sent, so a retry after a lost reply or a failed save returns the SAME journal entry instead of posting again, and two simultaneous presses post once (POP runs one instance; a second instance would need the ledger's own claim-first lock, which does not exist yet). The one gap: a retry with a CHANGED date or account is a new posting, so if the first call did succeed at the ledger and the person changes the date, it can post twice. Resubmit the same values. Order creation, sending, receiving and return steps have no such key.
+
 Q: 409 posting_context_unavailable.
 A: The ledger could not give POP the accounts or open period it needs. Most often the Company has no open accounting period. Nothing was recorded. The Company's accountant opens a period; missing accounts go to GL.
 
 Q: gl_engine_call_failed (status is the ledger's own: 409 closed period, 400, 503).
-A: The ledger refused or did not answer. For a match or a payment nothing is saved when this happens, and it can be retried once the cause is fixed.
+A: The ledger refused or did not answer. Since 2026-10-10 (T7) a match or a payment posts to the ledger FIRST and records its own state only when the ledger accepts, so on a refusal, an error or a timeout NOTHING is saved and the same request can be tried again once the cause is fixed. Two cautions. (1) An order that was matched BEFORE T7 and refused at the ledger may be stuck in MATCHED with no journal entry and no invoice; do not pay it, and escalate (the fix is a database reset of its status to FULLY_RECEIVED, done by the POP session with CM). (2) The ledger replays a refusal it has already answered for an IDENTICAL request, even after the cause is fixed (for example a period reopened under the same id); changing anything sent, such as the date, starts a fresh attempt. Ask the person to resubmit the same values on a plain retry, and to change the date only when they mean to.
 
 Q: 409 facility_liability_account_not_configured when paying.
 A: The payment is made by the bank on the deal's behalf and the Company's chart of accounts has no trade finance facility liability account (code 2300). Create it in GL. Nothing was posted.
@@ -97,7 +100,7 @@ unauthorized - bad or missing sign-in. forbidden - signed in but not allowed (re
 
 NOT BUILT, NOT DEPLOYED YET, OR NOT YET EXERCISED (do not promise these)
 - (Closed 2026-10-07, for the record.) Two gaps of one kind, both fixed and live. (1) Eight "nested" routes (accept/reject a negotiation proposal, acknowledge/resolve a discrepancy report, approve/reject/dispatch/credit a return) used to let a person with write access in one Company act on another Company's record by pairing it with a purchase order of their own: fixed in d178982, merged b024f22. (2) Supplier activate/deactivate, creating a purchase order and recording an opening payable looked a supplier up by id alone, so another Company's supplier could be changed or used: fixed in beedd7f, merged 55162f2. A record from another Company now answers exactly like a missing one. (3) The same ownership check for those eight routes now also sits inside the five use cases behind them (effdcd1, merged 1a5f555, deployed as task definition :30), so a future route cannot forget it.
-- Protection against a double click or retry on any POP route (no Idempotency-Key anywhere): two identical create, match or pay requests are handled as the order's status allows, nothing more. A planned fix for return dispatch is T6 below.
+- Protection against a double click or retry on routes other than match and payment (no Idempotency-Key on create, send, receive-line or the return steps): two identical requests are handled as the order's status allows, nothing more. Match and payment are protected since 2026-10-10 (see above). A planned fix for return dispatch is T6 below.
 - A retry path or posted marker for a return whose dispatch failed at Inventory (see above).
 - Per-receipt identity, receipt corrections, and any link between a POP receipt and the IM stock receipt.
 - A screen or API to read the audit log; any rule that stops the creator approving or paying their own order (T9b); approval or separation of duties for the three-way match, payment and return approval (decisions with Femi, T9c).
@@ -133,7 +136,7 @@ OPEN TASKS
 - P0-1c DONE 2026-10-07: the nested-id ownership checks also sit inside the use cases (effdcd1, merged 1a5f555, live as :30 after CM re-triggered the build with an empty commit, 22da11e).
 - P0-2 Check the same shape in SOP and IM: any route with a nested id under a parent path id (looked up by its own id alone). Asked of both on 2026-10-07; their own sessions own the check.
 - T6 Goods-issue idempotency on Return Outwards dispatch: BUILT and HELD (branch feature/return-dispatch-idempotency, migration V17, rebased on the T15 work) until IM's real-token verification of its side. Sends Idempotency-Key = return-outwards:{companyId}:{returnOutwardsId}, stores the date and contra account of the first attempt so a retry sends an identical request, stores IM's journal-entry id as the posted marker, and lets a DISPATCHED-but-unposted return be retried. Known limit: the stored date cannot change, so a return refused because that date's period is closed needs the period reopened. Until it ships, a failed IM call on dispatch is not retryable (see the Returns section).
-- T7 Match and payment idempotency (own key per match and per payment; GL's Idempotency-Key already exists on its record routes).
+- T7 DONE 2026-10-10 (POP :37): match and payment post to the ledger first with a deterministic Idempotency-Key and record their own state only on success; a per-order lock; no migration. Open on the ledger side, queued by CM: cache only successful answers, and a claim-first lock.
 - T8 Partial supplier payments: track amount paid against the invoice, close the order and settle the invoice only when covered.
 - T9a DONE 2026-10-08 (audit log, above).
 - T9b Separation of duties on approval: approve needs the approve capability, settings need administer, the approver differs from the creator except for the Owner (whose self-approval is allowed and flagged in the audit row), per the RBAC plan (docs/RBAC_SPUTO.md). Waits for the platform capability model (T5a) and Femi's decisions; about 4 days after that.
@@ -144,9 +147,9 @@ OPEN TASKS
 - Parked, not mine: NFR-PO05 facility headroom (needs the bank's terms), GL's suspenseAccountId in purchase-posting-context.
 
 PART 6 - ORDER (foundations before features)
-1. Done: P0 security gaps, audit log, PO numbers, multi-Tenant P1 to P4.
+1. Done: P0 security gaps, audit log, PO numbers, multi-Tenant P1 to P4, GL-first posting with idempotency keys (T7).
 2. Next, gated by others: T6 (needs IM's real-token verification), then the first real multi-Tenant run in the combined UAT sitting.
-3. T7 (match and payment idempotency), then T8 (partial payments): payment correctness before control changes, and neither needs a decision.
+3. T8 (partial payments): payment correctness before control changes, and it needs no decision. T7 is done.
 4. T9b and T9c once Femi decides and the capability model exists; T10 after IM and POP agree one owner for the receipt.
 5. T15 M2 before a second real customer relies on the database, not only POP's code, for isolation.
 6. T11 last; it depends on the platform-wide import layer.
