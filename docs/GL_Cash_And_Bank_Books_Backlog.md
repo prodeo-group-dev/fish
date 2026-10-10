@@ -25,21 +25,21 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| T1 | `CashBookKind` and `Account.cashBookKind` with the ASSET-only invariant; migration V33 (`cash_book_kind`, CHECK, backfill every account `1000` to CASH; no jurisdiction dependency); repository mapping; domain and persistence tests. **Started.** | GL | C1 | 1 | in progress |
-| T2 | Account routes: optional `cashBookKind` on create; `PUT .../accounts/{id}/cash-book-kind`; field on `GET accounts`; BANK cannot be cleared while a reconciliation exists; route-inventory and isolation-matrix classification (people-only, WRITE). | GL | T1 | 1 | open |
-| T1b | Jurisdiction currency: `jurisdictions.currency` column and seed (UK GBP, IE EUR, NG NGN, SL SLE; LR, GN, CI as Femi decides, proposed SLE); `AddCompanyToTenantUseCase` derives the Company currency; `companyBaseCurrency` optional and validated; tests. **Held until the SRS redraft is merged and Femi confirms the LR, GN, CI currencies.** | GL | C0 | 1 | held |
-| T3 | "Add missing standard accounts" use case and route (the VAT control account `2150`, kind CASH on `1000`; no Bank seeded; skips and reports codes already used; idempotent) with tests including the `13de72e4` shape (chart without 2150). | GL | T1 | 1 | open |
+| T1 | `CashBookKind` and `Account.cashBookKind` with the ASSET-only invariant; migration V33 (`cash_book_kind`, CHECK, backfill every account `1000` to CASH; no jurisdiction dependency); repository mapping; domain and persistence tests. **Started.** | GL | C1 | 1 | built, `gl/cash-bank-books` e1ef80c; HIGH-approved by CM, held for release after the sitting |
+| T2 | Account routes: optional `cashBookKind` on create; `PUT .../accounts/{id}/cash-book-kind`; field on `GET accounts`; BANK cannot be cleared while a reconciliation exists; route-inventory and isolation-matrix classification (people-only, WRITE). | GL | T1 | 1 | built, `gl/cash-bank-books` e1ef80c; HIGH-approved by CM, held for release after the sitting |
+| T1b | Jurisdiction currency: `jurisdictions.currency` column and seed (UK GBP, IE EUR, NG NGN, SL SLE; LR, GN, CI as Femi decides, proposed SLE); `AddCompanyToTenantUseCase` derives the Company currency; `companyBaseCurrency` optional and validated; tests. **Held until the SRS redraft is merged and Femi confirms the LR, GN, CI currencies.** | GL | C0 | 1 | built, `gl/cash-bank-books` e1ef80c; HIGH-approved by CM, held for release after the sitting |
+| T3 | "Add missing standard accounts" use case and route (the VAT control account `2150`, kind CASH on `1000`; no Bank seeded; skips and reports codes already used; idempotent) with tests including the `13de72e4` shape (chart without 2150). | GL | T1 | 1 | built, `gl/cash-bank-books` d4dbf2e (route `POST /companies/{id}/standard-accounts`) |
 
 ## W2: books and cash flow (Release A, part 2)
 
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| T4 | Repository method for the posted lines of one account between two dates (uses `idx_journal_lines_account_id`); `GET .../cash-books` list with balances. | GL | T1 | 1 | open |
-| T5 | `GET .../cash-books/{accountId}?from=&to=`: opening, rows, running balance, totals, reversal flag, `range_too_large`, 409/404 rules; running balance equals the trial-balance figure in a property test (NFR-CB02). | GL | T4 | 1.5 | open |
-| T6 | **Cash-flow statement over all CASH and BANK accounts** (IAS 7 cash and equivalents; transfers excluded); regression: a `1000`-only Company gives identical output to today. | GL | T1 | 1 | open |
-| T7 | Posting contexts (sales, purchase, payroll) return additive `cashAndBankAccounts`; existing `cashAccountId` unchanged. | GL | T1 | 0.5 | open |
+| T4 | Repository method for the posted lines of one account between two dates (uses `idx_journal_lines_account_id`); `GET .../cash-books` list with balances. | GL | T1 | 1 | built, `gl/cash-bank-books` e1ef80c; HIGH-approved by CM, held for release after the sitting |
+| T5 | `GET .../cash-books/{accountId}?from=&to=`: opening, rows, running balance, totals, reversal flag, `range_too_large`, 409/404 rules; running balance equals the trial-balance figure in a property test (NFR-CB02). | GL | T4 | 1.5 | built, `gl/cash-bank-books` e1ef80c; HIGH-approved by CM, held for release after the sitting |
+| T6 | **Cash-flow statement over all CASH and BANK accounts** (IAS 7 cash and equivalents; transfers excluded); regression: a `1000`-only Company gives identical output to today. | GL | T1 | 1 | built, `gl/cash-bank-books` e1ef80c; HIGH-approved by CM, held for release after the sitting |
+| T7 | **Dropped (2026-10-10).** Adding `cashAndBankAccounts` to the posting-context responses would break SOP, POP, IM and HR, which decode GL's responses strictly. Instead WEB reads the list from GL's own `GET /companies/{id}/cash-books` (a people route, built) and sends the chosen account id in the request each service already takes; GL validates it (T15). No posting-context change, no consumer-first step. | GL | none | 0 | dropped |
 | T8 | `reconciled` flag per row for bank accounts from completed reconciliations (Should). | GL | T5 | 0.5 | open |
-| T9 | Seed `1000 Cash` with kind CASH in all five chart templates and `AddCompanyToTenantUseCase` (D4). No Bank account is seeded. **Last item of Release A**, after T6 is live and verified (the first Bank account any owner creates must already appear in cash flow). | GL | T6, T1 | 0.5 | open |
+| T9 | Seed `1000 Cash` with kind CASH in all five chart templates and `AddCompanyToTenantUseCase` (D4). No Bank account is seeded. **Last item of Release A**, after T6 is live and verified (the first Bank account any owner creates must already appear in cash flow). | GL | T6, T1 | 0.5 | built, `gl/cash-bank-books` e1ef80c; HIGH-approved by CM, held for release after the sitting |
 | W-A | WEB: Cash and Bank section (list, book with range, print/CSV), "Add a bank account" prompt, honest empty states, layout checklist. | WEB | T2, T5 | WEB to size | open |
 
 **Release A gate:** T6 live and verified before T9. First Tenant's cash-flow figures unchanged (snapshot regression on `1000`-only Companies).
@@ -65,10 +65,17 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| T16 | SOP: cash sale and collection take a chosen `settlementAccountId` from `cashAndBankAccounts` (default `1000`). | SOP | T7 | SOP to size | open |
-| T17 | POP: supplier payment settlement picker from the same list. | POP | T7 | POP to size | open |
-| T18 | HR: pay run `cashAccountId` choice. | HR | T7 | HR to size | open |
-| W-C | WEB: account pickers on the three screens; reconcile action on bank accounts only. | WEB | T7, T16 to T18 | WEB to size | open |
+| T16 | SOP: cash sale and collection accept an optional `settlementAccountId` chosen from GL's cash-book list (default: the context's cash account, as today). A request field only; no decoding change. | SOP | T15 | SOP to size | open |
+| T17 | POP: supplier payment settlement picker; its request already carries `settlementAccountId`, so this is WEB plus POP validating nothing itself (GL does). | POP | T15 | POP to size | open |
+| T18 | HR: pay run accepts an optional chosen `cashAccountId` (default: the payroll context's). | HR | T15 | HR to size | open |
+| T18b | IM: stock receipts and issues settled in cash or bank (the contra account of `record-receipt` / `record-issue` can be a chosen cash or bank book); IM accepts the chosen id and passes it on. Added at CM's request 2026-10-10 so that SOP collections, POP payments, HR pay runs and IM settlements can all settle into a chosen book. | IM | T15 | IM to size | open |
+| W-C | WEB: account pickers on the SOP, POP, HR and IM screens, fed by `GET /companies/{id}/cash-books`; reconcile action on bank accounts only. Postings made by a service land as ordinary lines on the chosen account, so they appear in its book and reconcile through the same bank-reconciliation match as any other entry (matching is by entry, whatever its source). | WEB | T15, T16 to T18b | WEB to size | open |
+
+## Release conditions (from CM's HIGH review, 2026-10-10)
+
+- **WEB must stop sending `companyBaseCurrency`** (OnboardingWizard.tsx and AddCompanyForm.tsx send a user-chosen one) or send the jurisdiction's own, **before or in lockstep with** this GL release: once live, a currency that is not the jurisdiction's is refused with 409 `currency_not_supported_for_jurisdiction`.
+- V33 backfills `code = '1000' AND type = 'ASSET'` only, idempotently. A Company whose account `1000` is not an ASSET (a custom chart; no template produces one) keeps no kind, is no longer read as cash by the cash-flow statement (it needs an ASSET account coded 1000 or a flagged cash/bank account), and its cash flow answers 409 `no_cash_account` until one is created.
+- Nothing deploys before the combined UAT sitting.
 
 ## Sizes
 
