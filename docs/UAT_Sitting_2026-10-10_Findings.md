@@ -13,7 +13,7 @@ Source: the tester's report (`docs/reports/FiSH_UAT_Sitting_2026-10-10.md`, kept
 | # | Finding | Evidence | Owner |
 |---|---|---|---|
 | 1 | **PO line has no VAT category field; a SENT PO cannot be edited, so the three-way match is refused (400) for every order made in the UI.** PO currency defaults to USD, not the Company's. | POP 400 at 11:33:26 | POP + WEB |
-| 2 | **Inventory dashboard tile "Couldn't load":** WEB calls the removed flat `GET /api/items` on IM. | IM 404 x8 (11:18:43 ... 11:38:40) | WEB |
+| 2 | **Inventory dashboard tile "Couldn't load":** EA's dashboard calls the removed flat `GET /api/items` on IM (`EA/.../infrastructure/im/ktor_im_gateway.kt:23`, `listItems(bearerToken)`, no company id); WEB was checked and does not call it. Fix in EA: call `GET /companies/{companyId}/items` for the selected Company. | IM 404 x8 (11:18:43 ... 11:38:40) | **EA** (corrected 2026-10-11) |
 | 3 | **No UI to collect payment** on a credit invoice, **no UI for a sales return / credit note**. | tester | SOP + WEB |
 | 4 | **Bank reconciliation has no Complete control**; the match picker lists cash-book entries. | tester; GL 11:25:19, 11:25:40 | WEB (GL for the rule) |
 | 5 | **Undo row shows raw `JournalEntryId(value=...)`** (journal_entry.kt:91 builds `"Reversal of $id"` from a value class); reversal row order odd. | tester; code | GL (text), WEB (order) |
