@@ -48,8 +48,8 @@ Actors: **Owner** (Business Owner / Owner-Admin), **Accountant** (staff with WRI
 - **Traces:** FR-CB24, CB40.
 
 ## UC-CB8 Correct a wrong entry
-- **Actor:** Accountant (WRITE). **Main flow:** (1) Selects the entry in the book, "Undo". (2) GL posts a reversing entry (existing reversal use case). (3) Both rows show in the book; the balance is back; the user records the right entry.
-- **Alternate:** the entry was already reversed: 409. Entry in a closed Period: 409 (when Period close exists).
+- **Actor:** Accountant (WRITE). **Main flow:** (1) Selects the entry in the book, "Undo". (2) GL posts a reversing entry (a scoped Undo use case, written with the original's new status in one transaction). (3) Both rows show in the book; the balance is back; the user records the right entry.
+- **Alternate:** the entry was already undone: 409 `already_undone` (treat as done). The entry did not start in a cash or bank book (a sales collection, a supplier payment, a pay run, a journal): 409 `undo_elsewhere` with a token naming where to reverse it, and the row shows no Undo. Entry in a closed Period: 409 `period_not_open`.
 - **Traces:** FR-CB26, CB10.
 
 ## UC-CB9 Reconcile a bank account
@@ -58,11 +58,11 @@ Actors: **Owner** (Business Owner / Owner-Admin), **Accountant** (staff with WRI
 - **Alternate:** account is not BANK: `reconciliation_requires_bank_account` (log-first, then refused; D7). Balance tie-out is the existing switch (`enforceBalanceTieOut`), unchanged.
 - **Traces:** FR-CB30, CB31, CB14.
 
-## UC-CB10 Choose the cash or bank account when selling, paying or running payroll
-- **Actor:** Service on behalf of a person (SOP cash sale / collection, POP supplier payment, HR pay run). **Main flow:** (1) The service reads the posting context, which now lists `cashAndBankAccounts`. (2) WEB shows the choice (default: the Company's cash account `1000`, as today). (3) The service sends the chosen `settlementAccountId` / `cashAccountId`. (4) GL posts as today to that account.
-- **Alternate:** chosen account is not a cash/bank account of the Company: logged first, then 409 `settlement_account_not_allowed` (FR-CB52).
-- **Post:** the posting shows in that account's book with source of the originating module, not `CASH_BOOK`.
-- **Traces:** FR-CB50, CB51, CB52.
+## UC-CB10 Choose the cash or bank account when selling, paying, running payroll or receiving stock
+- **Actor:** a person using WEB, through SOP (cash sale, collection), POP (supplier payment), HR (pay run) or IM (stock settlement). **Main flow:** (1) WEB reads the Company's cash and bank books from GL (`GET /companies/{id}/cash-books`; no posting-context change). (2) The person picks one (default: account `1000`, the Cash Book). (3) WEB sends the chosen account id in the request field the service already has. (4) The service posts through GL as today, to that account.
+- **Alternate:** the chosen account is not a cash or bank book of the Company: today it is only logged (`WOULD REFUSE settlement_account_not_a_cash_book`); once enforced, 409 `settlement_account_not_a_cash_book` (FR-CB52).
+- **Post:** the posting shows in that account's book with the source of the originating module, not `CASH_BOOK`, and is reconciled like any other entry on a bank account. It is reversed in its own module, not by Undo in the book (FR-CB26).
+- **Traces:** FR-CB51, CB52.
 
 ## UC-CB11 Cash flow statement with cash and bank
 - **Actor:** Owner, Accountant, Reader; EA dashboard. **Main flow:** the statement sums cash and bank accounts as cash and cash equivalents: opening, closing, net cash flow; transfers between them are excluded.
