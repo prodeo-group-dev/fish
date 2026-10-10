@@ -38,7 +38,7 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 | T6 | **Cash-flow statement over all CASH and BANK accounts** (IAS 7 cash and equivalents; transfers excluded); regression: a `1000`-only Company gives identical output to today. | GL | T1 | 1 | open |
 | T7 | Posting contexts (sales, purchase, payroll) return additive `cashAndBankAccounts`; existing `cashAccountId` unchanged. | GL | T1 | 0.5 | open |
 | T8 | `reconciled` flag per row for bank accounts from completed reconciliations (Should). | GL | T5 | 0.5 | open |
-| T9 | Seed `1010 Bank` (BANK) and mark `1000` CASH in all five chart templates and `AddCompanyToTenantUseCase`. **Last item of Release A**: only after T6 is live and verified. | GL | T6, T3 | 0.5 | open |
+| T9 | Seed `1010 Bank` (BANK) and mark `1000` CASH in all five chart templates and `AddCompanyToTenantUseCase`. **Last item of Release A**: only after T6 is live and verified. | GL | T6 | 0.5 | open |
 | W-A | WEB: Cash and Bank section (list, book with range, print/CSV), "Add a bank account" prompt, honest empty states, layout checklist. | WEB | T2, T5 | WEB to size | open |
 
 **Release A gate:** T6 live and verified before T9. First Tenant's cash-flow figures unchanged (snapshot regression on `1000`-only Companies).
@@ -73,12 +73,12 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 
 | Release | GL days |
 |---|---|
-| A: T1 to T9 | 7.5 (T1 1, T2 1, T3 1, T4 1, T5 1.5, T6 1, T7 0.5, T8 0.5, T9 0.5; T9 closes the release) |
+| A: T1 to T9 | 8 (T1 1, T2 1, T3 1, T4 1, T5 1.5, T6 1, T7 0.5, T8 0.5, T9 0.5; T9 closes the release) |
 | B: T10 to T13 | 3.75 |
 | C: T14, T15 | 1 |
-| **Total GL** | **about 12.25 days** |
+| **Total GL** | **about 12.75 days** |
 
-WEB, SOP, POP and HR sizes are theirs. A shorter first slice if Femi wants something fast: **T1, T2, T4, T5, T6, T9 (about 5.5 days)** gives owners a bank account and a book, with cash flow correct, before any entry-side work.
+WEB, SOP, POP and HR sizes are theirs. A shorter first slice if Femi wants something fast: **T1, T2, T4, T5, T6, T9 (about 6 days)** gives owners a bank account and a book, with cash flow correct, before any entry-side work.
 
 ## What each session is asked
 
@@ -86,7 +86,7 @@ WEB, SOP, POP and HR sizes are theirs. A shorter first slice if Femi wants somet
 - **WEB:** read the SRS and use cases; design the Cash and Bank section and the pickers with the section-7 layout checklist; plain-language labels; tell GL anything the API shape should change before T5 and T11 are built.
 - **SOP, POP, HR:** nothing before Release C; they should read FR-CB50 to CB52 and confirm they can send a chosen account.
 - **EA:** no change expected; confirm no cash tile depends on `1000` alone.
-- **Femi:** confirm D2 to D8; say whether the five-and-a-half-day slice is the first release.
+- **Femi:** confirm D2 to D8; say whether the six-day slice is the first release.
 
 ## Verification before each release
 
