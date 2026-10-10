@@ -27,7 +27,7 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 |---|---|---|---|---|---|
 | T1 | `CashBookKind` and `Account.cashBookKind` with the ASSET-only invariant; migration (`cash_book_kind`, CHECK; `jurisdictions.prime_cash_book_kind` and `prime_account_name` with the proposed per-country seed; backfill each existing `1000` to its Company's jurisdiction kind); repository mapping; domain and persistence tests. | GL | C1, C0 | 1.5 | open |
 | T2 | Account routes: optional `cashBookKind` on create; `PUT .../accounts/{id}/cash-book-kind`; field on `GET accounts`; BANK cannot be cleared while a reconciliation exists; route-inventory and isolation-matrix classification (people-only, WRITE). | GL | T1 | 1 | open |
-| T3 | "Add missing template accounts" use case and route (`1010 Bank` and `2150`; skips and reports codes already used; idempotent) with tests including the 13de72e4 shape (chart without 2150). | GL | T1 | 1 | open |
+| T3 | "Add missing template accounts" use case and route (the second account `1010` of the kind the jurisdiction does not give the prime account, and `2150`; skips and reports codes already used; idempotent) with tests including the 13de72e4 shape (chart without 2150). | GL | T1 | 1 | open |
 
 ## W2: books and cash flow (Release A, part 2)
 
