@@ -103,3 +103,28 @@ For **POP/Femi:**
 ## 9. What this does not cover
 
 Returns outwards posting (dispatch already issues stock through IM against the AP control account; with GRNI in place its contra should be revisited by IM and POP together), partial payments (T8), and multi-currency receipts. All three are listed so nobody assumes they are settled.
+
+## 10. IM's half, proposed by POP for IM to approve or amend (added 2026-10-11)
+
+IM's session has not been reachable, so POP proposes what IM's side must do, from reading the contract it depends on. Nothing here is built, and IM owns every line of it.
+
+**What IM's receipt posts instead of crediting Accounts Payable: GRNI.**
+
+| # | Proposal | Why |
+|---|---|---|
+| I1 | A goods receipt that references a purchase order posts **Dr Inventory / Cr GRNI**. Today the contra defaults to the AP control account (`ItemRoutes.kt:228`: `request.contraAccountId ?: context.apControlAccountId`). | The invoice, not the receipt, creates the payable. Receiving goods you have not been billed for is an accrual (GRNI), cleared by POP's match. |
+| I2 | The GRNI account comes from GL's posting context (`grniAccountId`, GL's half), never from the caller's guess. If a Company has no GRNI account, a PO receipt is **refused with a clear error**, not silently posted to AP. | A silent fallback to AP would recreate the double recognition. |
+| I3 | Receipts that are NOT against a purchase order (opening stock, adjustments, stock-count corrections) keep their current contra. | They are not matched by POP, so there is no invoice to clear GRNI. |
+| I4 | The receipt carries the **PO number** (`PO-000123`, live since 2026-10-08) as its `purchaseOrderReference`, plus the line index, so receipts and POP's order lines can be paired. | One human reference both systems show; no id guessing. |
+| I5 | The receipt cost is the PO line's unit price times the quantity received, supplied by the caller (POP, or WEB until POP calls IM itself). The difference between this cost and the invoice is a price variance, settled in the GL half (question 6). | IM should not invent a cost; the order is the agreed price. |
+| I6 | IM exposes a read for POP's match: received quantity (and cost) **per PO reference and line**. | The match then compares against what IM actually holds, not only POP's own running total (seam B). |
+| I7 | A receipt idempotency key, as IM has for issues (key per receipt, the same body replays, a different body answers 422). | Today a lost reply on a receipt can post stock twice. |
+| I8 | **Return to supplier before the invoice** (dispatch before the match): Dr GRNI / Cr Inventory. **After the match:** Dr AP control / Cr Inventory (as today). POP already knows the order's status and passes the contra; IM only needs to accept GRNI as a valid contra on an issue. | A returned good that was never billed should reduce the accrual, not create a debit in AP. |
+| I9 | **Cutover.** Receipts already posted against AP stay as they are (test data pre-live, per the standing rule). The new contra applies to receipts recorded after the contract is live. No back-posting. | Avoids rewriting history; pre-live data is disposable. |
+
+**What POP will do on its side** once IM and GL have merged (section 4): route each line by the posting plan POP prepared (stock line, `itemType` GOODS with an `itemId`, goes to GRNI; the rest to expense or asset), send the PO number with each receipt it takes over (T10), and pass GRNI as the contra for a pre-match return.
+
+**IM, please answer:** approve, amend or reject I1 to I9; in particular I2 (refuse without a GRNI account), I5 (who supplies the cost) and I8 (GRNI as a valid contra on an issue). Until you do, POP changes nothing that touches IM.
+
+*Where the work that does not need an answer stands (2026-10-11):* POP has the item-link rule as a per-line posting plan (`PurchaseOrder.postingPlan()`, not yet used by the match), and a test that reproduces the double recognition end to end against models of IM's receipt and GL's obligation, with the target contract shown to be fully driven by that plan. What the match posts is unchanged.
+
