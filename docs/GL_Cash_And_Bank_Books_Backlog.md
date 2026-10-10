@@ -38,7 +38,7 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 | T5 | `GET .../cash-books/{accountId}?from=&to=`: opening, rows, running balance, totals, reversal flag, `range_too_large`, 409/404 rules; running balance equals the trial-balance figure in a property test (NFR-CB02). | GL | T4 | 1.5 | built, `gl/cash-bank-books` e1ef80c; HIGH-approved by CM, held for release after the sitting |
 | T6 | **Cash-flow statement over all CASH and BANK accounts** (IAS 7 cash and equivalents; transfers excluded); regression: a `1000`-only Company gives identical output to today. | GL | T1 | 1 | built, `gl/cash-bank-books` e1ef80c; HIGH-approved by CM, held for release after the sitting |
 | T7 | **Dropped (2026-10-10).** Adding `cashAndBankAccounts` to the posting-context responses would break SOP, POP, IM and HR, which decode GL's responses strictly. Instead WEB reads the list from GL's own `GET /companies/{id}/cash-books` (a people route, built) and sends the chosen account id in the request each service already takes; GL validates it (T15). No posting-context change, no consumer-first step. | GL | none | 0 | dropped |
-| T8 | `reconciled` flag per row for bank accounts from completed reconciliations (Should). | GL | T5 | 0.5 | open |
+| T8 | `reconciled` flag per row for bank accounts from completed reconciliations (Should). | GL | T5 | 0.5 | built, `gl/cash-bank-entries` a8f1528 (completed reconciliations only; null for a cash book) |
 | T9 | Seed `1000 Cash` with kind CASH in all five chart templates and `AddCompanyToTenantUseCase` (D4). No Bank account is seeded. **Last item of Release A**, after T6 is live and verified (the first Bank account any owner creates must already appear in cash flow). | GL | T6, T1 | 0.5 | built, `gl/cash-bank-books` e1ef80c; HIGH-approved by CM, held for release after the sitting |
 | W-A | WEB: Cash and Bank section (list, book with range, print/CSV), "Add a bank account" prompt, honest empty states, layout checklist. | WEB | T2, T5 | WEB to size | open |
 
@@ -48,10 +48,10 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 
 | # | Item | Owner | Depends on | Size | Status |
 |---|---|---|---|---|---|
-| T10 | `JournalSource.CASH_BOOK` (or fallback `MANUAL`, per C3). | GL | C3 | 0.25 | open |
-| T11 | Record receipt and payment use case and routes through `PostJournalEntryUseCase`; counter-account rules incl. module-owned control accounts resolved by the posting contexts' own resolvers, not code literals; `Idempotency-Key`; named errors; `cash_below_zero` warning (Should). | GL | T5, T10 | 2 | open |
-| T12 | Transfer between two cash/bank accounts (one entry, both books; no cash flow). | GL | T11 | 0.5 | open |
-| T13 | Tests that matter: idempotent replay; concurrency (two receipts at once); reversal shows two rows; counter-account refusals; isolation matrix and guess-the-id; source scan "all entries via PostJournalEntryUseCase" (NFR-CB03); mutation checks on each refusal. | GL | T11, T12 | 1 | open |
+| T10 | `JournalSource.CASH_BOOK` (or fallback `MANUAL`, per C3). | GL | C3 | 0.25 | built, `gl/cash-bank-entries` d303b45 |
+| T11 | Record receipt and payment use case and routes through `PostJournalEntryUseCase`; counter-account rules incl. module-owned control accounts resolved by the posting contexts' own resolvers, not code literals; `Idempotency-Key`; named errors; `cash_below_zero` warning (Should). | GL | T5, T10 | 2 | built, `gl/cash-bank-entries` d303b45 (entries), 2494878 (counter-accounts route); key behaviour in the handoff to CM |
+| T12 | Transfer between two cash/bank accounts (one entry, both books; no cash flow). | GL | T11 | 0.5 | built, `gl/cash-bank-entries` 757cec2 |
+| T13 | Tests that matter: idempotent replay; concurrency (two receipts at once); reversal shows two rows; counter-account refusals; isolation matrix and guess-the-id; source scan "all entries via PostJournalEntryUseCase" (NFR-CB03); mutation checks on each refusal. | GL | T11, T12 | 1 | built, `gl/cash-bank-entries` d303b45 to b594379; 26 mutation checks, 24 caught, 2 equivalent |
 | W-B | WEB: Money in / Money out / Move money forms in each book, plain-language counter-account picker, Undo. | WEB | T11, T12 | WEB to size | open |
 
 ## W4: tighten (Release C, part 1; refusals only, log-first)
@@ -76,6 +76,20 @@ Three releases, each shippable and each safe on its own. The ordering rule that 
 - **WEB must stop sending `companyBaseCurrency`** (OnboardingWizard.tsx and AddCompanyForm.tsx send a user-chosen one) or send the jurisdiction's own, **before or in lockstep with** this GL release: once live, a currency that is not the jurisdiction's is refused with 409 `currency_not_supported_for_jurisdiction`.
 - V33 backfills `code = '1000' AND type = 'ASSET'` only, idempotently. A Company whose account `1000` is not an ASSET (a custom chart; no template produces one) keeps no kind, is no longer read as cash by the cash-flow statement (it needs an ASSET account coded 1000 or a flagged cash/bank account), and its cash flow answers 409 `no_cash_account` until one is created.
 - Nothing deploys before the combined UAT sitting.
+
+## Release B: what changed from the plan, and the review findings (2026-10-11)
+
+- **Idempotency is the entry id, not the shared helper.** Receipts, payments and transfers require an `Idempotency-Key`; the entry id is derived from tenant, company, book, direction and key and stored only if absent (`JournalEntryRepository.insertIfAbsent`). A retry replays, a changed request is 422, a refused request does not spend its key, and simultaneous identical requests post once.
+- **Undo only for entries made in the book (CM's HIGH review, blocking finding).** Undo and `canUndo` apply to source `CASH_BOOK` only. A sales collection, a supplier payment, a pay run or a journal is refused with 409 `undo_elsewhere` and a token (SALES_COLLECTION, PURCHASE_PAYMENT, INVENTORY, FIXED_ASSETS, VAT, OPENING_FIGURES, PAYROLL, ORIGINAL_SCREEN), because its own module would otherwise still show it paid.
+- **The reversal is written in one transaction** (`JournalEntryRepository.recordReversal`): the reversing entry and the original's REVERSED status land together or not at all.
+- **`ReverseJournalEntryUseCase` has no HTTP route and no Company scoping**; the cash book has its own scoped Undo use case. A general-journal reversal route does not exist today and is not part of this work.
+- **Tokens added for refusals:** `VAT` (counter-account), `PAYROLL` and `ORIGINAL_SCREEN` (undo only).
+
+## Next for GL (not started)
+
+- **T15 (settlement-account validation, log-first):** about 1 day. Applies to the three routes whose request carries a cash or settlement account (SOP record-collection, POP record-payment, HR record-pay-run); not to IM (its contra account is legitimately a payable). Needs a new refusal in three use cases and routes, so CM's go first.
+- **T14 (reconciliation only on bank accounts, log-first):** about 0.5 day.
+- The services' request fields (T16 to T18b) and WEB's screens are theirs.
 
 ## Sizes
 
