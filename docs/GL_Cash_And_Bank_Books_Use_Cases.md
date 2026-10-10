@@ -75,6 +75,12 @@ Actors: **Owner** (Business Owner / Owner-Admin), **Accountant** (staff with WRI
 - **Post:** idempotent; running twice adds nothing the second time.
 - **Traces:** FR-CB60, CB61; the 2150 gap found on Company `13de72e4`.
 
+## UC-CB14 A new Company gets its prime account
+- **Actor:** Owner creating a Company (or GL on their behalf). **Pre:** the Company has a jurisdiction.
+- **Main flow:** (1) The Company is created. (2) GL seeds the chart as before, and the prime account `1000` and the second account `1010` take their kind and name from the jurisdiction (UK, IE, NG: `1000` is the bank, `1010` is cash; SL, LR, GN, CI: `1000` is cash, `1010` is the bank). (3) The Company's first opening balance, sales, collections, payments and payroll default to `1000`.
+- **Alternate:** unknown or disabled jurisdiction: `1000` is cash, `1010` is bank. A country added later by CM as reference data gets its own prime kind with no deploy.
+- **Traces:** FR-CB04, CB05, D4.
+
 ## UC-CB13 Opening balance of a cash or bank account
 - **Actor:** Owner, Accountant (WRITE). Uses the existing opening-balance route for the account; the book's first row shows the opening balance; the contra is Opening-balance equity as today.
 - **Traces:** FR-CB70.
@@ -89,3 +95,4 @@ Actors: **Owner** (Business Owner / Owner-Admin), **Accountant** (staff with WRI
 | One book per account | UC-CB3, 4 |
 | Services settle into them | UC-CB10 |
 | Existing Companies | UC-CB2, 12 |
+| The prime account depends on jurisdiction | UC-CB14 |

@@ -31,6 +31,7 @@ What GL has today (verified):
 ## 2. Overall description
 
 - **Users:** Business Owner and accountants (record and read books, reconcile); non-accountants record "money in" and "money out" in plain words; services (SOP/POP/IM/HR) choose a cash or bank account when they settle.
+- **The prime account:** `1000` is where the services default to (SOP cash sale, POP payment, HR pay run use it today), so it remains the default settlement account whatever its kind. A UK Company's `1000` is a bank account; a Sierra Leone Company's is cash.
 - **Principle kept:** GL stays generic (Ledger knows no business type). The kind is a ledger concept (as an expense classification is), not a Purse or school concept.
 - **Assumptions:** the Company's base currency is the only currency (Decision D3). Tenant and Company isolation exactly as every other route (T15). RBAC freeze: new routes use the existing `authorizeTenantFor{Read,Write}` levels, no new roles or permissions; new refusals only (see 7).
 
@@ -41,7 +42,7 @@ What GL has today (verified):
 | D1 | One book **per account**; no combined book. | **Femi, 2026-10-10** |
 | D2 | Books are books of original entry: receipts, payments and transfers are recorded in the book and post the journal. | Femi's requirement; mechanics proposed here |
 | D3 | Base currency only for now (reconciliation already refuses other currencies). | Proposed, confirm |
-| D4 | Chart templates gain `1010 Bank` (BANK); `1000 Cash` becomes CASH. Free code in every template (checked: 1000, 1100, 1200, 1300 are the only codes in the 10xx-13xx range). | Proposed, confirm |
+| D4 | **The prime account is `1000`, the first account every new Company is seeded with, and what it is depends on the Company's jurisdiction** (Femi, 2026-10-10). The jurisdiction decides the prime account's kind (BANK or CASH) and its name. A second account of the other kind is seeded at `1010` so every Company has both a cash and a bank account. The mapping is reference data on the `jurisdictions` table (a new `prime_cash_book_kind` and `prime_account_name` per row), so adding a country is a data insert by CM with no deploy. **Proposed mapping, Femi to confirm per country:** UK, IE, NG: prime `1000` = BANK named "Bank", `1010` = CASH named "Cash"; SL, LR, GN, CI: prime `1000` = CASH named "Cash", `1010` = BANK named "Bank". Mobile money (the real digital channel in SL and LR) is not a third kind here; parked, see section 8. | Femi's rule confirmed; mapping proposed |
 | D5 | Trade receipts and payments are **not** recorded through a book against module-owned control accounts (AR 1100, AP 2000, VAT 2150, Inventory 1300, Fixed Assets 1200/1210, Opening-balance equity 3900, Suspense 3910); they go through SOP collection / POP payment so AR/AP stay itemised. The cash book refuses them with a message naming the right screen. | Proposed, confirm |
 | D6 | New `JournalSource.CASH_BOOK` for entries from the books, so the audit trail shows original entry. Falls back to `MANUAL` if a consumer cannot take a new value (T-check in backlog). | Proposed |
 | D7 | Bank reconciliation only on BANK accounts, introduced log-first (as G3 was), then enforced. | Proposed |
@@ -53,8 +54,8 @@ What GL has today (verified):
 - **FR-CB01 (M)** An `Account` of type ASSET may carry `cashBookKind` = `CASH` or `BANK`; any other type may not (domain invariant, tested). Other accounts have none.
 - **FR-CB02 (M)** The kind is set when the account is created (`POST /companies/{id}/accounts` gains optional `cashBookKind`) and can be changed by `PUT /companies/{id}/accounts/{accountId}/cash-book-kind` (same shape as `expense-classification`). BANK cannot be cleared while a reconciliation exists for the account.
 - **FR-CB03 (M)** `GET .../accounts` returns `cashBookKind` (additive, nullable field).
-- **FR-CB04 (M)** Every chart template seeds `1000 Cash` (CASH) and `1010 Bank` (BANK), both CURRENT.
-- **FR-CB05 (M)** Existing accounts coded `1000` of type ASSET are backfilled to CASH by migration. No account is auto-flagged BANK.
+- **FR-CB04 (M)** Every chart template seeds the prime account `1000` and the second account `1010`, both CURRENT ASSET; their kinds and names come from the Company's jurisdiction (D4), read from `jurisdictions.prime_cash_book_kind` / `prime_account_name`. `ChartOfAccountsTemplate.accountsFor` therefore takes the jurisdiction; `AddCompanyToTenantUseCase` already has it. An unknown or disabled jurisdiction falls back to `1000` CASH "Cash" and `1010` BANK "Bank".
+- **FR-CB05 (M)** Existing accounts coded `1000` of type ASSET are backfilled by migration to the kind their Company's jurisdiction gives the prime account (UK, IE, NG BANK; SL, LR, GN, CI CASH). Names are not changed. No other account is auto-flagged. An owner can flip the kind (FR-CB02).
 - **FR-CB06 (M)** An owner can create further cash and bank accounts (several bank accounts, petty cash) with ordinary account creation.
 
 **The book (read)**
@@ -89,8 +90,8 @@ What GL has today (verified):
 - **FR-CB52 (S)** Settlement accounts must be cash/bank accounts of the Company (D7-style, log-first, then enforce) so a payment cannot be settled into an arbitrary account.
 
 **Existing Companies**
-- **FR-CB60 (M)** A use case adds missing template accounts to an existing Company, idempotently and reporting what it added or skipped (a code already used by a different account is skipped and reported, never overwritten): `1010 Bank` and also the VAT control account `2150` (the same fix queued after the Period scoping). No unique constraint on `(company_id, code)` exists, so the use case checks in code.
-- **FR-CB61 (S)** WEB offers "Add a bank account" when a Company has none, using ordinary account creation with the BANK kind, so no mass backfill is needed for the first owners.
+- **FR-CB60 (M)** A use case adds missing template accounts to an existing Company, idempotently and reporting what it added or skipped (a code already used by a different account is skipped and reported, never overwritten): the second account `1010` (of the kind the jurisdiction does not give the prime account) and also the VAT control account `2150` (the same fix queued after the Period scoping). No unique constraint on `(company_id, code)` exists, so the use case checks in code.
+- **FR-CB61 (S)** WEB offers "Add a bank account" or "Add a cash account" when a Company lacks the second kind (Companies created before this change have only `1000`), using ordinary account creation, so no mass backfill of `1010` is needed for the first owners.
 
 **Opening figures**
 - **FR-CB70 (S)** A cash or bank account's opening balance uses the existing opening-balance route (`POST .../accounts/{id}/opening-balance`), and the book's opening row shows it.
@@ -126,4 +127,6 @@ What GL has today (verified):
 3. **Module-owned control account list (D5)** is by code today; a Company that renamed or re-coded them could slip a counter-account through. Identify them by the same resolvers the posting contexts use, not by code literals.
 4. **Reconciliation grandfathering:** a Company that reconciles `1000 Cash` today must be able to flag it BANK before D7 enforces (FR-CB02 allows CASH to BANK).
 5. **Period interaction:** entries use the open-Period lookup the other posting routes use; when Period management lands, the books adopt its resolver with no change here.
-6. **Unconfirmed decisions:** D2 mechanics, D3 to D8 need Femi's confirmation before the dependent tasks start.
+6. **Unconfirmed decisions:** D2 mechanics, D3, D5 to D8, and the per-country mapping in D4 need Femi's confirmation before the dependent tasks start.
+7. **Mobile money (parked, not guessed).** `docs/External_Regulatory_And_Banking_API_Integrations_Requirements_Specification.md` finds mobile money (Orange Money, MTN MoMo) the only accessible digital channel in SL and LR. Whether a wallet is a CASH account, a BANK account (reconcilable against a wallet statement) or a third kind is a question for Femi; this SRS does not decide it. It needs no schema change to defer: a wallet can be created today as a CASH or BANK account.
+8. **Jurisdiction currency.** The prime account carries the Company's base currency, which is set per Company at creation; this SRS does not map currency to jurisdiction (only SLE is onboarded for the Mano River four, per the existing currency decision).
