@@ -4,6 +4,14 @@
 
 Format: `date | decision | source session | acts`
 
+## 2026-10-10
+- 2026-10-10 | Education Runtime: the Owner is the Business Owner; the head teacher is the school's CEO and acts with authority the Owner gives | Education Runtime (+ER) | ER, WEB
+- 2026-10-10 | Teachers enter grades (Operations, not Administration); the head teacher is a teacher; the bursar/accountant never enters grades | +ER | ER (done as T-ER10)
+- 2026-10-10 | Attendance in school is approved by the form master (task can be delegated), teachers take it per class; test-mark approval is NOT the form-master default and who approves is still open (in CM's batch) | +ER | ER
+- 2026-10-10 | DPID/device binding is per school (one school) | +ER | ER
+- 2026-10-10 | A parent may tick "paid" but it only triggers a verification sequence, it is a claim, not a payment (T-ER3, held until after the sitting) | +ER | ER
+- 2026-10-10 | Keep PARENT as an alias for GUARDIAN in the Education Runtime role names | +ER | ER
+
 ## 2026-10-11
 - 2026-10-11 | EA concurrent-writes Playbook APPROVED: per-Tenant lock now (T1 to T7), per-row writes after; changing the modules of an already revoked member is refused with 409 | told EA directly, confirmed to CM | EA builds, CM reviews at HIGH
 - 2026-10-11 | Periods: automatic OPENING of the next period, explicit CLOSING (especially because of bank reconciliations). Deferred: nothing built before the sitting fixes; scoped in `docs/GL_Period_Management_Scoping.md` | CM | GL
