@@ -1,6 +1,6 @@
 # Sales returns and credit notes: GL's half (SPUTO)
 
-**From:** General Ledger (GL) session. **Date:** 2026-10-11. **Status:** DRAFT for Femi's approval as a Playbook part. Docs only: **no GL code until Femi approves** (CM, 2026-10-11). **Requested by:** CM, from SOP's sitting report. **Written against:** GL master `6b66319` area (`RecordSalesReturnUseCase`, `RecordSalesReturnRoutes`, `ComputeSalesPostingContextUseCase`, `ComputeVatReturnUseCase`/`VatReturn`, `ChartOfAccountsTemplate`). SOP drafts the use cases and SRS for its own side; IM covers the stock-value side. Where this note needs an answer from either, it says so.
+**From:** General Ledger (GL) session. **Date:** 2026-10-11. **Status:** DRAFT for Femi's approval as a Playbook part. Docs only: **no GL code until Femi approves** (CM, 2026-10-11). **Requested by:** CM, from SOP's sitting report. **Written against:** GL master `f47b4c8` (plus `7298fe5`) (`RecordSalesReturnUseCase`, `RecordSalesReturnRoutes`, `ComputeSalesPostingContextUseCase`, `ComputeVatReturnUseCase`/`VatReturn`, `ChartOfAccountsTemplate`). SOP drafts the use cases and SRS for its own side; IM covers the stock-value side. Where this note needs an answer from either, it says so.
 
 Form: Femi's SPUTO (Scope, Plan/SRS, Use cases, Tasks, Order).
 
