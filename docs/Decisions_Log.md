@@ -27,5 +27,9 @@ Format: `date | decision | source session | acts`
 - 2026-10-11 | Business Owner dashboard additions approved in direction, in this order: a "Needs your attention" box (pending approvals, overdue receivables and payables, outstanding verification), money owed to you / you owe with overdue highlighted, next-due list, cash over time (after the cash book); screens built by WEB, new fields added to EA's dashboard response with consumers declaring them first; brief at docs/EA_Dashboard_At_A_Glance_Brief.md | EA (told directly) | WEB, EA, CM
 - 2026-10-11 | VAT category: IM owns it per product or service item (services are IM items); a sales line takes a COPY of the item's category when it is ordered and that copy never changes afterwards, so a posted invoice reprints exactly as issued even if IM later changes the item; nobody types the category on a line, and SOP reads it from IM at order time (a new SOP-to-IM read, to be agreed in IM's Playbook); the VAT figure itself is calculated by GL, which holds the rates (Femi: "Very true" / "Exactly") | SOP (Femi told SOP directly) | IM (Playbook + service items), SOP (read at order time), GL (VAT figure quote), WEB
 
+## 2026-10-12
+- 2026-10-12 | CI/CD reliability Playbook APPROVED in full (T1 to T8, `docs/CI_Reliability_SPUTO.md`); Femi granted the GitHub CLI token the `admin:repo_hook` scope so CM maintains the Jenkins webhooks (they are plain webhooks, not GitHub Actions; Actions stay discarded) | CM | CM
+- 2026-10-12 | All Jenkins webhooks now send `push` + `pull_request`; `scripts/ci/webhooks.sh check` verifies it | CM | CM
+
 ## Earlier, still in force
 - Only CM pushes, merges and deploys. Coordination is the prime directive. Everything in production is test data until Femi announces the Live switch. RBAC freeze: only add-a-deny changes without CM. Unknown keys are never tolerated in auth payloads (strict decoding). SLE is the only onboarded currency across the Mano River operation.
