@@ -100,7 +100,7 @@ Researched options for async events, at the expected volume (hundreds to low tho
 | A7 | ER | error body to `{error, detail}`; align the base URL convention (see section 9) | 0.25 d |
 | A8 | every client | a request and connect timeout on every service client | 0.5 d |
 | A9 | SOP, IM, POP, HR | add the missing Idempotency-Keys (sales return, inventory receipt, opening AP import, leave utilization) | 1.5 d |
-| A10 | Omniview, CM | resolve the Omniview support-card route that EA does not seem to have | 0.1 d |
+| A10 | Omniview, CM | closed: the support-card route is deliberately unbuilt in EA (Femi, 2026-10-05, owner approval first); Omniview fails soft | 0 d |
 
 **Layer B (design now, build later)**
 
@@ -151,7 +151,7 @@ Total for Layer A, C and D1: about 17 to 19 days across sessions, with the fixtu
 - Whether the live Education Runtime to SOP base URL doubles the `/api` prefix (the code and Terraform disagree; the live environment variable decides). CM can check it.
 - Whether `SOP_ER_COMPANY_IDS` is set in production (it is not in Terraform).
 - Whether anything outside these repos drains the Education Runtime outbox (nothing inside them does).
-- Omniview's call to an EA support-card route: no such route in EA's code or history; it may be on an unfetched branch.
+- Omniview's call to an EA support-card route: **resolved 2026-10-12, not a defect.** EA has deliberately not built it: Femi decided on 2026-10-05 that EA builds the operator support card only after the Owner Admin approves it (a per-tenant switch, default off) and only after the support relay release. Omniview's gateway fails soft (the card shows as unavailable) until then. Task A10 is therefore closed; it was never a missing route.
 - Huawei Cloud's managed Kafka in the Lagos region: it could not be confirmed to exist; the only price found, about $672 a month, is marketing and not Nigeria-specific. Which Huawei products match SQS, SNS or Kinesis is also unconfirmed.
 - EventBridge's enhanced bus pricing, and whether it will reach London. The newer bus launched on 2026-09-24, the day after the September assessment, and is not in London.
 - NATS deduplication details; whether Fargate can safely hold JetStream or Kafka state; the self-run cluster cost estimates.
