@@ -1,6 +1,6 @@
-# How the Education Runtime credential is allowed in school Companies at SOP: design note
+# How a specialist runtime plugs into the generic services: the school-Company rule first, then the general pattern
 
-Status: design only, 2026-10-12. Led by the Education Runtime (+ER) session at Femi's direction ("The Education Runtime should actually design it"); SOP and EA contribute facts. **No code until CM has reviewed.** Replaces the hand-kept `SOP_ER_COMPANY_IDS` list (Decisions_Log, 2026-10-12: every school recognises its income through SOP, so the credential must work in every school Company by a rule, and never in a non-school Company).
+Status: design only, 2026-10-12. Led by the Education Runtime (+ER) session at Femi's direction ("The Education Runtime should actually design it. It is its primary responsibility i.e. to add an Education Runtime to the Generic."); SOP and EA contribute facts. **No code until CM has reviewed any auth path.** Part 1 (sections 1 to 8) is the immediate rule and the customer-creation idempotency, small and first. Part 2 (section 9) is the general pattern, shorter, so the next runtime follows it; it builds on EA's `docs/Platform_Contract_Generic_Services_And_Runtimes_SPUTO.md` and does not repeat it. Replaces the hand-kept `SOP_ER_COMPANY_IDS` list (Decisions_Log, 2026-10-12: every school recognises its income through SOP, so the credential must work in every school Company by a rule, and never in a non-school Company).
 
 ## 1. The problem, and the two things that must both hold
 
@@ -54,7 +54,7 @@ In `authorizeServiceAccount` (the only place the ER credential is judged), repla
 
 ### 4.2 The EA read
 
-`GET /api/internal/companies/{companyId}/industry`, answering exactly `{"industryType":"SCHOOL"}` or `{"industryType":"GENERIC"}`; 404 for an unknown Company. Callable only by SOP's own service principal (see 6, an infrastructure item for CM). SOP decodes it **strictly** (no `ignoreUnknownKeys`), per the standing rule for auth payloads. Minimal on purpose: one field, no school id, no names.
+`GET /api/internal/companies/{companyId}/industry`, answering exactly `{"industryType":"SCHOOL"}` or `{"industryType":"GENERIC"}`; 404 with body exactly `{"error":"company_not_found"}` (no detail text) for a Company with no EA record. Callable only by SOP's own service principal (see 6, an infrastructure item for CM). SOP decodes it **strictly** (no `ignoreUnknownKeys`), per the standing rule for auth payloads. Minimal on purpose: one field, no school id, no names.
 
 ### 4.3 Failure modes (fail closed, always)
 
@@ -90,7 +90,7 @@ Without the key, the alternative is to refuse to retry on `sop_unreachable`, whi
 | **SOP** | (a) idempotency key on customer creation with the stored key and tests; (b) `CompanyIndustryGateway` + strict EA client + positive-only cache; (c) `authorizeServiceAccount` uses it; remove `SOP_ER_COMPANY_IDS` after rollout | M |
 | **EA** | the `GET /api/internal/companies/{id}/industry` route, authorised for SOP's principal only; fixture for it in `fish-contracts` | S |
 | **ER** | send `Idempotency-Key: ER-guardian-{id}`; keep `billing_not_enabled` / `billing_unavailable` mapping (already built); a test that the header is sent and reused on retry | S |
-| **CM** | SOP's own service principal for calling EA (new Cognito app client plus EA-side authorisation), env vars (`SOP_EA_INDUSTRY_*`), apply order, remove `SOP_ER_COMPANY_IDS` from Infrastructure | S-M |
+| **CM** | env vars for SOP's new client and the EA base URL; apply order; remove `SOP_ER_COMPANY_IDS` from Infrastructure. SOP's principal for calling EA **already exists** (EA validates SOP's service token through its `ea-jwt-service-principal-sop` provider, audience `EA_JWT_SERVICE_AUDIENCE_SOP`, used today for owner-contact); EA's new route reuses it, so no new Cognito client is needed (EA's correction, to be confirmed once on SOP's side) | S |
 
 ## 6. Build order
 
@@ -99,6 +99,7 @@ Without the key, the alternative is to refuse to retry on `sop_unreachable`, whi
 3. **SOP rule switch**: ship the gateway and the new check; flip the check on only when EA's route is live. Until then the existing refuse-everywhere default stays in force.
 4. **ER header**, then a real end-to-end check on a test school (below).
 5. Remove `SOP_ER_COMPANY_IDS`.
+6. **Data prerequisite, before step 3 is switched on:** Companies registered before industry type existed hold the migration default GENERIC (EA V13), so any real school Company registered then, or without SCHOOL, would be refused. List the real school Companies and correct them by a reviewed data fix (the type is immutable through the API). Femi or CM names them; ER's `schools` table (organisation_id) is the list of Companies that actually have a school.
 
 ## 7. Test plan
 
@@ -112,7 +113,59 @@ Without the key, the alternative is to refuse to retry on `sop_unreachable`, whi
 
 ## 8. Open questions (for CM and Femi, not blocking review)
 
-1. **SOP's principal for calling EA** does not exist yet: new Cognito app client, or an existing one? (CM.)
+1. ~~SOP's principal for calling EA~~ **resolved by EA**: it already exists (see section 5); SOP to confirm with a one-line check.
 2. **Cache lifetime** for positive answers (10 minutes proposed).
 3. **Should ER also treat `502 sop_bad_response` as retryable** once idempotency is live? Proposed as a later, separate decision.
 4. **Reading customers**: the credential may also read customers in a school Company; consider later whether it should see only Customers it created. Out of scope here.
+
+---
+
+# Part 2. The general pattern: how any specialist runtime plugs into the generic services
+
+Shorter on purpose. The generic services are GL, SOP, POP, IM, HR and EA; a specialist runtime (Education now; credit union, banking, investment management, a doctor's surgery later) adds a domain on top of them. The platform-wide contract (versioning, fixtures, registry, broker) is EA's `docs/Platform_Contract_Generic_Services_And_Runtimes_SPUTO.md`; this part is the **runtime's side of it**, written from what the Education Runtime actually does today, so the next runtime copies a pattern that has been tried once. Nothing here is built beyond what is stated as built.
+
+## 9. The five rules a runtime follows
+
+**R-1. Identity of a runtime's Company is EA's to say, never the runtime's.** A Company belongs to a runtime because EA registered it so (today `industryType`; later EA's runtime manifest and `runtimeLinks`, EA doc Layer B). A generic service lets a runtime's credential act in a Company only if EA confirms that Company is registered for **that** runtime. Part 1 is the first instance: credential ER may act in Company C if and only if EA says C is SCHOOL. In SOP the mapping is data, not branches: *credential (audience) to required industry*; the second runtime adds one credential and one row. A runtime never asserts its own scope (Part 1, option B).
+
+**R-2. A runtime owns its domain and its own people; the generic services own money, stock and the ledger.** The Education Runtime owns students, admissions, attendance, marks, curriculum, fee schedules and invoices, and its own staff and roles (`staff_assignments`); it does not read EA's `/me` or module grants for what a person may do inside it. It **never posts to GL** (enforced in code: `NoDirectGlWrites`). Financial meaning reaches the ledger only through a generic service's existing posting route. A runtime that wants a posting the generic service cannot yet express asks the generic owner to extend it; it does not reach around it.
+
+**R-3. Least privilege, per route and per Company.** A runtime has its own Cognito service client and audience in each generic service (one audience per caller). The generic service opts routes in one by one (`serviceMayCall`) and always requires a Company the identity rule accepts. Today the Education Runtime may call exactly one thing: SOP customer create and read, for a school Company. It calls nothing at GL, POP, IM or HR, and EA only calls it (provisioning). The kill switch is per runtime: unset the audience and that runtime's tokens are all refused.
+
+**R-4. Financial events leave a runtime as business facts, through an outbox, never as ledger postings.** The runtime writes an event row in the **same transaction** as the business change (fee payment confirmed, enrolment, marks published). A relay delivers it to the generic service's ingestion route; the generic service turns it into its own posting (for SOP: a collection through the existing record-collection route, which reaches GL). Delivery is **at least once**; the event id is deterministic from the business fact (the Education Runtime already uses `StudentPaymentReceived:{invoiceId}`) so the consumer deduplicates by id. Order is guaranteed **per business key** (for fees: the invoice), by a sequence column, not by timestamp. EA's CloudEvents envelope and `fish-contracts/events/` fixtures are the format (EA doc C1).
+
+**R-5. Every call from a runtime to a generic service is retry-safe.** (a) A call with a side effect carries an `Idempotency-Key` derived from a stable business id, and the generic service stores only successes ("a refused request must not spend a key", Decisions_Log). (b) The reply read after the effect is decoded tolerantly: if it cannot be read, the runtime retries with the same key rather than failing a call that already succeeded; access and money payloads stay strict (no `ignoreUnknownKeys` there). (c) Every client has a connect and request timeout. (d) Failures map to three runtime answers, and only three: refused by the platform (401/403) gives `..._not_enabled`; platform down or slow (503, timeout) gives `..._unavailable`, retry later; anything else is a loud internal error. Part 1 section 4.4 and the built `billing_unavailable` are the first instance.
+
+## 10. What the Education Runtime has, and lacks, against those rules
+
+| Rule | Today | Gap |
+|---|---|---|
+| R-1 identity | EA registers the school Company and provisions ER; SOP uses a hand-kept list | Part 1 (the EA read), plus the data fix for pre-existing school Companies |
+| R-2 ownership | holds; `NoDirectGlWrites`; own staff table | none |
+| R-3 least privilege | one SOP route family, own audience, deny-all kill switch | none beyond Part 1's rule |
+| R-4 events | outbox is written in the business transaction with deterministic ids; **nothing relays it**, so a fee payment has no financial effect in SOP or GL | the relay (below); the outbox table also lacks a sequence column, a published marker and a dead state, and carries `school_id` not the Company id |
+| R-5 retry | `billing_unavailable` built (`e532ac4`); no key; customer-create reply decoded strictly after the effect; no client timeout; error body is `{error, message}` against the platform convention `{error, detail}` | the Part 1 key; tolerant decode; timeout; error body |
+
+## 11. The Education Runtime's own build list for the pattern (each its own branch, none before CM review)
+
+1. `Idempotency-Key: ER-guardian-{guardianAccountId}` on SOP customer create; on a 2xx whose body cannot be read, retry once with the same key instead of failing. (Part 1; size S.)
+2. A request and connect timeout on the SOP client. (S.)
+3. Error body `{error, detail}`: a breaking change for WEB and for tests, so brief WEB first; cheapest before the Live switch (EA doc decision 3). (S, with WEB.)
+4. **Outbox relay** (EA's C2, the first build that makes a fee payment reach SOP): a migration adding a sequence column, `published_at`, attempt count, a dead state and the Company id; a poller that claims the oldest unpublished row **per invoice**, delivers to SOP's ingestion route, marks it published, dead-letters after N tries with an alert on oldest-unpublished age; real-Postgres tests for ordering, a crash mid-delivery, concurrent relays and replay. **Held until after the UAT sitting and after T-ER3** (a parent's "paid" becomes a claim to verify, not a payment), because the relay must carry the verified fact, not the claim. (M.)
+
+## 12. The checklist for the next runtime
+
+1. EA: a registered runtime (manifest and its industry value) and a JSON, idempotent provisioning contract keyed on the organisation id.
+2. A Cognito service client per generic service it needs, one audience per caller; route opt-in in each generic service; a deny-all default and a kill switch.
+3. The identity rule (R-1) as data: credential to required Company registration, checked against EA, fail closed, positive answers cached briefly, refusals and errors never cached.
+4. Its own people and roles inside the runtime, mapped to the platform's view / enter / approve / administer capabilities; no reading of EA's `/me` for runtime permissions.
+5. An outbox in the same transaction as each business fact; deterministic event ids; per-key ordering by sequence column; a relay and a dead state; the consumer's ingestion route deduplicates.
+6. Every outbound call: Idempotency-Key, tolerant reply after the effect, timeouts, the three-way failure mapping.
+7. Fixtures in `fish-contracts` for every response it provides to another service and a strict decode of every one it consumes; a paper dry run against SOP, GL and EA before any code (EA doc B1).
+
+## 13. What the generic owners contribute (asked, not assumed)
+
+- **SOP:** the idempotent customer create, the rule switch, and the event ingestion route with inbox dedupe; confirm how a collection is recorded from an event.
+- **EA:** the industry route, the data-fix list, and later the manifest and `runtimeLinks`.
+- **GL, IM, POP, HR:** state which of their routes a runtime must *never* call and which, if any, a future runtime might need; for the next runtime's dry run (EA B1), not for Education.
+- **CM:** reviews every auth path before code; owns env vars, Cognito clients and the deploy order.
