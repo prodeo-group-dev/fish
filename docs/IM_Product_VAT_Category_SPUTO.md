@@ -1,16 +1,18 @@
-# Product VAT category, owned by IM: SPUTO / Playbook
+# Product VAT category, owned by IM: SPUTO / Playbook (v2)
 
-**Status: DRAFT for Femi's approval, 2026-10-11, IM session. Planning only. Nothing is built, nothing is deployed, and no code starts until Femi approves this playbook.**
+**Status: v2 DRAFT, 2026-10-12, IM session. Planning only. Nothing is built, nothing is deployed, and no code starts until Femi approves this playbook.** v1 (merged as `ee2ae9e`) is superseded by this file; it stays in git history.
 
-**Source of the requirement.** Femi, relayed by CM on 2026-10-10: *"it is the product that determines whether it's vatable or not"*, and IM, as owner of the product, must determine it. Process rule (also Femi, via CM): *"SPUTO gives them the Playbook to build against"*. This document is that Playbook for IM, SOP, POP, WEB, EA and CM.
+**Why v2.** On 2026-10-11 Femi decided the design with SOP (Decisions Log, entry "VAT category: IM owns it per product or service item", merged in `dd6a0b2`): *IM owns the category for every product **and service** (services are IM items); a sales line takes a **copy** of the item's category when it is ordered and the copy never changes afterwards, so a posted invoice reprints exactly as issued; **nobody types the category on a line**; SOP **reads** it from IM at order time; the VAT figure itself is calculated by GL.* That reverses three parts of v1: v1 said WEB pre-fills a line the user may override, that POP/SOP make no call to IM, and that every IM Item is stock. All three are rewritten below.
 
-**Written from.** IM master `cf97150` (task definition `:32`), GL `vat_category.kt` and `VatCategoriesRoutes.kt`, POP `purchase_order_line.kt`/`ktor_im_gateway.kt`, SOP `sales_order_line.kt` plus SOP's own replies today, EA `im_dtos.kt`, WEB `src/api/im.ts` and `ImItemsList.tsx`, and `docs/IE/IE_VAT_MVP_Design.md`. Every claim marked "checked" was read in code today. Anything I could not verify is listed in section 10 and says so.
+**Source of the original requirement.** Femi, via CM, 2026-10-10: *"it is the product that determines whether it's vatable or not"*. Process rule: *"SPUTO gives them the Playbook to build against"*. This document is that Playbook for IM, SOP, POP, WEB and EA.
+
+**Written from.** IM master `cf97150` (task definition `:32`) and the code read for v1, plus, for v2: IM's route list, `Item`/`ItemResponseDto`/`items` table, `CreateItemUseCase`, SOP's own replies today, and the Decisions Log. Every claim marked "checked" was read in code. Anything unverified is in section 10 and says so.
 
 ---
 
 ## 0. In one paragraph
 
-Today an IM `Item` has no VAT information. The category is typed on each order line in POP and SOP. This playbook makes the **product** carry it: `Item.vatCategory`, one of the six GL values, set by the owner (never defaulted), editable with a reason and an audit trail. WEB reads it from IM's item response and **pre-fills** the order line (visible, overridable). The line stores the category it was ordered with, so a later change to the product never alters an order already placed, and GL keeps deciding which categories a country allows. POP and SOP make no new call to IM. The one dangerous part is shipping order: **EA's decoder fails closed on an unknown field**, so consumers declare the field before IM ships it.
+Today an IM `Item` has no VAT information and every Item is physical stock. This playbook (1) adds **`Item.vatCategory`**, one of the six GL values, set by the owner and never defaulted, editable with a reason and an audit trail; (2) adds **service items**, so a service is an Item with no stock tracking (`kind = SERVICE`) and therefore also has a category; (3) has **SOP read the category from IM when a line is ordered and store a frozen copy on the line**, with no one typing it. GL still decides which categories a country allows and computes the VAT figure. The dangerous part is shipping order: **EA's decoder fails closed on an unknown field**, so consumers declare the new fields before IM ships them.
 
 ---
 
@@ -18,19 +20,19 @@ Today an IM `Item` has no VAT information. The category is typed on each order l
 
 **In scope**
 1. `vatCategory` on the IM `Item`: stored, returned in every item response, set at creation, set or changed afterwards by a human with write access, with an audit trail.
-2. A rule for every existing Item: nothing is defaulted. They start as "not set" and the owner sets them.
-3. How WEB, SOP and POP use it (pre-fill at entry, line-stored value, item-less lines choose explicitly).
-4. The wire contract and the order in which services ship it.
-5. Migration safety on the live IM database.
+2. **Service items**: `kind` = `STOCK` or `SERVICE`; a service item carries a category, a unit, an optional selling price, and no stock tracking.
+3. A rule for every existing Item: nothing is defaulted. They start as "not set" and the owner sets them. (Every existing Item is `STOCK`; that is a fact, not a default of the tax kind.)
+4. How SOP (and, if confirmed, POP) read and copy it, and what happens when it is missing.
+5. The wire contract and the order in which services ship it; migration safety on the live IM database.
 
 **Out of scope (noted, not decided here)**
-- Which products are vatable or at which rate: that is the owner's legal decision, and GL's rate schedule decides the percentage. IM never computes VAT.
-- Whether a Company is VAT-registered at all (a Company-level fact, see section 10, item 5).
-- Partial-exemption input-VAT apportionment and price-inclusive pricing (GL has already deferred both).
-- A "stocked vs service" flag on Item (decision D5: not now).
-- SOP's own fixes (explicit category on every path, persisting it, nullable `itemId`): SOP's work, listed here only where this playbook depends on it.
+- Which products are vatable, or at which rate: the owner's legal decision, and GL's rate schedule decides the percentage. IM never computes VAT.
+- Whether a Company is VAT-registered at all (a Company-level fact, section 10, item 6).
+- Partial-exemption apportionment and price-inclusive pricing (GL has deferred both).
+- Transaction-dependent VAT such as exports and reverse charge (a product-only category cannot express it, section 10, item 1).
+- SOP's and POP's own line changes, listed here only where this playbook depends on them.
 
-**This amends one earlier decision, and says so.** `docs/IE/IE_VAT_MVP_Design.md` (2026-09-13) put the category on the transaction line, not on the Item master, because `SalesOrderLine` had no item link and `PurchaseOrderLine.itemId` is often absent. That document already said an Item-level category is "a legitimate later UX convenience" provided the line "always stores what actually applied". This playbook keeps that rule exactly. Only the **source of the default** moves to the product.
+**This amends `docs/IE/IE_VAT_MVP_Design.md` (2026-09-13)** twice: first by moving the *source* of the category from the line to the product (that document already allowed an Item-level default as "a legitimate later UX convenience"), and second, now, by taking away the line-level choice altogether. What it kept is still true: the line stores what actually applied.
 
 ---
 
@@ -38,33 +40,42 @@ Today an IM `Item` has no VAT information. The category is typed on each order l
 
 | # | Requirement |
 |---|---|
-| R1 | `Item.vatCategory` is one of exactly `STANDARD`, `REDUCED`, `SECOND_REDUCED`, `SUPER_REDUCED`, `ZERO_RATED`, `EXEMPT`: the identical names GL, POP and SOP use. No mapping layer. |
+| R1 | `Item.vatCategory` is exactly one of `STANDARD`, `REDUCED`, `SECOND_REDUCED`, `SUPER_REDUCED`, `ZERO_RATED`, `EXEMPT`: the identical names GL, POP and SOP use. No mapping layer. |
 | R2 | `null` means "not set yet". It never means exempt or zero-rated, and nothing treats it as a default. |
-| R3 | An Item is created **with** a category once enforcement is on (Wave 4). Before that the field is accepted but optional. |
+| R3 | An Item (of either kind) is created **with** a category once enforcement is on (Wave 5). Before that the field is accepted but optional. |
 | R4 | Existing Items are not backfilled. They stay `null` until a human sets them. |
 | R5 | Setting or changing the category needs a human with WRITE at the Company. Service accounts (POP, SOP tokens) are refused. |
 | R6 | Changing a category that is already set requires a non-blank `reason`. The first set does not. |
 | R7 | Every set or change writes an audit row in the same transaction as the item update: previous value, new value, reason, who (email), when. |
-| R8 | The set route runs under the same per-Item lock as the other Item writes, so a concurrent stock movement cannot write a stale category back over it. |
-| R9 | Item responses (list, single, and the `item` embedded in goods receipt/issue/adjustment responses) gain `vatCategory: String?`. |
+| R8 | The set route runs under the same per-Item lock as the other Item writes, so a concurrent stock movement cannot write a stale category back (`ItemRepository.save()` rewrites the whole row). |
+| R9 | Item responses (list, single, and the `item` embedded in goods receipt/issue/adjustment responses) gain `vatCategory: String?` and `kind: String`. |
 | R10 | IM validates only the six names. GL stays the authority on what a Company's country supports and answers `vat_category_not_supported` at posting. |
-| R11 | POP and SOP make **no** new service-to-service call and need **no** new allow-list entry. WEB pre-fills; the line carries the value. |
-| R12 | A line stores the category at the time of ordering. A later Item change never alters placed lines. Only the existing set-line-category routes correct a line, and only before posting or match. |
-| R13 | A line with no item (service, free text) chooses its category explicitly. A line whose Item has no category forces an explicit choice and offers to save it to the product. |
+| R11 | **SOP reads the category from IM when a sales line is ordered**, using the existing `GET /companies/{companyId}/items/{id}` with SOP's service login, and stores a **copy** on the line. No one types the category on a line. WEB shows it read-only. |
+| R12 | The copy never changes afterwards. A later change to the Item never alters a line already ordered, and a posted invoice reprints exactly as issued. |
+| R13 | If the Item has no category, SOP **refuses the line** with `409 item_has_no_vat_category`, mirroring `item_has_no_selling_price`. Never a default. (Whether POP follows the same rule for purchase lines is open: section 10, item 2.) |
 | R14 | No path anywhere may silently default a category. Missing means refused. |
-| R15 | The migration is additive and safe on the live shared database (section 7). |
-| R16 | Contract changes ship consumer-first (section 6). IM does not ship the response field until EA and WEB have deployed decoders that declare it. |
+| R15 | The migrations are additive and safe on the live shared database (section 7). |
+| R16 | Contract changes ship consumer-first (section 6). IM does not ship a new response field until EA and WEB have deployed decoders that declare it. |
+| R17 | `kind` is `STOCK` or `SERVICE`, set at creation, immutable. Every existing Item is `STOCK`. |
+| R18 | A `SERVICE` item requires: description, unit of measure, entity, currency and (once enforcement is on) `vatCategory`; it may have a selling price. It has **no** inventory asset account, COGS account, GL stock item, valuation method, stage, batch tracking, bins, quantity or cost. Its quantity and value fields read `"0"`. |
+| R19 | Every stock route refuses a `SERVICE` item with `409 item_is_service` and changes nothing: receive, issue, transfer, location assignments, stock counts, adjustments (create and approve), replenishment policy, stock velocity, inventory levels. A table-driven test covers every route. |
+| R20 | Stock reporting excludes services: IM's low-stock monitor, EA's inventory tile counts and WEB's stock valuation report. `GET /items` returns both kinds, with `kind`, and accepts an optional `?kind=` filter. |
+| R21 | No consumer may infer "stock" from "has an itemId". A line is stock only when its Item's `kind` is `STOCK` (POP's own `itemType` stays a second guard). |
+| R22 | The old per-line category entry that SOP built stays only as a transition path and is removed once Wave 4 is live (section 5, T-SOP-3). |
 
 ### Decisions for Femi (each has a recommendation; none is made without you)
 
+Decided already (Decisions Log, 2026-10-11): IM owns the category; services are IM items; the line holds a frozen copy; nobody types it; SOP reads it; GL computes the figure. Not asked again.
+
 | # | Question | Recommendation |
 |---|---|---|
-| D1 | Required at creation, or optional forever? | Required, in two steps: accepted-but-optional first (Wave 2), enforced as `vat_category_required` once WEB's create form sends it (Wave 4). "Not set" then exists only for Items created before. |
-| D2 | Who may change a category? | Any human with WRITE at the Company today (same gate as creating an Item and the selling price), service accounts refused, a reason required to change. RBAC changes are frozen until the RBAC SPUTO lands; when it does, "change VAT category" should become its own capability for accountants/owners, not every writer. |
-| D3 | Check the category against the Company's country at set time? | No, not in v1. WEB offers only the categories GL lists for the Company (`GET /companies/{companyId}/vat-categories`). GL refuses an unsupported one at posting. Having IM call GL for a convenience check adds a service-to-service dependency and an allow-list entry for little gain. |
-| D4 | How do owners fix the old Items? | One at a time with a "VAT category not set" badge and filter (Wave 3). Optional later (Wave 5): a bulk "set all unset Items to X" that the owner must confirm, which is an explicit act, not a silent default. |
-| D5 | A stocked-vs-service flag on Item? | None now. Checked: every IM Item is stock by construction (it requires an inventory asset account, a valuation method and a GL stock item), so POP's planned rule "a line with an `itemId` is a STOCK line" is true today. If services are ever to be Items, add an explicit `kind` first, and before that rule ships. |
-| D6 | Confirm the amendment to the 2026-09-13 decision above. | Recorded as instructed; Femi to confirm. |
+| D1 | Required at creation, or optional forever? | Required, in two steps: accepted-but-optional first (Wave 2), enforced as `vat_category_required` once WEB's create forms send it (Wave 5). "Not set" then exists only for Items created before. |
+| D2 | Who may change a category? | Any human with WRITE at the Company today (same gate as creating an Item and the selling price), service accounts refused, a reason required to change. RBAC is frozen until the RBAC SPUTO lands; then it should become its own capability for accountants/owners, not every writer. |
+| D3 | Check the category against the Company's country at set time? | No, not in v1. WEB offers only the categories GL lists for the Company (`GET /companies/{companyId}/vat-categories`). GL refuses an unsupported one at posting. |
+| D4 | How do owners fix the old Items? | One at a time with a "VAT category not set" badge and filter (Wave 4). Optional later (Wave 6): a bulk "set all unset Items to X" the owner must confirm: an explicit act, not a silent default. |
+| D5 | The shape of a service item (R18). | As R18: the fewest fields, no stock machinery, immutable `kind`. The alternative (a separate Service resource) is rejected: services must be readable at `GET items/{id}` like products or SOP needs two code paths. |
+| D6 | Lines with **no item** (free text, one-off). With nobody typing the category there is no source for it. | **Refuse them**, and give WEB a one-step "add a service" that creates a `SERVICE` item with its category inline, so a one-off charge costs one extra click, not a blocked order. Needs confirmation (it ends free-text lines), routed through CM. |
+| D7 | An unposted line holds a wrong copy (the item was fixed afterwards). | Not a typed correction. Offer **"re-read from the item"** before posting, which replaces the copy from the Item's current value. Needs SOP's and CM's agreement, since SOP built an explicit correction route that this supersedes. |
 
 ---
 
@@ -72,35 +83,35 @@ Today an IM `Item` has no VAT information. The category is typed on each order l
 
 All routes are Company-scoped under `/api/companies/{companyId}`, as today.
 
-**`ItemResponseDto` gains one field**
+**`ItemResponseDto` changes** (consumers declare these first, section 6)
 
 ```json
-{ "id": "…", "description": "Sugar 50kg", "…": "…existing fields…", "sellingPriceAmount": "55.00", "vatCategory": "ZERO_RATED" }
+{ "id": "…", "kind": "STOCK", "description": "Sugar 50kg", "…": "…existing fields…",
+  "sellingPriceAmount": "55.00", "vatCategory": "ZERO_RATED" }
+{ "id": "…", "kind": "SERVICE", "description": "Delivery", "unitOfMeasure": "trip", "…": "…",
+  "inventoryAssetAccountId": null, "cogsExpenseAccountId": null, "glStockItemId": null,
+  "quantityOnHand": "0", "unitCost": "0", "…": "all stock values \"0\"", "vatCategory": "STANDARD" }
 ```
-`vatCategory` is `null` when not set. Because the same DTO is embedded as `item` in the goods receipt, goods issue and adjustment responses, those gain it too.
+- `vatCategory` is `null` when not set. `kind` is always present.
+- The three account fields become **nullable** (null for `SERVICE` only). Today EA's decoder declares them non-null, so EA and WEB must declare them nullable before any service item exists.
+- The same DTO is embedded as `item` in the goods receipt, issue and adjustment responses, so those gain the fields too.
 
-**Create** (`POST /items`): `vatCategory` optional in Wave 2, required in Wave 4 (`400 vat_category_required`). Invalid value: `400 invalid_vat_category`.
+**Create** (`POST /items`): optional `kind` (default `STOCK`); `vatCategory` optional in Wave 2, required in Wave 5 (`400 vat_category_required`). For `SERVICE` the stock fields (accounts, valuation, stage, batch tracking) must be absent (`400 service_item_has_stock_fields`). Invalid value: `400 invalid_vat_category`.
 
 **Set or change** (new): `POST /items/{id}/vat-category`
 
 ```json
 { "vatCategory": "STANDARD", "reason": "Reclassified after accountant review" }
 ```
-- `200` with the updated `ItemResponseDto`. Same value as already stored: `200`, no audit row.
-- `400 invalid_vat_category`: not one of the six (detail lists them).
-- `400 reason_required`: the Item already has a category and `reason` is blank.
-- `403 forbidden`: no WRITE at the Company, or a service-account caller.
-- `404`: item missing or belongs to another Company (identical, as everywhere in IM).
-- `409 item_busy`: another stock movement for this Item is in progress; nothing changed, retry is safe.
+- `200` with the updated `ItemResponseDto` (same value as stored: `200`, no audit row).
+- `400 invalid_vat_category`; `400 reason_required` (already set, `reason` blank).
+- `403 forbidden` (no WRITE, or a service account); `404` (missing or another Company's item); `409 item_busy`.
 
-**History** (new, read access): `GET /items/{id}/vat-category-history`
+**History** (new, read access): `GET /items/{id}/vat-category-history` returning `{ "changes": [ { "changedAt", "changedBy", "previous", "new", "reason" } ] }`, newest first; `previous` is `null` for the first set.
 
-```json
-{ "changes": [ { "changedAt": "2026-10-11T09:12:00Z", "changedBy": "owner@example.com", "previous": "STANDARD", "new": "REDUCED", "reason": "Reclassified…" } ] }
-```
-Newest first. `previous` is `null` for the first set.
+**Stock routes on a service item:** `409 item_is_service` (R19).
 
-**Nothing else changes.** No new route is needed to read the category: WEB already lists Items.
+**What SOP uses (R11):** the existing `GET /items/{id}`, with SOP's service login. The same call that already reads the selling price at order time now also carries `vatCategory` and `kind`. No new route and no new allow-list entry: IM's inbound service allow-list (M1b) is not built yet, and when it is, this GET is already on SOP's list because SOP uses it for availability and price.
 
 ---
 
@@ -108,55 +119,58 @@ Newest first. `previous` is `null` for the first set.
 
 | # | Use case |
 |---|---|
-| UC-1 | **Create a product with its category.** An owner creates an Item and picks a category from the list GL allows for the Company. |
-| UC-2 | **Set the category on an old Item.** The items list shows "VAT category not set". The owner opens the Item, chooses a category, saves. No reason is needed for the first set. |
-| UC-3 | **Change a category.** The owner changes REDUCED to STANDARD, must give a reason, and the history shows who, when, from, to, why. |
-| UC-4 | **Order line for a known product (POP and SOP).** WEB pre-fills the line's category from the Item. The user sees it and may override it. The line stores what the user submitted. |
-| UC-5 | **Product has no category yet.** WEB makes the user choose and offers "also save to product" (calls UC-2). Nothing is guessed. |
-| UC-6 | **Free-text or service line, no item.** The user chooses explicitly. |
-| UC-7 | **Product changes after ordering.** Lines already placed keep their stored category. Only a line's own correction route (POP set-line-category, SOP's equivalent) changes it, and only before posting or match. |
-| UC-8 | **GL refuses a category.** `vat_category_not_supported` on posting: the user corrects the line through the line route. The product itself is not touched. |
-| UC-9 | **A machine tries to change a category.** POP's or SOP's service token gets `403`. |
-| UC-10 | **Review history.** An owner or accountant reads why a category changed. |
-| UC-11 | **Old order from before SOP's fix.** SOP shows the category as "not recorded"; once invoiced it cannot be corrected, because GL holds the truth (SOP's own use case g). |
-| UC-12 | **Bulk (optional, Wave 5).** "Set all unset Items to X" with an explicit confirm, and a CSV column for opening stock (`docs/Opening_Figures_CSV_Upload_DDD_Design.md`). |
+| UC-1 | **Create a product with its category.** An owner creates a stock Item and picks a category from the list GL allows for the Company. |
+| UC-2 | **Create a service with its category.** An owner adds "Delivery" or "Consultation" as a service item: no stock fields, a category, optionally a price. |
+| UC-3 | **Set the category on an old Item.** The items list shows "VAT category not set". The owner opens the Item, chooses a category, saves. No reason needed for the first set. |
+| UC-4 | **Change a category.** REDUCED to STANDARD, with a reason; the history shows who, when, from, to, why. |
+| UC-5 | **Order a line.** The user picks an Item (product or service). SOP reads it from IM, copies the category onto the line, WEB shows it read-only. |
+| UC-6 | **The Item has no category.** SOP refuses the line, `409 item_has_no_vat_category`; WEB tells the user to set the category on the Item (and links to it). |
+| UC-7 | **A one-off charge with no Item.** Refused (D6); WEB offers "add a service", which creates the service item and its category in one step. |
+| UC-8 | **The Item changes after ordering.** Placed lines keep their copy; a posted invoice reprints exactly as issued. |
+| UC-9 | **GL refuses a category** (`vat_category_not_supported`) at posting: the order cannot post until the Item's category is corrected and the unposted line is re-read (D7). |
+| UC-10 | **A machine tries to change a category.** POP's or SOP's service token gets `403`. |
+| UC-11 | **Review history.** An owner or accountant reads why a category changed. |
+| UC-12 | **A stock action on a service.** Receiving, issuing, counting or transferring a service item answers `409 item_is_service`. |
+| UC-13 | **Old order from before SOP's fix.** SOP shows the category as "not recorded"; once invoiced it cannot be corrected, because GL holds the truth (SOP's own use case). |
+| UC-14 | **Bulk (optional, Wave 6).** "Set all unset Items to X" with an explicit confirm, and a CSV column for opening stock (`docs/Opening_Figures_CSV_Upload_DDD_Design.md`). |
 
 ---
 
 ## 5. Tasks (T)
 
-**IM (owner of the field)**
-- T-IM-1 Migration `V10__item_vat_category.sql` (check the next free number at build time, see section 10, item 3): nullable `items.vat_category VARCHAR(20)` with a `CHECK` on the six values (nullable), plus table `item_vat_category_changes`.
-- T-IM-2 Domain: `Item.vatCategory` (nullable), `setVatCategory(category, reason)` returning `ValidationResult` (reason rule), enum `VatCategory` with the six names. The repository's `save()` must not clobber the column (R8).
-- T-IM-3 Application: `SetItemVatCategoryUseCase` (writes Item and audit row atomically via `UnitOfWork`), `GetItemVatCategoryHistoryUseCase`; `CreateItemUseCase` accepts the optional field.
-- T-IM-4 Web: `POST /items/{id}/vat-category` under the per-Item lock and WRITE gate, refusing service accounts; `GET .../vat-category-history`; `vatCategory` on `ItemResponseDto` and `CreateItemRequestDto`.
-- T-IM-5 Tests first, red then green: domain; use case; end-to-end for every error code above; contract test that the field is present, `null` on old Items, and present in the embedded `item`; mutation check on the reason rule and the service-account refusal; Postgres integration test for the migration on a database that already holds Items (see section 7); concurrency test (a receipt and a set at once never loses the category).
-- T-IM-6 Wave 4: `vat_category_required` on create, behind the same tests.
+**IM (owner of the field and of service items)**
+- T-IM-1 Migration `Vn__item_vat_category.sql` (next free number at build time, section 10, item 4): nullable `items.vat_category VARCHAR(20)` with a `CHECK` on the six values (nullable), plus table `item_vat_category_changes`.
+- T-IM-2 Domain: `VatCategory` enum; `Item.vatCategory`; `setVatCategory(category, reason)` returning `ValidationResult`; the repository's `save()` must not clobber the column (R8).
+- T-IM-3 Application and web: `SetItemVatCategoryUseCase` (Item and audit row atomically via `UnitOfWork`), history use case, `POST .../vat-category` under the per-Item lock and WRITE gate (service accounts refused), `GET .../vat-category-history`; `vatCategory` on `ItemResponseDto` and `CreateItemRequestDto`.
+- T-IM-4 Tests first, red then green: domain; use case; end-to-end for every error code; contract test that the field is present, `null` on old Items, present in the embedded `item`; mutation checks on the reason rule and the service-account refusal; Postgres integration test on a database that already holds Items; a concurrency test (a receipt and a set at once never lose the category).
+- T-IM-5 **Service items** (Wave 3): migration `Vm__item_kind.sql`: `kind VARCHAR(10) NOT NULL DEFAULT 'STOCK'`, `DROP NOT NULL` on `inventory_asset_account_id`, `cogs_expense_account_id`, `gl_stock_item_id`, and a `CHECK` that a `STOCK` row has all three; domain: `Item.createService(...)`; `requireStockItem()` guard on every stock route (R19) with the table-driven test; `kind` on the DTO with the three account fields nullable; exclusion of services from the low-stock monitor, velocity and inventory levels; optional `?kind=` filter.
+- T-IM-6 Wave 5: `vat_category_required` on create, behind the same tests.
 - T-IM-7 Operator sheet and error glossary updated in the same change as the code (`docs/IM_Playbook_Draft.md`, to be written).
 
 **EA (decoder, ships first)**
-- T-EA-1 `ImItemResponseDto`: add `vatCategory: String? = null` and update `KtorImGatewayTest`'s copy field for field. EA's decoder rejects unknown keys by design, so this must be live **before** IM ships.
-- T-EA-2 Separate, already known: EA's inventory dashboard tile calls IM's removed flat `GET /api/items` (UAT finding 2). Fix it with the Company id, ideally in the same EA change so the tile is verified once against a response that carries the new field.
+- T-EA-1 `ImItemResponseDto`: add `vatCategory: String? = null`, `kind: String = "STOCK"`, and make the three account fields nullable; update `KtorImGatewayTest`'s copy field for field. EA's decoder rejects unknown keys by design, so this must be live **before** IM ships.
+- T-EA-2 Inventory tile and counts: exclude `SERVICE` items (R20). Separately, EA's tile is already failing on a removed flat route (UAT finding 2); fix it in the same change so it is verified once against the new shape.
 
-**WEB (types first, then UI)**
-- T-WEB-1 `Item` type gains `vatCategory: VatCategory | null`, and a `VatCategory` union of the six names. No UI yet. Ships before IM.
-- T-WEB-2 Wave 3: create-item form select; items list badge and filter for "not set"; set/change dialog (reason field shown when changing); order-line pre-fill in POP and SOP forms with "also save to product"; options come from GL's `vat-categories` route so unsupported categories are never offered; reload the Item list when an order form opens.
-- T-WEB-3 Send `vatCategory` on create (before Wave 4).
-- T-WEB-4 Account for the idempotency-key-in-page-memory weakness noted separately (unrelated, but the same screens).
+**WEB**
+- T-WEB-1 Types first: `Item` gains `vatCategory: VatCategory | null`, `kind`, nullable account fields. No UI. Ships before IM.
+- T-WEB-2 Wave 4: create-item form with a `kind` choice and the category select (options from GL's `vat-categories` route, so unsupported categories are never offered); items list badge and filter for "not set"; set/change dialog (reason when changing); read-only category on order lines; "add a service" inline (D6); stock valuation report excludes services; plain-words display of `item_has_no_vat_category` and `item_is_service`.
+- T-WEB-3 Send `vatCategory` on create before Wave 5.
+
+**SOP (their own work, listed for dependency)**
+- T-SOP-1 Nullable `itemId` on `SalesOrderLine`, persisted category on the line (their V18), refuse a missing category on every path (agreed, in progress).
+- T-SOP-2 At order time, read the Item (existing `GET items/{id}`, service login), copy `vatCategory` onto the line, refuse with `409 item_has_no_vat_category`; add `vatCategory` and `kind` to SOP's partial, tolerant DTO; decide stock behaviour from `kind == STOCK`, **not** from the presence of `itemId` (R21).
+- T-SOP-3 Remove the typed per-line category once Wave 4 is live (R22); settle D7.
 
 **POP**
-- T-POP-1 No wire change needed. Keep `missing_vat_category` and the set-line-category route. Confirm the item-less line rule (R13).
-- T-POP-2 Verify (not assume) the risk in section 10, item 2.
-
-**SOP** (their own work, listed for dependency)
-- T-SOP-1 Nullable `itemId` (string, IM item UUID, informational) on `SalesOrderLine`; persist the category on the line (their V18); refuse a missing category on every path (including `POST /api/record-sale`, which SOP reports silently posts ZERO_RATED today, and `POST /api/sales-orders`). SOP confirmed all of this today.
+- T-POP-1 No wire change is required for the field. Rule change: a line is stock only when `itemType` is GOODS **and** its Item's `kind` is `STOCK` (R21): "has an itemId" is no longer enough, because a service item has one too. IM refuses receipts for a service item, so no service line can reach GRNI by mistake.
+- T-POP-2 Confirm whether purchase lines also read and copy the category from IM (section 10, item 2), and verify POP's IM decoder against a real response (CM already assigned this).
 
 **GL**
-- T-GL-1 None. GL stays the authority. Confirm WEB's Company Membership may read `vat-categories` (it is read-only reference data behind `authorizeTenantForRead`).
+- T-GL-1 None. GL stays the authority and computes the figure. Confirm WEB's Company Membership may read `vat-categories`.
 
 **CM**
 - T-CM-1 Deploy order (section 6), checking EA's decoder is live before IM's image. No terraform, no secrets, no new allow-list entry.
-- T-CM-2 Migration number gate: only one of IM's branches may take `V10` (section 10, item 3).
+- T-CM-2 Migration number gate: IM has several migrations queued (VAT, kind, receipt idempotency from the GRNI half, M2); only one takes each number.
 
 ---
 
@@ -166,27 +180,30 @@ Foundations first, then consumers, then the producer, then the UI, then enforcem
 
 | Wave | What | Who | Gate to start |
 |---|---|---|---|
-| W0 | Playbook and D1 to D6 approved | Femi | none |
-| W1 | **Consumers declare the field (optional, default null)** | EA T-EA-1, WEB T-WEB-1 | W0. **Must be deployed and verified before W2 ships** |
-| W2 | **IM ships** the field, the optional create field, the set route and the history route | IM T-IM-1 to T-IM-5 | W1 live in production |
-| W3 | WEB UI, line pre-fill, "also save to product" | WEB T-WEB-2/3 | W2 live |
-| W4 | IM makes the category **required** at creation | IM T-IM-6 | W3's create form sends it |
-| W5 | Optional: bulk set, CSV column, a `kind` flag if D5 changes | IM/WEB | Femi's call |
+| W0 | Playbook and D1 to D7 approved | Femi (via CM) | none |
+| W1 | **Consumers declare the new fields** (optional, nullable, tolerant) | EA T-EA-1, WEB T-WEB-1, SOP T-SOP-2 (DTO fields only) | W0. **Must be deployed and verified before W2 ships** |
+| W2 | **IM ships** `vatCategory`, the optional create field, the set and history routes | IM T-IM-1 to T-IM-4 | W1 live in production |
+| W3 | **IM ships service items** and the stock-route guards | IM T-IM-5 | W2 live |
+| W4 | WEB UI; SOP reads and copies at order time, refuses a missing category; POP's stock rule uses `kind` | WEB T-WEB-2/3, SOP T-SOP-2/3, POP T-POP-1 | W2 live for stock items, W3 live for services |
+| W5 | IM makes the category **required** at creation | IM T-IM-6 | W4's create forms send it |
+| W6 | Optional: bulk set, CSV column | IM/WEB | Femi's call |
 
-**Why two directions.** IM *responds* with the new field (so decoders must accept it first: EA strictly, SOP and POP tolerate it) and IM *accepts* the new field on create (so IM must accept it before WEB sends it, since IM's server decoder also rejects unknown keys). So: decoders first, then IM, then senders, then enforcement.
+**Why two directions.** IM *responds* with new fields (decoders must accept them first: EA strictly, SOP and POP tolerate) and IM *accepts* a new field on create (IM must accept it before WEB sends it, since IM's server decoder also rejects unknown keys). So: decoders first, then IM, then senders, then enforcement.
 
-**Why W1 cannot be skipped.** This is the exact failure class of 2026-09-29: EA, SOP, POP and GL each mirror a peer's response, a new field arrives unannounced, and a strict decoder throws on a live request. Here the peer is IM and the strict consumer is EA.
+**Why W1 cannot be skipped.** This is the failure class of 2026-09-29: a peer's response gains a field and a strict decoder throws on a live request. Here the peer is IM and the strict consumer is EA. Making three EA fields nullable is the same class and needs the same care.
+
+**Why services are a separate wave from the field.** The category alone is small and unblocks SOP's read for stock items. Service items touch many routes and the response shape; shipping them separately keeps each rollback simple.
 
 ---
 
 ## 7. Migration and safety on the live IM database
 
-- IM's database already holds Items (legacy test data, but treated carefully). The change is **additive**: `ALTER TABLE items ADD COLUMN vat_category VARCHAR(20)` with no default and no `NOT NULL`. On Postgres 16 this is a metadata change, with no table rewrite and no long lock.
+- IM's database already holds Items (legacy test data, treated carefully). All changes are **additive or relaxing**: `ADD COLUMN vat_category VARCHAR(20)` with no default and no `NOT NULL`; `ADD COLUMN kind VARCHAR(10) NOT NULL DEFAULT 'STOCK'`; `DROP NOT NULL` on three columns. On Postgres 16 each is a metadata change with no table rewrite and no long lock. The `kind` default is a fact (every existing row is stock), not a guess.
+- A `CHECK` on `vat_category` (six names, nullable) and a `CHECK` that a `STOCK` row has its three stock fields: a bad value or an incomplete stock item cannot be stored even by a bug.
 - A new table `item_vat_category_changes` (id, item_id foreign key, previous, new, reason, changed_by, changed_at, index on item_id).
-- **No backfill, no default.** Existing rows are `null` (R4).
-- **Rolling deploy is safe both ways.** Flyway runs at start-up before the new task serves. The old task keeps running against the new schema (Exposed selects named columns, so the extra column is invisible to it). Rolling the image back leaves the column in place, harmless.
-- **The `CHECK` constraint** lists the six names and allows `null`; a bad value cannot be stored even by a bug.
-- **Verify** with a Postgres integration test that starts from a database already containing Items (not only an empty one), and check the new migration's number against any other IM branch before merge.
+- **No backfill of the category** (R4).
+- **Rolling deploy.** Flyway migrates at start-up before the new task serves. An old task keeps running against the new schema and ignores `vat_category` and `kind`. **One real window for services:** an old task that reads a `SERVICE` row would meet nulls in columns it treats as non-null. So no service item may be created until every IM task runs the new code (a few minutes at deploy; CM confirms before W3 is used). Rolling the image back after service items exist is **not** safe for those rows; roll forward.
+- **Verify** with a Postgres integration test that starts from a database already containing Items, and check each migration's number against IM's other queued branches before merge.
 
 ---
 
@@ -194,33 +211,37 @@ Foundations first, then consumers, then the producer, then the UI, then enforcem
 
 - **Who:** a human with WRITE at the Company. Service accounts refused. The first set needs no reason; any later change does.
 - **What is kept:** previous value, new value, reason, `changedBy` (the caller's email, the only identity IM holds), `changedAt`, in the same transaction as the item update. Retained as long as the Item.
-- **Limits, stated plainly:** IM has no EA user id, only email; there is no approval step (a second person confirming a tax-affecting change); and the audit is not yet shown in Omniview or EA. All three are deliberate omissions for v1, to be revisited with the RBAC SPUTO.
+- **Limits, stated plainly:** IM has no EA user id, only email; there is no approval step (a second person confirming a tax-affecting change); the audit is not yet shown in Omniview or EA. Deliberate omissions for v1, to be revisited with the RBAC SPUTO.
 
 ---
 
 ## 9. Acceptance checks per wave
 
-- **W1:** EA's unit test decodes a real IM item response that includes `vatCategory`; WEB type-checks; both deployed; EA's inventory tile loads against production IM.
-- **W2:** every error in section 3 returned correctly; an old Item returns `vatCategory: null`; setting under concurrent stock movement never loses the value; migration passes on a database that already has Items; POP and SOP calls to IM unchanged.
-- **W3:** an owner creates a product with a category, sets an old one, changes one with a reason, sees the history; a POP and a SOP line pre-fill; an Item with no category forces a choice; a category GL refuses is corrected on the line.
-- **W4:** creating an Item without a category answers `400 vat_category_required`; WEB's form never triggers it.
+- **W1:** EA decodes a real IM item response containing `vatCategory`, `kind` and nullable account fields; WEB type-checks; SOP's DTO carries the fields; all deployed; EA's inventory tile loads against production IM.
+- **W2:** every error in section 3 returned correctly; an old Item returns `vatCategory: null`; a set under concurrent stock movement never loses the value; migration passes on a database that already has Items; POP and SOP calls to IM unchanged.
+- **W3:** a service item can be created and read at `GET items/{id}`; **every** stock route refuses it with `409 item_is_service` (table-driven); stock reports exclude it; an old stock Item is unchanged.
+- **W4:** an order line for an Item copies the category and WEB shows it read-only; an Item with no category blocks the line with the plain-words message; changing the Item afterwards leaves a placed line untouched; a one-off charge goes through "add a service"; GL refusing a category blocks posting with a clear message.
+- **W5:** creating an Item without a category answers `400 vat_category_required`; WEB's forms never trigger it.
 
 ---
 
 ## 10. Risks and things nobody asked (candid)
 
-1. **EA's strict decoder (high).** If IM ships before EA, every EA call that decodes an IM item throws. The wave order exists for this. EA's tile is *already* failing on a removed route, so verify EA end to end, not only its unit test.
-2. **POP's IM decoder may already be wrong (unverified).** POP's IM gateway decodes IM's goods receipt/issue response with Ktor's default JSON into a one-field `ItemResponseDto(id)`, while IM returns the whole item (twenty-odd fields). POP's own tests feed it a one-field stub, so tests cannot catch this. I believe default Ktor JSON rejects unknown keys, in which case POP's call fails *after* IM has already posted; I have not run it. The last seven days of POP logs show no such calls, so it has never been exercised in production. It is independent of this work (adding `vatCategory` makes it neither better nor worse), but POP should test it against a real IM response before relying on it. SOP's client is explicitly tolerant, so SOP is not affected.
-3. **Migration number clash.** I planned `V10` for the Company-scoped child-table work (M2). This playbook also needs a migration. Only one may be `V10`; the other becomes `V11`. IM has hit this before (V3/V4). CM gates it.
-4. **Lost update.** `ItemRepository.save()` writes the whole row. Without the per-Item lock (R8) a receipt could write a stale category back and the audit would say it changed. This is why the set route takes the lock.
-5. **VAT registration is a Company fact, not a product fact.** A Company that is not VAT-registered should not charge VAT whatever the product category. GL's `vatScheduleConfigured` covers countries with no verified rates, not registration status. Nobody owns "is this Company VAT-registered" yet. Not solved here; for GL and EA.
-6. **Wrong category means wrong tax.** The mitigations are the reason, the audit and the write gate. There is no second-person approval in v1.
-7. **Stale pre-fill.** If WEB holds an old Item list, a line pre-fills the older category. The line stores what the user saw, which is correct and auditable; WEB should reload the list when an order form opens.
-8. **One category per product.** A bundle with mixed rates is separate lines, not one Item.
-9. **Wire change reaches embedded responses.** Receipts, issues and adjustments embed the item, so their responses gain the field too (R9).
+1. **A product-only category cannot express some real VAT.** Exports (zero-rated even though the product is normally standard), reverse charge, and mixed supplies depend on the *transaction*, not the product. Femi's rule (nobody types it on a line) means v2 cannot represent them; the workarounds are a separate Item ("Sugar, export") or a later, tightly controlled transaction-level override. Not decided here; flagged to CM.
+2. **Do POP's purchase lines follow the same rule?** Femi's decision names the *sales* line. The mirror (POP reads the Item's category and copies it for input VAT) is the obvious reading, but I am not assuming it. Asked of CM and POP, not of Femi.
+3. **EA's strict decoder (high).** If IM ships a new field or a null account before EA declares it, every EA call that decodes an IM item throws. W1 exists for this. EA's tile is *already* failing on a removed route, so verify EA end to end, not only its unit test.
+4. **Migration numbers.** IM has VAT, kind, receipt-idempotency (seam A) and the M2 child-table work queued. Only one can take each number; IM has hit this before (V3/V4). CM gates it; build order fixes the sequence.
+5. **Lost update.** `ItemRepository.save()` writes the whole row. Without the per-Item lock a receipt could write a stale category back and the audit would say it changed. This is why the set route takes the lock.
+6. **VAT registration is a Company fact, not a product fact.** A Company that is not VAT-registered should not charge VAT whatever the category. Nobody owns "is this Company VAT-registered" yet. For GL and EA.
+7. **Services leak into stock figures if one place is missed.** The stock valuation report, the low-stock monitor, EA's counts, stock velocity and inventory levels all read Items and assume stock. R19 and R20 list them; the table-driven route test and a report test are the guard. This is the most likely source of bugs in W3.
+8. **"Has an itemId means stock" is now false** (R21). POP's GRNI plan and SOP's goods-issue decision both used it. Both must switch to `kind`. A service line that reached goods issue would be a real error, so IM also refuses it (R19).
+9. **POP's IM decoder.** CM confirmed my earlier finding was real; POP now decodes only what it needs. Independent of this work.
+10. **Wrong category means wrong tax.** Mitigations: the reason, the audit and the write gate. No second-person approval in v1.
+11. **Wire change reaches embedded responses.** Receipts, issues and adjustments embed the item, so their responses gain the fields too (R9).
+12. **SOP built the typed per-line category and has not released it.** It is the transition path until W4 (R22); removing it is a tracked task so two sources of truth do not live on.
 
 ---
 
 ## 11. What I am not claiming
 
-I do not know which of anyone's products are vatable, and IM holds no VAT data today. This playbook decides where the answer is stored and who may record it, not what the answer is.
+I do not know which of anyone's products or services are vatable, and IM holds no VAT data today. This playbook decides where the answer is stored, who may record it, and how a line copies it, not what the answer is.
