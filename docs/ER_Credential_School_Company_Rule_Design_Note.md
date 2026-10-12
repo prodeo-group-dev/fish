@@ -193,7 +193,7 @@ Today the credential is opted in on exactly two routes (customer create, custome
 
 **Never** for ER: cancel, return requests and credit notes, `record-sale` (the lower-level synthesis route), bills for collection and facilities (trade finance), the VAT-category edit route, invoice email, complaints, analytics. A refund or a mistaken invoice is a separate, later design (credit note through the returns flow), not part of this opt-in.
 
-Two things SOP must also settle: the sale records the **actor from the token's email claim**, which for ER is the service account, not the bursar who raised the invoice, so an explicit "raised by" field is needed if the audit trail must name the person; and `Idempotency-Key` already works on `POST /sales` and the collections route, so ER's keys need no new SOP mechanism.
+Two things SOP must also settle: the sale records the **actor from the token's email claim**, which for ER is the service account, not the bursar who raised the invoice, **proposal (CM agrees): an explicit `raisedBy` field on the sale request, the bursar's name as data and never as the token identity**; and `Idempotency-Key` already works on `POST /sales` and the collections route, so ER's keys need no new SOP mechanism.
 
 ## 16. VAT and revenue timing: not mine to decide, so asked, not defaulted
 
@@ -213,7 +213,7 @@ Two things SOP must also settle: the sale records the **actor from the token's e
 | `GuardianBillingService`, `GuardianAccount`, `KtorSopCustomerGateway`, Part 1 key, `billing_unavailable` (`e532ac4`) | **stay, unchanged** | the first leg of the new flow; the Customer is what every sale hangs on |
 | Fee schedule items (`defineScheduleItem`) | **stay**; gain an explicit `vatCategory` | the price list is the runtime's own; the money fact moves |
 | `FeeService.issueInvoice` | **changes**: raises the credit sale in SOP, then stores the mapping | one key per invoice |
-| `FeeInvoice` table (amount and status as truth) | **reduced to a mapping**: ER invoice id, student id, SOP sale id and a cached status; **not** retired outright | the student-to-sale link exists nowhere else; status and amounts read from SOP |
+| `FeeInvoice` table (amount and status as truth) | **reduced to a mapping**: ER invoice id, student id and SOP sale id only: no amounts and no status, so no second copy can drift (CM steer, 2026-10-12); **not** retired outright | the student-to-sale link exists nowhere else; status and amounts read from SOP |
 | `confirmPaymentStub`, the `StudentPaymentReceived` outbox event | **replaced** by the verified-payment call to the collection route (key per payment) | today's event has no financial effect |
 | `reconcileStuckInvoices` | **replaced**: replay any invoice or payment with no confirmed SOP result under the **same** key; it converges because SOP dedupes | SOP now knows the truth |
 | Parent gateway `outstandingCount`, per-student statement, guardian `outstanding` (`4e03ab9`) | **stay as ER's API for WEB; source swaps to SOP** | the response shape WEB codes against does not change |
