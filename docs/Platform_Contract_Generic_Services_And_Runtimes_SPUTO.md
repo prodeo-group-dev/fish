@@ -2,6 +2,8 @@
 
 **Status:** 2026-10-12, planning only (SPUTO: Scope, Plan/SRS, Use cases, Tasks, Order). Nothing in this note is built. **Decisions are asked of Femi in section 8.** Written by the EA session at Femi's request, from four read-only research passes made the same day: how Education Runtime depends on the generic services; every service-to-service call; the versioning and extension conventions that exist; and a sourced comparison of messaging options. Prices are AWS list prices for eu-west-2 read on 2026-10-12. Every estimate is mine and unproven. What I could not verify is listed in section 9.
 
+**Revision 2026-10-12 (Femi, after reading section 2.3):** a runtime does not duplicate a generic service. SOP creates income, so the Education Runtime raises its tuition fee invoices **in SOP** (and records payments there as collections), not in a second invoicing model of its own. This matches the decision already recorded through CM that all schools bill through SOP. It changes Layer C: the first build is no longer an event relay for fee payments but Education Runtime invoicing through SOP's existing sale and collection routes (tasks C2a to C2c). The sections below are updated accordingly; the relay design stays as a later option for non-financial events.
+
 ## 1. Scope (S)
 
 **The idea (Femi, 2026-10-12):** the platform is a set of **generic services** (GL, SOP, POP, IM, HR, EA) plus several **specialist runtimes** (Education now; credit unions, banking, investment management, doctor surgeries later). The contract fixtures already approved are "the missing piece" that lets that work. This note says what it takes to make it true, and where a message broker such as Kafka fits.
@@ -14,7 +16,7 @@
 
 **2.2 There is no contract layer.** No API version (routes sit under `/api`, which is a routing prefix, not a version), no deprecation or sunset mechanism, no OpenAPI or JSON Schema anywhere. The GL readiness assessment parked versioning "deliberately last". The Education Runtime's own spec demands versioned APIs, six months' deprecation notice and contract tests in CI; nothing implements it.
 
-**2.3 Education Runtime is lighter on the platform than people assume.** It makes exactly **one** outbound call to a generic service (create a Customer in SOP for a guardian, `POST /api/companies/{id}/customers`). It never calls GL, POP, IM, HR or EA. It never reads EA's `GET /me` or module grants: who may do what comes from its own staff table. `EDUCATION_RUNTIME` is only a visibility switch in WEB. EA calls it (two provisioning routes, pipe-delimited text, not JSON). **Its event outbox is written but nothing reads it**, so a fee payment has no financial effect in SOP or GL today.
+**2.3 Education Runtime is lighter on the platform than people assume.** It makes exactly **one** outbound call to a generic service (create a Customer in SOP for a guardian, `POST /api/companies/{id}/customers`). It never calls GL, POP, IM, HR or EA. It never reads EA's `GET /me` or module grants: who may do what comes from its own staff table. `EDUCATION_RUNTIME` is only a visibility switch in WEB. EA calls it (two provisioning routes, pipe-delimited text, not JSON). **Its event outbox is written but nothing reads it**, so a fee payment has no financial effect in SOP or GL today. It also keeps its own fee schedule, fee invoices and a stubbed payment step: a second invoicing model beside SOP's, which is what the revision at the top corrects (the runtime keeps only what is specific to a school: the fee schedule, and the student and guardian links).
 
 **2.4 Education is hard-wired into the generic services.** EA: `IndustryType` is a closed enum with two values, provisioning is an `if (industryType == SCHOOL)` branch, `/me` carries a school-specific `schoolId` that all five strict mirrors had to add. SOP: an education-named login provider, an education-specific env var and a Company allow-list (`SOP_ER_COMPANY_IDS`) kept outside Terraform. GL and the others mirror `EDUCATION_RUNTIME` in their module enum. WEB hard-codes education in many places.
 
@@ -52,7 +54,9 @@ The work falls into four layers. They have different urgency, and Kafka belongs 
 Replace the Education-specific code with data. A **runtime manifest** in EA: runtime id, name, module id (a string, not a code enum), the role names it declares and how they map to the platform's view/enter/approve/administer capabilities (the RBAC SPUTO's R12, still unbuilt), its provisioning route (JSON, versioned, idempotent on the organisation id), the service identities it uses, and the generic routes each identity may call. `/me` carries a generic `runtimeLinks` map in place of `schoolId` (one consumer-first lockstep change in the five strict mirrors, with `schoolId` kept during a stated overlap). SOP's and GL's allow-lists read "runtime enabled for this Company" from EA instead of an env var. Before building anything, run a **paper dry run**: write down how a credit-union runtime would onboard, call SOP, GL and EA, and post a member's contribution, and see which blocker (section 2.5) actually bites. Femi's answer on 2026-10-07 was that nothing is planned for Clinical or Banking: build only what the dry run proves necessary.
 
 ### Layer C: the event contract (design now; the first piece is already needed)
-One envelope, **CloudEvents 1.0.2** (`id`, `source`, `type`, `subject` as the business key, `time`, plus `tenantid` and the registered `partitionkey` extensions). A catalogue per publisher in **AsyncAPI 3.1**, JSON Schema payloads, and one fully populated fixture per event type in `fish-contracts/events/`, produced by the publisher's own golden test and decoded strictly by each consumer, exactly like the REST fixtures. **First build: the Education Runtime relay.** A small poller reads the existing outbox, claims the oldest unpublished row per business key (ordering by a sequence column, not a timestamp), POSTs the envelope over HTTP to an authenticated, idempotent SOP ingestion route, and records attempts, last error and a `dead` state; SOP keeps an inbox table keyed on `source` and `id`. Alert on the age of the oldest unpublished row and on dead rows. No new infrastructure, and it works unchanged anywhere Postgres and HTTP exist. Put the transport behind a small `Sink` port (`HttpSink` now).
+One envelope, **CloudEvents 1.0.2** (`id`, `source`, `type`, `subject` as the business key, `time`, plus `tenantid` and the registered `partitionkey` extensions). A catalogue per publisher in **AsyncAPI 3.1**, JSON Schema payloads, and one fully populated fixture per event type in `fish-contracts/events/`, produced by the publisher's own golden test and decoded strictly by each consumer, exactly like the REST fixtures. **Relay design (revised: no longer the first build, see the revision below).** A small poller reads the existing outbox, claims the oldest unpublished row per business key (ordering by a sequence column, not a timestamp), POSTs the envelope over HTTP to an authenticated, idempotent SOP ingestion route, and records attempts, last error and a `dead` state; SOP keeps an inbox table keyed on `source` and `id`. Alert on the age of the oldest unpublished row and on dead rows. No new infrastructure, and it works unchanged anywhere Postgres and HTTP exist. Put the transport behind a small `Sink` port (`HttpSink` now).
+
+**Revision (Femi, 2026-10-12): fee income goes through SOP's API, not through events.** SOP already creates income. So the Education Runtime raises a term's tuition invoice in SOP through SOP's existing credit-sale route, with one stable Idempotency-Key per invoice (the runtime's own invoice id), and records a confirmed payment through SOP's existing collection route, again with a key. SOP and GL then do the receivable, the income and the cash exactly as for any other sale. This is a synchronous, idempotent API call, so a fee never depends on a relay being up, and it removes the runtime's own invoice tables. SOP already carries `customerReference` and a service period (`servicePeriodFrom`, `servicePeriodTo`) on a sale; whether those cover a tuition term is for ER and SOP to confirm. **Two things to settle with Finance, not assumed here:** SOP requires an explicit VAT category on every sale line (since 2026-10-11), so the VAT treatment of tuition must be decided and set by IM or SOP, not defaulted; and the guardian-as-Customer rule and the school-Company rule (CM merged ER's note) already govern which Company the runtime may act in. The event outbox and relay stay available for non-financial events (enrolment, attendance, assessment) if a consumer ever needs them; today none does, so that is deferred.
 
 ### Layer D: the broker (decide at triggers; not now)
 Researched options for async events, at the expected volume (hundreds to low thousands of events a day per tenant):
@@ -77,7 +81,7 @@ Researched options for async events, at the expected volume (hundreds to low tho
 | UC-P1 | A generic service adds a response field | consumers declared it optional first; fixtures updated by the source's own golden test; no outage in any deploy order |
 | UC-P2 | A generic service must remove or retype a field | a `/api/v2` route ships beside the old one; consumers move within the agreed period; the old route sends a `Deprecation` header until it is retired |
 | UC-P3 | EA adds a module or role value | consumers decode an unknown value as "no access", never as an exception |
-| UC-P4 | A parent's fee payment is confirmed in Education Runtime | the event reaches SOP once, is recorded as a collection, and appears in GL; a retry or a crash does not duplicate it |
+| UC-P4 | A school raises a term's tuition invoice and a parent's payment is confirmed | the invoice is created in SOP (receivable and income in GL) and the payment is recorded as a SOP collection, each once; a retry or a crash duplicates neither |
 | UC-P5 | SOP is down for an hour | events wait in the runtime's outbox and are delivered in order per invoice afterwards; the oldest-unpublished-age alert fires |
 | UC-P6 | A runtime service retries a customer-creation call after a timeout | one Customer exists |
 | UC-P7 | A new runtime (a credit union) is registered | a manifest and Cognito clients, not new branches in EA, SOP and GL (after Layer B) |
@@ -116,7 +120,10 @@ Researched options for async events, at the expected volume (hundreds to low tho
 | Task | Owner | Content | Size |
 |---|---|---|---|
 | C1 | EA, ER, SOP | CloudEvents envelope, AsyncAPI catalogue and event fixtures in `fish-contracts/events/` | 1 d |
-| C2 | ER, SOP | outbox relay with sequence ordering and dead state, SOP ingestion route, inbox dedup, collection posted through the existing record-collection route, alerts | 3 to 4 d |
+| C2a | ER, SOP | tuition invoice raised in SOP through its existing credit-sale route, one Idempotency-Key per invoice, explicit VAT category (decided with Finance), term as the service period, school reference as the customer reference | about 2 d ER, 0.5 d SOP |
+| C2b | ER | a confirmed payment recorded through SOP's collection route with a key, replacing the stubbed payment step | about 1.5 d |
+| C2c | ER | retire the runtime's own invoice tables (fee schedule stays), migrating the test data | about 1 d |
+| C2d | ER, SOP | deferred: the outbox relay, only for non-financial events and only when a consumer exists | 3 to 4 d, not scheduled |
 
 **Layer D**
 
@@ -130,7 +137,7 @@ Total for Layer A, C and D1: about 17 to 19 days across sessions, with the fixtu
 
 1. **A3, A4, A5, A6** first: they close the riskiest calls (section 2.8) and need no new design.
 2. **A1, A2** (policy and fixtures), starting with SOP as already planned.
-3. **C1, C2**: the Education Runtime relay, which fixes the one place a real financial effect is missing today.
+3. **C1, then C2a to C2c**: the Education Runtime raises tuition invoices and records payments through SOP (Femi, 2026-10-12), which fixes the one place a real financial effect is missing today. The relay (C2d) waits for a non-financial consumer.
 4. **A7 to A10** alongside.
 5. **B1** (paper dry run), then B2; decide on B3 and B4 from what B1 shows.
 6. **D1** with C2.
@@ -139,12 +146,12 @@ Total for Layer A, C and D1: about 17 to 19 days across sessions, with the fixtu
 
 ## 8. Decisions asked of Femi
 
-1. **Approve the layered approach:** the contract policy and fixtures first (Layer A), events (Layer C) with the Education Runtime relay as the first build, the runtime registry (Layer B) designed now and built only if a paper dry run shows the need, and the broker (Layer D) held until a trigger fires. Kafka is not the foundation; it is an option for later.
+1. **Approve the layered approach:** the contract policy and fixtures first (Layer A), events (Layer C), with Education Runtime invoicing through SOP as the first build, the runtime registry (Layer B) designed now and built only if a paper dry run shows the need, and the broker (Layer D) held until a trigger fires. Kafka is not the foundation; it is an option for later.
 2. **Broker:** accept "no broker now; outbox plus relay plus HTTP sink; revisit at the triggers in section 4" (recommended), or choose a broker now? If a broker is wanted now, my choice would be SNS and SQS in London, not Kafka, because of cost and operations; a Kafka-API broker only when a trigger fires.
 3. **Do the breaking cleanups before the Live switch** (`/me` shape, error body, enum to string, tolerant decodes)? Recommended: yes, because they are cheapest while production data is test data.
 4. **Deprecation period** for a retired route once the platform is Live: the Education Runtime spec says 6 months; my suggestion is 3 months before any outside customer depends on it and 6 after. Your call.
 5. **Layer B:** do the paper dry run for a credit-union runtime (1 day) now, or wait until a second runtime is decided? Note your earlier answer on 2026-10-07 that nothing is planned for Clinical or Banking.
-6. **Priority:** should the Education Runtime relay (C2) go ahead of the remaining Layer A work, since a fee payment currently has no financial effect?
+6. **Priority:** should Education Runtime invoicing through SOP (C2a to C2c) go ahead of the remaining Layer A work, since a fee payment currently has no financial effect? The relay is no longer the fix for that.
 
 ## 9. What I could not verify
 
