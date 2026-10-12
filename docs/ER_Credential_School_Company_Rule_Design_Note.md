@@ -169,3 +169,61 @@ Shorter on purpose. The generic services are GL, SOP, POP, IM, HR and EA; a spec
 - **EA:** the industry route, the data-fix list, and later the manifest and `runtimeLinks`.
 - **GL, IM, POP, HR:** state which of their routes a runtime must *never* call and which, if any, a future runtime might need; for the next runtime's dry run (EA B1), not for Education.
 - **CM:** reviews every auth path before code; owns env vars, Cognito clients and the deploy order.
+
+---
+
+# Part 3. Raising tuition in SOP: which routes the Education Runtime credential needs, and what happens to ER's own fee code
+
+Added 2026-10-12 after Femi's direction relayed by EA and CM: "Education Runtime does not need to duplicate these services. SOP creates income; ER should raise tuition fee invoices in SOP." This extends Part 1 (who may act in a school Company) and Part 2 (how a runtime behaves). Facts below are from SOP's and ER's code read the same day. Design only; nothing built.
+
+## 14. What changes in principle
+
+ER keeps its **price list** (fee schedule items) and its **people** (students, guardians, who may do what). It stops being the place where the money fact lives: a tuition invoice becomes a **credit sale in SOP** for the guardian's Customer, and a payment becomes a **collection** against that sale. SOP and GL then do what they already do (revenue, receivable, cash). ER's `confirmPaymentStub` and its `StudentPaymentReceived` outbox event, which today has no financial effect at all, are replaced by a direct, idempotent call. The outbox relay is no longer the first build; it stays for non-financial events only (EA's rev 2).
+
+## 15. SOP routes the ER credential would need (per route, never broad)
+
+Today the credential is opted in on exactly two routes (customer create, customer read; `serviceMayCall`). Every route below needs its own opt-in, **behind Part 1's SCHOOL check**, and each is an auth-path change for CM to review at higher effort. In the order they are needed:
+
+| # | SOP route | Why ER needs it | Key | Notes for SOP |
+|---|---|---|---|---|
+| 1 | `POST /api/companies/{c}/customers` | create the guardian's Customer (exists, cleared) | `ER-guardian-{guardianAccountId}` (Part 1) | first build |
+| 2 | `POST /api/sales` (credit sale) | raise a tuition invoice | `ER-invoice-{erInvoiceId}` | the Company is a **body field** on this flat route: the rule must take it from the body, never from a header, and check the Customer belongs to that Company (it already does); lines carry an **explicit** VAT category (section 16); `servicePeriodFrom/To` and `customerReference` carry the term dates and the student reference (print-only) |
+| 3 | `POST /api/sales-orders/{id}/collections` | record a verified payment | `ER-payment-{paymentId}` | the route has no Company in path or body: SOP must derive the Company from the order itself and apply the SCHOOL rule to **that**, not trust the caller; needs the gross, currency and cash account (section 17) |
+| 4 | `GET /api/companies/{c}/customers-with-balances`, `GET /api/sales`, `GET /api/sales-invoices/{n}` | statements, outstanding, invoice print | none (reads) | read-only, same SCHOOL rule; later than 2 and 3 |
+
+**Never** for ER: cancel, return requests and credit notes, `record-sale` (the lower-level synthesis route), bills for collection and facilities (trade finance), the VAT-category edit route, invoice email, complaints, analytics. A refund or a mistaken invoice is a separate, later design (credit note through the returns flow), not part of this opt-in.
+
+Two things SOP must also settle: the sale records the **actor from the token's email claim**, which for ER is the service account, not the bursar who raised the invoice, **proposal (CM agrees): an explicit `raisedBy` field on the sale request, the bursar's name as data and never as the token identity**; and `Idempotency-Key` already works on `POST /sales` and the collections route, so ER's keys need no new SOP mechanism.
+
+## 16. VAT and revenue timing: not mine to decide, so asked, not defaulted
+
+- **VAT category is mandatory per sale line** (`STANDARD`, `REDUCED`, `SECOND_REDUCED`, `SUPER_REDUCED`, `ZERO_RATED`, `EXEMPT`). The Decisions_Log (2026-10-11) says IM owns the category per item and SOP copies it at order time, but that SOP-to-IM read is not built. **Interim:** each ER fee-schedule item carries an explicit `vatCategory`, set by Finance when the item is defined, with no default (a missing one refuses the invoice). The right value per jurisdiction is Finance's and Femi's call.
+- **Tuition is earned over a term; SOP recognises a credit sale at the sale date.** `servicePeriodFrom/To` and `customerReference` are, by SOP's own KDoc, print-only and never an input to recognition, so they do not give over-the-term recognition. Whether that is acceptable, or tuition needs deferred income released over the term, is an accounting question for Finance and SOP. It does not block the first build (a termly invoice raised at the start of term), but it must be answered before the Live switch.
+
+## 17. Open design points with SOP and GL
+
+- **Cash account for a payment.** The collection needs the gross GL debits, the currency and the cash account; ER holds no GL account ids. Proposal: SOP resolves the Company's default cash book (account 1000 is always the Cash Book, Decisions_Log 2026-10-11) when ER sends none; a school paying into a bank account is a later extension.
+- **A payment is a claim until verified** (T-ER3, held until after the sitting): ER calls the collection route only when the fee desk has verified the payment, never on a parent's tick. This is the same rule as Part 2's R-4: the financial call carries the verified fact.
+- **Student view over a guardian's Customer.** SOP's Customer is the guardian; a guardian with three children has one Customer and three students' invoices. A per-student statement therefore cannot be read from SOP alone (the student reference on the invoice is print-only text). ER keeps a thin mapping (section 18).
+
+## 18. What happens to ER's existing code
+
+| ER code | Fate | Reason |
+|---|---|---|
+| `GuardianBillingService`, `GuardianAccount`, `KtorSopCustomerGateway`, Part 1 key, `billing_unavailable` (`e532ac4`) | **stay, unchanged** | the first leg of the new flow; the Customer is what every sale hangs on |
+| Fee schedule items (`defineScheduleItem`) | **stay**; gain an explicit `vatCategory` | the price list is the runtime's own; the money fact moves |
+| `FeeService.issueInvoice` | **changes**: raises the credit sale in SOP, then stores the mapping | one key per invoice |
+| `FeeInvoice` table (amount and status as truth) | **reduced to a mapping**: ER invoice id, student id and SOP sale id only: no amounts and no status, so no second copy can drift (CM steer, 2026-10-12); **not** retired outright | the student-to-sale link exists nowhere else; status and amounts read from SOP |
+| `confirmPaymentStub`, the `StudentPaymentReceived` outbox event | **replaced** by the verified-payment call to the collection route (key per payment) | today's event has no financial effect |
+| `reconcileStuckInvoices` | **replaced**: replay any invoice or payment with no confirmed SOP result under the **same** key; it converges because SOP dedupes | SOP now knows the truth |
+| Parent gateway `outstandingCount`, per-student statement, guardian `outstanding` (`4e03ab9`) | **stay as ER's API for WEB; source swaps to SOP** | the response shape WEB codes against does not change |
+
+**The queued read branch `4e03ab9` (statement route and guardian `outstanding`):** safe to release as it is, read-only and over test data, and its **shapes stay**; its **implementation is later re-pointed** at SOP (balances from `customers-with-balances`, per-student via the mapping). One difference WEB and Finance must know: SOP's balance is **gross, including VAT**, while ER's today sums net invoice amounts; once re-pointed the figure changes meaning, so the label ("including VAT") must change with it.
+
+## 19. Build order (extends sections 6 and 11)
+
+1. SOP idempotent customer create (Part 1, first). 2. EA industry route and the SOP rule, switched on only when CM says (the data gate in section 6). 3. ER customer-create key, tolerant retry, timeout (Part 2 list). 4. **Decide with Finance:** per-item VAT category, and the revenue-timing question (section 16); SOP's actor and cash-account answers (section 17). 5. SOP opts in `POST /sales` then the collection route (rows 2 and 3), each reviewed by CM. 6. ER: `vatCategory` on schedule items; `issueInvoice` raises the sale and stores the mapping. 7. ER: T-ER3 (payment as a claim), then the verified-payment call replaces `confirmPaymentStub`. 8. Re-point the reads (row 4) and retire `reconcileStuckInvoices`. Steps 1 to 3 need nothing from Finance; steps 5 to 8 wait on step 4.
+
+## 20. Test plan additions
+
+SOP: the credential is refused on each new route for a non-school Company and for an unknown order; a replayed `POST /sales` or collection with the same key returns the same result and posts once; a refused request spends no key; the actor field. ER: one sale per invoice across a retry after a timeout; a payment verified twice posts one collection; a missing `vatCategory` refuses the invoice; a parent's tick never calls SOP; the mapping survives a crash between SOP success and the local save (replay converges). End to end on a test school: invoice raised, payment verified, SOP and GL balances agree, and the ER statement matches SOP's gross figure.
