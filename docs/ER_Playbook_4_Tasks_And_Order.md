@@ -31,8 +31,8 @@ Owner: **ER** the Education Runtime, **WEB**, **SOP**, **EA**, **HR**, **CM**. "
 | F8 | **LATER, parked (built, not released; D13 and D13b off the open list).** **Safeguarding access**: remove SCHOOL_ADMIN from `canAccessSafeguarding` (add-a-deny now, CM review, no flag; see `ER_Safeguarding_Admin_Deny_Note.md`); break-glass later behind flag E2 | PL-SAF-1, C2 | ER | S | ⚑ | D13 decided |
 | F9 | Audit extension: log exports, permission changes, score changes after locking, payment actions, views of restricted records; kept six years (proposed) | PL-AUD-1, PL-RPT-4 | ER | M | | |
 | F10 | **Privacy model**: lawful basis per data category, consent records (what, when, how, who), retention schedule per record type, field switches per school and country | PL-PRV-1, 2, PL-CON-5, PL-ENR-3 | ER | M | | |
-| F11 | ****Offline mobile app** design pass** (WEB and ER together): the on-device store, sync queue, conflict rule per entity, the late-sync deadline (D4), device wipe; output is a design doc, then F12 | PL-ATT-2, Part 2 section 5 | ER, WEB | S | | D1 (decided: online and an offline mobile app), **D4** |
-| F12 | Offline mobile app for the **attendance register**, then **mark entry** (server side exists: devices, change feed, push ledger) | PL-ATT-2, PL-ASM-3, UC-E4, UC-E5 | WEB, ER | L | | F11 |
+| F11 | **Offline mobile app design pass: DONE and approved by Femi 2026-10-13** (`ER_Offline_Mobile_App_Design.md`: v1 scope accepted, the six server gaps accepted, prefetch first, technology B decided) | PL-ATT-2, Part 2 section 5 | ER, WEB | S | | done |
+| F12 | **Offline mobile app**, scope as approved: the server side in the order of design note section 3.1 (S2 prefetch, S4 handshake, S3 JSON push, S1 change feed, S5 limits; S6 shared phones deferred; about 9 to 10 days) and WEB's client (a native shell around the same React app with encrypted local storage), attendance register first, then mark entry, then roster and timetable lookups; the build, signing and distribution plan is CM's | PL-ATT-2, PL-ASM-3, UC-E4, UC-E5 | WEB, ER, CM | L | | F11 done; D4 |
 
 ### Core student and family (C)
 

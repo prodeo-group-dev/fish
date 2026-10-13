@@ -34,6 +34,19 @@ Out of v1: admission capture offline (spec UC-01 A3: provisional admission numbe
 | S5 | **Per-batch limits and a partial-failure contract** documented and tested | defined in the contract | S |
 | S6 | **A shared classroom phone** (one device, several teachers) conflicts with "a device is scoped to one subject" | decision O3 below; if shared devices are needed the model changes (a device holds a list of subjects, writes carry the acting subject) | M |
 
+### 3.1 Order and size (Femi approved the six gaps and the prefetch "sooner than later", 2026-10-13)
+
+| Order | Gap | Why here | Size | Notes |
+|---|---|---|---|---|
+| **1** | **S2 prefetch bundle** | what the app is useless without, and the biggest win on a weak link (one call, not forty); Femi: "sooner than later" | **M** (3 to 4 days) | one read per device: the teacher's arms, students, offerings (with current mark cells and versions, so offline editing starts from the right version), scales, structures, timetable; a cursor and a size cap; scoped like the online routes (a teacher gets only their own classes and offerings; head roles see more); no safeguarding fields; tests for scoping, paging and a revoked device |
+| **2** | **S4 device handshake** | tiny, and gives the app server time, the minimum app version, the wipe flag and the late-sync deadline (D4) before it does anything else | **S** (about 1 day) | can ride on the prefetch response header first and become its own route if needed |
+| **3** | **S3 JSON push body** (with a fixture in `fish-contracts`) | the app should not speak a pipe-delimited text format; consumer-first, the old body stays | **S** (about 1 day) | the idempotency ledger is unchanged |
+| **4** | **S1 change feed for marks, rosters and offerings** | after the first prefetch the app needs only what changed | **M** (about 3 days) | a version-since read or an ETag per roster page; the marks ledger and cell versions already exist |
+| **5** | **S5 limits and partial-failure contract** | documented and tested so the app can size its batches and handle a half-applied batch | **S** (0.5 to 1 day) | |
+| **6** | **S6 shared classroom phone** | **not in v1** (open question O3: one device, one teacher); the model change is only needed if Femi wants shared devices | **M**, deferred | |
+
+**Total for v1 on the server (S2, S4, S3, S1, S5): about 9 to 10 days**, my estimate, unproven; S2 and S4 alone, 4 to 5 days, are enough for WEB to start the app against real data. The client (option B, WEB's) is sized by WEB.
+
 ## 4. The client, in layers
 
 1. **Local store.** An encrypted database on the device (a SQLite engine with encryption, key in the Android Keystore). Holds only what the person needs: their arms, students, offerings, scales, structures and timetable (**data minimisation**: no other teachers' classes, no safeguarding fields, no fee data). A **sync outbox** table holds every unsent operation with its id, entity, payload, created time and state.
@@ -63,7 +76,7 @@ Play Store versus a **sideloaded APK** (data cost and no-store schools matter in
 
 | # | Question | For | Proposal |
 |---|---|---|---|
-| O1 | Technology: A, B, C or D | WEB and Femi | B, with A as a prototype |
+| O1 | Technology | WEB and Femi | **Decided 2026-10-13 (Femi: "I agree"): B, the same React app in a native shell with local encrypted storage, built under WEB**; A is only an optional stage-0 prototype |
 | O2 | Distribution: Play Store, APK or both | CM, Femi | both; the handshake enforces a minimum version |
 | O3 | **Shared classroom phones**: allow several teachers on one device | Femi, ER | not in v1: one device, one teacher; revisit with the S6 model |
 | O4 | iOS support in v1 | Femi | no (Android first, the Nigerian arrowhead), revisit |
