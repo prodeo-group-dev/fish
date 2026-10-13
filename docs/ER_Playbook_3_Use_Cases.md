@@ -141,7 +141,7 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 - Low data: pages are small; results summary also by SMS for non-smartphones (P2).
 **Offline:** a guardian's own phone: read what is cached.
 
-## UC-E9 Record a safeguarding concern
+## UC-E9 Record a safeguarding concern (LATER, country-triggered; not in the Nigeria or Sierra Leone packs)
 
 **Actors:** any staff member raising; safeguarding lead and head teacher (restricted); pastoral lead. **Reqs:** PL-SAF-1 to 3, PL-STF-4.
 **Main flow**
