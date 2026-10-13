@@ -100,7 +100,7 @@ Nothing in this vocabulary. Answered 2026-10-13 and applied above: Enrolment (Br
 |---|---|---|---|
 | **School Operations** | the teaching staff: teachers, heads of department and year, the form masters, the timetabler | TEACHER, HOD, HOY, HEAD_TEACHER (the head teacher is a teacher), TIMETABLER | **Staff** (the division's directory), **Teaching records** (registration, vetting, training; only for Operations staff) |
 | **School Administration** (The Registry) | the Registry staff: registrar, admissions officer, safeguarding and pastoral leads, the school admin; and the **Proprietor** (the Business Owner; EA is the Proprietor) | REGISTRAR, ADMISSIONS_OFFICER, SAFEGUARDING_LEAD, PASTORAL_LEAD, SCHOOL_ADMIN | **Staff**, and **Roles and access** (see below) |
-| **School Finance** | the finance staff: bursar, fee officers | BURSAR, FEE_OFFICER | **Staff**; payroll runs sit here (proposal, decision D21) |
+| **School Finance** | the finance staff: bursar, fee officers | BURSAR, FEE_OFFICER | **Staff**; **the pay run** (run, approve, post) sits here; the **pay basis** is set under School Administration (decision D21, below) |
 
 **Where "Roles and access" lives: School Administration.** Who may do what in the school is an administrative act of the Proprietor and the school admin, across all three divisions, so it is one screen under The Registry, replacing "Staff and roles" and "Team". It lists everyone with their school roles (from the Education Runtime) and, for the Proprietor, which platform modules each person has (from EA). The word "Team" disappears for a school.
 
@@ -114,7 +114,9 @@ Nothing in this vocabulary. Answered 2026-10-13 and applied above: Enrolment (Br
 
 **Words.** Screen **Staff** inside each division; list rows **Staff members**; button **Add staff member**; **Roles and access**; **Teaching records**; **Proprietor**. **No** top-level "Staff" tab and no "Team" for a school. The **module** word for HR in the module and permission lists (the invite picker) stays **Staff**, since it names a permission, not a tab.
 
-**Still open (two questions for Femi, my recommendations):** **D20** where do **supporting** staff sit (cleaners, security, drivers, kitchen): recommend **Operations** (they keep the school day running); **D21** where does **payroll** sit: recommend **School Finance** (money is Finance; today "People" sits under The Registry in the generic screens).
+**Decided by Femi (2026-10-13):** **D20** supporting staff (cleaners, security, drivers) sit in **Operations**. **D21** "Payroll is both Administrative and Finance. The basis of a pay (time, piece, contract or salary) is administrative. The pay run itself, given a basis, is financial", and he added "RBAC".
+
+**Payroll, split by role-based access (proposal, no code, for CM to review; the permissions are HR and EA to confirm).** Two separate permissions so the person who sets a basis is not automatically the one who runs payroll: **set pay basis** (Administrative: time, piece or contract/salary, a field on the **HR employment record**, set under School Administration) and **run payroll** (Finance: run, approve, post; the **Payroll** screen under School Finance). A third, **approve a pay run**, is separate from running it (the person who prepares a run does not approve it), and none is implied by a division label. Proposed default holders, to be confirmed by HR and EA: the Proprietor and an HR officer set the basis; an accountant or bursar runs and approves, with the approver different from the runner. **HR is asked to confirm** what the employment record holds today for pay basis and whether the run today separates run from approve. This touches the RBAC freeze: it is a proposal only.
 
 **Contributed by EA (2026-10-13), agreed:**
 
