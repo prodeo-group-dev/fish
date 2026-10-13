@@ -160,6 +160,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | PL-FEE-7 | Receipts: SOP numbers them; ER shows and sends the link | FEE-004 | ER + G:SOP | P1 | ⚑ | none |
 | PL-FEE-8 | Currency is the invoice's, from SOP; the platform's onboarded currencies apply (C8) | FEE-007 | G:SOP | P1 | | |
 | PL-FEE-9 | Scholarships, bursaries, discounts, waivers: ER owns eligibility and approval; SOP posts credit | FEE-006, 009 | ER + G:SOP | P2 | ⚑ | none |
+| PL-FEE-14 | **Third-party payer**: a sponsor, employer or church may pay a guardian's invoice; the **guardian stays the customer** and the sponsor is the payer of a collection applied to the invoice, recorded as payer party and reference; the guardian statement shows who paid (Femi, 2026-10-13); depends on SOP's additive payer field | FEE-003 | ER + G:SOP | P2 | ⚑ | none; SOP field not yet defined |
 | PL-FEE-10 | Clearance policy (C10), segregation of duties between recording and approving | FEE-008, 009 | ER | P2 | ⚑ | decision D8 |
 | PL-FEE-11 | Offline cash receipt: provisional receipt from a pre-allocated number range, posted on sync | FIN-INT-013 | ER + G:SOP | P2 | ⚑ | none; needs a SOP number-range design |
 | PL-FEE-12 | Online and mobile-money payment: a payment-provider integration the platform does not yet have (O3) | FEE-003, 010 | G:SOP | P2 | ⚑ | blocked |
