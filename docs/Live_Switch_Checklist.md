@@ -46,6 +46,17 @@ Generated from `docs/ER_Playbook_2_SRS.md` section 1.1 (Femi, 2026-10-13: "RBAC 
 | Alarm subscription confirmed (dev@theprodeogroup.com) and tested | CM | before Live |
 | Branch protection requiring the Jenkins PR check; retire duplicate GitHub Actions checks | CM | before Live |
 | Contract fixtures nightly drift job running (docs/Cross_Service_Contract_Fixtures_SPUTO.md) | CM | before Live |
-| Backups and restore drill documented | CM | before Live |
+| Database safety (read live 2026-10-13, instance fish-gl-engine-production): automated backups retained for 1 day only, single-AZ, no deletion protection, final snapshot skipped on delete, storage encrypted. Raise retention, turn on deletion protection and a final snapshot, decide on multi-AZ, write and run a restore drill | CM | before real data |
 
 Rules: this file is the single list; items are removed only by CM with a note of who confirmed; new deferred items from any service are added in the change that defers them.
+
+## E. Service go-live flags (from the services' own MVP definitions, 2026-10-13)
+
+| Item | Owner | Condition |
+|---|---|---|
+| GL: no audit trail written (the store exists, nothing writes to it; a journal entry carries no actor): first writers FS-3 and T17 | GL | before real data |
+| GL: no row-level security (docs/GL_RLS_Scoping.md; best done before Live while data is test data) | GL, CM | Femi decides when |
+| GL: no route to create, open, close or reopen a Period, and no generic reversal route over HTTP (month-end close and reversal are not possible from the app) | GL, Femi | Femi decided periods auto-open and close explicitly, deferred past UAT: schedule before Live |
+| GL: known accounting-correctness gaps (seam A GRNI, sales returns without VAT reversal, fixed-asset gaps, non-atomic aggregate routes, simultaneous-duplicate gap) | GL, POP, IM | each scheduled; none may be left silent at Live |
+| IM: opening stock has no route; no stock reservation against open orders | IM | before a customer with existing stock |
+
