@@ -18,7 +18,7 @@
 | Module `IM` | Stock | **Stores** | OK (Femi) | decided 2026-10-13 |
 | Module `GL` | Ledger | **Accounts** | OK (Femi) | decided 2026-10-13. Do **not** use "Bursary": the earlier "Bursary"/"Registry" was illustrative, not a Finance relabel |
 | Module `TAX` | Tax | Tax | OK | unchanged |
-| Module `HR` | People | **Staff** | OK | A school says staff; payroll beneath it stays a payroll word |
+| Module `HR` | People | **Staff** (a module and permission word only: **no top-level Staff tab**, see section 7) | OK | payroll beneath it stays a payroll word |
 | Module `EDUCATION_RUNTIME` | Education | **Education Operations** | OK | already the school's own name |
 | Hint for `SOP` | sales and customers | fees and guardians | OK | |
 | Hint for `POP` | purchases and suppliers | purchases and suppliers | OK | unchanged |
@@ -55,9 +55,9 @@ Already school words and unchanged: **The Registry** (Administration), **Admissi
 | Suppliers, Purchase Orders, Items | **Suppliers, Purchase Orders, Store items** | OK | Items follows Stock = Stores |
 | Warehouses | **Store rooms** | OK | follows Stock = Stores |
 | Adjustments | **Store adjustments** | OK | follows Stock = Stores |
-| Employees | **Staff members** (one Staff directory, grouped by kind, see section 7) | OK | the button "Add employee" becomes **"Add staff member"** |
+| Employees | **Staff members** (listed inside each division's Staff screen, section 7) | OK | the button "Add employee" becomes **"Add staff member"** |
 | Run payroll / Pay runs / Salary advances | unchanged | OK | payroll words are the same in a school |
-| Team | **Staff** (the same directory: Femi, 2026-10-13, "Staff", by kind: Teaching, Administrative, Supporting, etc.) | OK (Femi) | one Staff area, section 7; "Staff and roles" becomes the **Roles and access** tab inside it |
+| Team | **Roles and access** (one screen under School Administration, section 7) | OK (Femi) | the word "Team" disappears for a school |
 | Companies / Company profile | **Schools / School profile** | OK | "+ Add another company" becomes **"+ Add another school"**; fields "Registered name / Registration number" stay (they are legal facts) |
 | Verification: "Business (KYB)" | **School (KYB)** | OK | |
 | Business Owner | unchanged | OK | Femi's own address for the owner; do not change to "School Owner" |
@@ -90,21 +90,36 @@ Already school words and unchanged: **The Registry** (Administration), **Admissi
 
 Nothing in this vocabulary. Answered 2026-10-13 and applied above: Enrolment (British); Buy = Purchasing (list "Purchases"); Stock = Stores; Ledger = Accounts; Profitability = Surplus; Profit and loss = Income and Expenditure; Revenue = Income; Team = **Staff**, by kind (Teaching, Administrative, Supporting, etc.). The guiding principle he gave: a school is not a hard-nosed business, so where a business word and a gentler school word both fit, use the school word.
 
-## 7. The Staff area: one coherent place (proposal for WEB and ER, 2026-10-13)
+## 7. Staff follow the three divisions (rewrite, 2026-10-13, after Femi's correction)
 
-**The collision.** The vocabulary mapped the People module (HR) to "Staff" and reserved "Staff and roles" for ER's roles screen; Femi then said the school word for **Team** is also "Staff", by kind. Three things were being called staff: HR's employees, EA's team (who can sign in and which modules), and ER's school roles (what a person may do in the school). They are three different facts about the same person, so the answer is **one Staff area, three kinds of fact about a person, no second "Staff"**.
+**Femi (Decisions_Log, 2026-10-13):** the platform already has three top-level tabs, Administrative, Operations and Finance, and that is the paradigm of the whole software. Teaching staff are Operations staff, Registry staff are Administrative staff (EA is the Proprietor), Finance is still Finance. **So there is no fourth top-level Staff module, and the earlier kinds (Teaching, Administrative, Supporting, Other) are superseded.** A person's **division** is the kind.
 
-**Structure** (a school Company; the module label is **Staff**):
+**The picture** (a school Company; the three tabs are the existing School Administration (The Registry), School Operations (Education Operations) and School Finance):
 
-| Tab in Staff | What it shows | Source of truth | Who sees it |
+| Tab | Staff shown there | Typical roles | Staff screens inside the tab |
 |---|---|---|---|
-| **Staff** (the directory, the default) | one row per person, **grouped or filtered by kind**: **Teaching, Administrative, Supporting, Other**; each row shows name, kind, position and, as small chips, their school roles and the modules they can use | HR owns the person and the employment; the kind is an attribute of the employment | head teacher, admin, bursar (HR roles) |
-| **Roles and access** (replaces "Staff and roles" and "Team") | who can do what in the school: school roles (ER) and, for the Owner Admin, which EA modules each person has; give, change and remove | ER holds school roles; EA holds module access | school admin and the Business Owner |
-| **Teaching records** | registration, vetting, training for staff of kind Teaching | ER | head teacher, safeguarding lead, admin |
-| **Payroll** | Run payroll, Pay runs, Salary advances (payroll words unchanged) | HR | those with HR payroll access |
+| **School Operations** | the teaching staff: teachers, heads of department and year, the form masters, the timetabler | TEACHER, HOD, HOY, HEAD_TEACHER (the head teacher is a teacher), TIMETABLER | **Staff** (the division's directory), **Teaching records** (registration, vetting, training; only for Operations staff) |
+| **School Administration** (The Registry) | the Registry staff: registrar, admissions officer, safeguarding and pastoral leads, the school admin; and the **Proprietor** (the Business Owner; EA is the Proprietor) | REGISTRAR, ADMISSIONS_OFFICER, SAFEGUARDING_LEAD, PASTORAL_LEAD, SCHOOL_ADMIN | **Staff**, and **Roles and access** (see below) |
+| **School Finance** | the finance staff: bursar, fee officers | BURSAR, FEE_OFFICER | **Staff**; payroll runs sit here (proposal, decision D21) |
 
-**Kinds.** Femi's kinds are **Teaching, Administrative, Supporting** and "etc", so the list is configurable with these three as defaults and **Other** as the catch-all. **The kind belongs to the HR employment record** (HR owns employment, decided: employ once through HR); today the employment command EA receives carries only a position of staff, teacher or non-teaching staff, which cannot tell Administrative from Supporting. So: **HR is asked to add a staff kind to the employment**, the EA push to ER carries it, and ER uses it to decide who gets a teaching record (Teaching only, v1). Until that exists, WEB groups on position (Teaching versus Non-teaching) and shows Non-teaching as one group.
+**Where "Roles and access" lives: School Administration.** Who may do what in the school is an administrative act of the Proprietor and the school admin, across all three divisions, so it is one screen under The Registry, replacing "Staff and roles" and "Team". It lists everyone with their school roles (from the Education Runtime) and, for the Proprietor, which platform modules each person has (from EA). The word "Team" disappears for a school.
 
-**One joined list.** WEB builds the directory by joining the three sources on the person's email (HR employee, EA membership, ER staff assignment); a person with a sign-in but no HR employment (the Business Owner) shows as **Owner** and is not in a kind. This is a read-model in WEB, not a new service.
+**The division is HR's.** HR owns employment (employ once), so the division is a field on the **HR employment record**, with exactly three values: Operations, Administrative, Finance. EA's push to the Education Runtime carries it. **HR is asked to confirm** it will add that field (today the employment carries only staff, teacher or non-teaching staff). Until then WEB groups by position: teacher into Operations, everyone else into Administrative.
 
-**Words.** Module **Staff**; list **Staff members**; button **Add staff member**; tab **Roles and access**; the kinds as above. "Team" disappears for a school.
+**A person in two divisions.** One HR record, one **primary division** (the one on the employment; payroll belongs there). A person also **appears in every division where they hold a role** (derived from their school roles: a bursar who also teaches one class shows in Finance and, with a small "also in Finance" chip, in Operations), so no one is invisible to the head of a division they work for. No second record is created.
+
+**The Owner.** The Business Owner is shown under School Administration as the **Proprietor** (not as staff, not in a division), above the divisions.
+
+**The joined list.** WEB builds each division's list as a read-model joining HR (the employee and division), EA (the membership and modules) and the Education Runtime (school roles) on the person's email. It is not a new service, and the screens are WEB's.
+
+**Words.** Screen **Staff** inside each division; list rows **Staff members**; button **Add staff member**; **Roles and access**; **Teaching records**; **Proprietor**. **No** top-level "Staff" tab and no "Team" for a school. The **module** word for HR in the module and permission lists (the invite picker) stays **Staff**, since it names a permission, not a tab.
+
+**Still open (two questions for Femi, my recommendations):** **D20** where do **supporting** staff sit (cleaners, security, drivers, kitchen): recommend **Operations** (they keep the school day running); **D21** where does **payroll** sit: recommend **School Finance** (money is Finance; today "People" sits under The Registry in the generic screens).
+
+**Contributed by EA (2026-10-13), agreed:**
+
+- **Division is a grouping label, never an authorisation.** What a person may do stays their **duties** in the Education Runtime (the closed role list) and their EA role and modules at the Company; access is never derived from "Operations, Administrative or Finance" alone.
+- **Roles and access** is one WEB screen under School Administration, the Proprietor's view: one list of the Company's people grouped by division, each row showing name and email, division, position as HR holds it, employment window, EA access at this Company (role, access level, modules) and the person's **school duties read from the Education Runtime** (EA stores no duties, so there is one truth). Actions: employ and dismiss happen in **HR** (decided 2026-10-06), module access is adjusted through **EA**, school duties are granted through the **Education Runtime's** roles routes; the screen links to each.
+- **HR sends EA a `division`** (closed value OPERATIONS, ADMINISTRATIVE or FINANCE) in place of the earlier `position` staff/teacher/non-teaching; EA declares the field before HR sends it (strict decoding). **EA pushes to the Education Runtime** `PUT /schools/{schoolId}/staff/{email}/employment` carrying employmentId, `division`, default `duties`, validFrom, validUntil, version; the division tells the Education Runtime which group the person sits in; **ER never receives HR's raw position**. `GET /me` does not change and carries no division.
+- **Default duties (decision D22, awaiting Femi):** OPERATIONS maps to the duty TEACHER (v1); ADMINISTRATIVE and FINANCE map to **no default duty**, because a registrar, bursar or fee officer is a deliberate grant by the school admin, never implied by a push. A newly employed administrative or finance person gets their invite and the Education Runtime module at read access, sits in their division, and has no duty until the admin grants one.
+- **An EA role for a person who works only in the Education Runtime (decision D23, awaiting Femi):** EA's Role enum has nothing for them; EA recommends one generic role `STAFF` (division-neutral, only the modules granted), added consumer-first (only GL decodes roles strictly). A finance person who also needs the ledger is given ACCOUNTANT in addition by the Owner Admin, not by the push. This replaces my earlier D18 (a per-duty mapping to EA modules).
