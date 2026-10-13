@@ -24,3 +24,11 @@ Size **S** (one predicate, test updates). Tests: admin alone refused or masked o
 ## Consequence for the Playbook
 
 Part 2 PL-SAF-1 and the deferred-enforcement row E2 are updated: the **deny** is an add-a-deny now (no flag), only **break-glass** stays flagged (E2), and D13b (head teacher) is added to the decisions.
+
+## Built 2026-10-13 and two known limits (added after CM's clearance)
+
+Built on the Education Runtime branch `feature/safeguarding-admin-deny`: (1) `canAccessSafeguarding` is SAFEGUARDING_LEAD and PASTORAL_LEAD only; (2) **only a SCHOOL_ADMIN may grant or revoke SAFEGUARDING_LEAD and PASTORAL_LEAD** (a registrar gets `role_not_grantable`, mirroring T-ER1), closing the one-hop escalation I found; (3) the additive read `GET /schools/{id}/safeguarding/status` answering `{viewerHasAccess, leadAppointed, hint}`; HEAD_TEACHER stays out (D13b).
+
+**Known limit, shallow audit (until F9).** An admin can appoint a safeguarding lead, themselves included, and the assignment records `grantedBy` and `updatedAt`, but only for the **latest** change: a later change overwrites it and there is **no append-only history of role changes**. So Femi's "audited" is true only for the latest grant until the audit extension (task F9) is built.
+
+**Known limit, the admin can appoint themselves.** The deny stops the *implicit* access; an admin can still make themselves a lead, deliberately. That is intended (a school must have someone) and is why the audit history matters.
