@@ -59,7 +59,7 @@ These are recommendations for CM and Femi, not decisions. Nothing here changes u
 Notes:
 
 - **One-person Company (D4/D6).** The Owner holds the approver role from registration, so request-and-approve by the same person is allowed and flagged in the audit record. WEB may offer the Owner a single "dispose and approve" action; that is a UI decision for WEB and CM, not a rule change.
-- **Open sub-question O-D1 (for Femi/CM): are proceeds and date fixed at request, or can the approver amend them?** This session recommends fixed at request (reject and re-request to change), so the approver approves exactly what was asked.
+- **O-D1 DECIDED by Femi, 2026-10-13: proceeds and date are fixed at request; the approver can only approve or reject, never change them** ("That is opening the system to fraud if it is allowed to change"). Changing a figure means rejecting and raising a new request. Recorded in `docs/Decisions_Log.md`. This applies to impairments the same way (the recoverable amount is fixed at request), and this session suggests it as the platform rule for every approval, for CM to confirm.
 - **Phase 2 interplay** (PO-driven acquisition, Asset-Under-Construction, disposal via SOP, all parked): PO-driven creation would arrive by service call and inherit approval upstream (POP's T9). That call should be a scoped endpoint under R7 from day one, not another blanket service bypass.
 
 ---
@@ -98,8 +98,8 @@ Order this session suggests: G1 and G7 now (if CM agrees), then G2, then G3 and 
 - **GL:** F-FA1 to F-FA3 confirmed 2026-10-08 (F-FA1 widened to every body-`periodId` route). GL owns all backend changes (G1 to G3, G7). GL has said the approval mechanism is one shared GL mechanism (T12), so FA waits on GL's statement for its design. Still open: where audit entries go (depends on T17).
 - **EA:** T5a, with the approve capability reported per Company on `/me` so GL can check it; T6, with the Owner's explicit assignments including approve at every Company (and the GL module if G5 goes ahead); T17, the minimal audit shape.
 - **FiSH+ER WEB:** R11 gating on `FixedAssetRegister.tsx`; request/approve forms and a pending list once G3 has a contract; confirm the current state of that component.
-- **CM:** carve-out of G1 (GL and FA both support it, GL is raising it too) and G7; ordering of G2 to G4 behind T5a; take D-FA1 and O-D1 to Femi.
-- **Femi, via CM:** D-FA1 (acquisition at WRITE, or approval above a limit) and O-D1 (proceeds fixed at request, or amendable by the approver).
+- **CM:** carve-out of G1 (GL and FA both support it, GL is raising it too) and G7; ordering of G2 to G4 behind T5a; take D-FA1 to Femi (O-D1 is answered).
+- **Femi, via CM:** D-FA1 only (acquisition at ordinary entry, or approval above a limit). O-D1 is answered (fixed at request).
 
 ---
 
