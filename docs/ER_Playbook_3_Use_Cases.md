@@ -115,9 +115,9 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 **Actors:** bursar or fee officer, guardian, SOP. **Reqs:** PL-FEE-1 to 9, 13, PL-CON-3.
 **Pre:** fee schedule items with VAT categories; students enrolled; guardian accounts linked to SOP Customers; the school's Company is allowed at SOP (EA says it is a school).
 **Main flow**
-1. The bursar runs the term's billing: for each student the schedule applies; ER raises a credit sale in SOP with key `ER-invoice-{id}`, lines carrying the VAT category, term dates and the student reference, and "raised by" set to the bursar.
+1. The bursar runs the term's billing: for each student the schedule applies; ER raises a credit sale in SOP with key `ER-invoice-{id}`, lines carrying the VAT category, term dates and the student reference, and the **issuer set to the school (the organisation, through its finance department)**; the bursar who acted is recorded in the internal audit trail only, never on the invoice.
 2. ER stores only the mapping (invoice id, student, SOP sale id).
-3. A guardian pays by bank transfer or at the desk; the **fee desk verifies** the payment; ER records the collection in SOP with key `ER-payment-{id}`; SOP numbers the receipt; the cash account is the Company's cash book.
+3. A guardian pays by bank transfer or at the desk; the **fee desk verifies** the payment; ER records the collection in SOP with key `ER-payment-{id}`; SOP numbers the receipt; the payment goes to **the school's settlement accounts** (the Company's, per the cash-book design).
 4. The statement for a student and the outstanding per guardian read through SOP; a defaulter list shows what is outstanding (older than 30 days labelled).
 **Alternates / errors**
 - SOP not enabled for the school: `billing_not_enabled`. SOP or EA unavailable: `billing_unavailable`, retry safely; the same key converges to one sale or one collection. [code for the refusal codes]

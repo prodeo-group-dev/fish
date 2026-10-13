@@ -193,7 +193,7 @@ Today the credential is opted in on exactly two routes (customer create, custome
 
 **Never** for ER: cancel, return requests and credit notes, `record-sale` (the lower-level synthesis route), bills for collection and facilities (trade finance), the VAT-category edit route, invoice email, complaints, analytics. A refund or a mistaken invoice is a separate, later design (credit note through the returns flow), not part of this opt-in.
 
-Two things SOP must also settle: the sale records the **actor from the token's email claim**, which for ER is the service account, not the bursar who raised the invoice, **proposal (CM agrees): an explicit `raisedBy` field on the sale request, the bursar's name as data and never as the token identity**; and `Idempotency-Key` already works on `POST /sales` and the collections route, so ER's keys need no new SOP mechanism.
+Two things SOP must also settle: the sale records the **actor from the token's email claim**, which for ER is the service account. **Decided 2026-10-13 (Femi): the invoice issuer is the school (the organisation) through its finance department**, not a person; the acting person stays in the internal audit trail only (this replaces the earlier `raisedBy` proposal); and `Idempotency-Key` already works on `POST /sales` and the collections route, so ER's keys need no new SOP mechanism.
 
 ## 16. VAT and revenue timing: not mine to decide, so asked, not defaulted
 
@@ -202,7 +202,7 @@ Two things SOP must also settle: the sale records the **actor from the token's e
 
 ## 17. Open design points with SOP and GL
 
-- **Cash account for a payment.** The collection needs the gross GL debits, the currency and the cash account; ER holds no GL account ids. Proposal: SOP resolves the Company's default cash book (account 1000 is always the Cash Book, Decisions_Log 2026-10-11) when ER sends none; a school paying into a bank account is a later extension.
+- **Settlement account for a payment (Femi, 2026-10-13: "the school's settlement accounts").** The collection needs the gross GL debits, the currency and the account; ER holds no GL account ids. The payment goes to the Company's **settlement accounts** per the cash-book design (account 1000 is the Cash Book, bank and mobile-money accounts are further settlement accounts, Decisions_Log 2026-10-11); SOP and GL confirm how a collection names the account (ER names a payment method, SOP/GL resolve the account).
 - **A payment is a claim until verified** (T-ER3, held until after the sitting): ER calls the collection route only when the fee desk has verified the payment, never on a parent's tick. This is the same rule as Part 2's R-4: the financial call carries the verified fact.
 - **Student view over a guardian's Customer.** SOP's Customer is the guardian; a guardian with three children has one Customer and three students' invoices. A per-student statement therefore cannot be read from SOP alone (the student reference on the invoice is print-only text). ER keeps a thin mapping (section 18).
 

@@ -174,8 +174,8 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 
 | ID | Requirement | Spec | Owner | Ph | Gate | State |
 |---|---|---|---|---|---|---|
-| PL-FEE-1 | ER keeps the **fee schedule** (level, stream, term, day or boarding) with a **Finance-set VAT category per item, never defaulted** | FEE-001 | ER | P1 | | schedule built; category not |
-| PL-FEE-2 | **Raise tuition in SOP**: ER calls SOP's credit sale; key `ER-invoice-{id}`; "raised by" is an explicit field; the Company is checked as a school | FEE-002, FIN-INT-005 | ER + G:SOP | P1 | ⚑ | ER stub today; designed (note Part 3) |
+| PL-FEE-1 | ER keeps the **fee schedule** (level, stream, term, day or boarding) with a **tax class per item and Finance-set, effective-dated category entries resolved by country and supply date, never defaulted** (Femi 2026-10-13) | FEE-001 | ER | P1 | | schedule built; category not |
+| PL-FEE-2 | **Raise tuition in SOP**: ER calls SOP's credit sale; key `ER-invoice-{id}`; the **issuer is the school (organisation) through its finance department**, the acting person in the internal audit trail only (Femi 2026-10-13); the Company is checked as a school | FEE-002, FIN-INT-005 | ER + G:SOP | P1 | ⚑ | ER stub today; designed (note Part 3) |
 | PL-FEE-3 | **Record a verified payment in SOP**: collection call; key `ER-payment-{id}`; a parent's tick is a claim and never calls SOP | FEE-003, FIN-INT-006 | ER + G:SOP | P1 | ⚑ | stub today; T-ER3 first |
 | PL-FEE-4 | ER keeps only a thin mapping (ER invoice id, student, SOP sale id); amounts and status are read through SOP, never stored as a second copy | FIN-INT-009 | ER | P1 | | invoice tables hold amounts today |
 | PL-FEE-5 | Guardian billing identity: the guardian account to a SOP Customer, created idempotently (`ER-guardian-{id}`), a retryable refusal when SOP is unavailable | FIN-INT-002 | ER + G:SOP | P1 | | built; key pending SOP |
