@@ -1,6 +1,6 @@
-# Product VAT category, owned by IM: SPUTO / Playbook (v2)
+# Product VAT category, owned by IM: SPUTO / Playbook (v3)
 
-**Status: v2 DRAFT, 2026-10-12, IM session. Planning only. Nothing is built, nothing is deployed, and no code starts until Femi approves this playbook.** v1 (merged as `ee2ae9e`) is superseded by this file; it stays in git history.
+**Status: v3 DRAFT, 2026-10-12, IM session. Planning only. Nothing is built, nothing is deployed, and no code starts until Femi approves this playbook.** v1 (`ee2ae9e`) and v2 (`1b6ff7b`) are superseded by this file and stay in git history. **v3 folds in POP's review of v2** (POP, 2026-10-12, relayed by CM): purchases differ from sales in three ways, see R23 to R26 and D8, D9 below.
 
 **Why v2.** On 2026-10-11 Femi decided the design with SOP (Decisions Log, entry "VAT category: IM owns it per product or service item", merged in `dd6a0b2`): *IM owns the category for every product **and service** (services are IM items); a sales line takes a **copy** of the item's category when it is ordered and the copy never changes afterwards, so a posted invoice reprints exactly as issued; **nobody types the category on a line**; SOP **reads** it from IM at order time; the VAT figure itself is calculated by GL.* That reverses three parts of v1: v1 said WEB pre-fills a line the user may override, that POP/SOP make no call to IM, and that every IM Item is stock. All three are rewritten below.
 
@@ -60,8 +60,12 @@ Today an IM `Item` has no VAT information and every Item is physical stock. This
 | R18 | A `SERVICE` item requires: description, unit of measure, entity, currency and (once enforcement is on) `vatCategory`; it may have a selling price. It has **no** inventory asset account, COGS account, GL stock item, valuation method, stage, batch tracking, bins, quantity or cost. Its quantity and value fields read `"0"`. |
 | R19 | Every stock route refuses a `SERVICE` item with `409 item_is_service` and changes nothing: receive, issue, transfer, location assignments, stock counts, adjustments (create and approve), replenishment policy, stock velocity, inventory levels. A table-driven test covers every route. |
 | R20 | Stock reporting excludes services: IM's low-stock monitor, EA's inventory tile counts and WEB's stock valuation report. `GET /items` returns both kinds, with `kind`, and accepts an optional `?kind=` filter. |
-| R21 | No consumer may infer "stock" from "has an itemId". A line is stock only when its Item's `kind` is `STOCK` (POP's own `itemType` stays a second guard). |
-| R22 | The old per-line category entry that SOP built stays only as a transition path and is removed once Wave 4 is live (section 5, T-SOP-3). |
+| R21 | No consumer may infer "stock" from "has an itemId". A line is stock only when its Item's `kind` is `STOCK`. **POP derives its `itemType` from `kind` at entry** (a `SERVICE` item forces `itemType` `SERVICE`), so POP needs no new column; IM's `409 item_is_service` on a receipt stays as the second guard. |
+| R22 | The old per-line category entry that SOP built stays only as a transition path and is removed once Wave 4 is live (section 5, T-SOP-3). **This is SOP's transition only; it does not apply to POP's set-category route (R25).** |
+| R23 | **Purchases follow the same read-and-copy rule where a line has an Item** (Femi's snapshot rule, confirmed by CM): POP reads the Item's category at order time and stores a frozen copy per line; a category typed on a line that has an `itemId` is refused with `400`. |
+| R24 | **Purchase lines with no Item** (rent, utilities, one-off supplier services) are **not** refused: they keep an explicit category on the line (required on create and amend), until Femi decides D8. |
+| R25 | **POP's set-category route (unposted orders only) stays** as the visible correction path before the match. Reason: input VAT is what the **supplier charged**, which can differ from the buyer's own Item category (supplier zero-rating, exports, intra-EU supplies). It is the purchase analogue of D7, and it is not listed for removal. |
+| R26 | POP's read of an Item is a new POP-to-IM call, `GET /companies/{companyId}/items/{id}` with POP's service login, decoding only `{id, kind, vatCategory}` tolerantly. If IM is unreachable at order time the line is refused with `503` (try again), never given a default category. An Item with no category answers `409 item_has_no_vat_category`. |
 
 ### Decisions for Femi (each has a recommendation; none is made without you)
 
@@ -74,8 +78,10 @@ Decided already (Decisions Log, 2026-10-11): IM owns the category; services are 
 | D3 | Check the category against the Company's country at set time? | No, not in v1. WEB offers only the categories GL lists for the Company (`GET /companies/{companyId}/vat-categories`). GL refuses an unsupported one at posting. |
 | D4 | How do owners fix the old Items? | One at a time with a "VAT category not set" badge and filter (Wave 4). Optional later (Wave 6): a bulk "set all unset Items to X" the owner must confirm: an explicit act, not a silent default. |
 | D5 | The shape of a service item (R18). | As R18: the fewest fields, no stock machinery, immutable `kind`. The alternative (a separate Service resource) is rejected: services must be readable at `GET items/{id}` like products or SOP needs two code paths. |
-| D6 | Lines with **no item** (free text, one-off). With nobody typing the category there is no source for it. | **Refuse them**, and give WEB a one-step "add a service" that creates a `SERVICE` item with its category inline, so a one-off charge costs one extra click, not a blocked order. Needs confirmation (it ends free-text lines), routed through CM. |
-| D7 | An unposted line holds a wrong copy (the item was fixed afterwards). | Not a typed correction. Offer **"re-read from the item"** before posting, which replaces the copy from the Item's current value. Needs SOP's and CM's agreement, since SOP built an explicit correction route that this supersedes. |
+| D6 | **Sales** lines with **no item** (free text, one-off). With nobody typing the category there is no source for it. | **Refuse them** (SOP), and give WEB a one-step "add a service" that creates a `SERVICE` item with its category inline, so a one-off charge costs one extra click, not a blocked order. Needs confirmation (it ends free-text sales lines), routed through CM. |
+| D7 | An unposted **sales** line holds a wrong copy (the item was fixed afterwards). | Not a typed correction. Offer **"re-read from the item"** before posting, which replaces the copy from the Item's current value. Needs SOP's and CM's agreement, since SOP built an explicit correction route that this supersedes. Purchases are different (R25). |
+| D8 | **Purchase** lines with **no item** (rent, utilities, a supplier's one-off service). Refusing them, as D6 does for sales, would block any purchase not in the item list. | **Do not refuse.** Lines with an `itemId` read-and-copy (R23); lines without keep an explicit category on the line (R24). Revisit if Femi wants every purchase to be an Item too (a "service" item per recurring cost). Purchase-specific question for Femi, through CM. |
+| D9 | A product-only category **cannot express VAT that depends on the transaction**: an export (zero-rated though the product is normally standard), reverse charge, a supplier who charges differently. | For MVP: **not supported on the sales side**; use a separate Item ("Sugar, export") where it matters. For purchases R25 already covers it. A tightly controlled transaction-level override can come later if Femi wants it. A question for Femi, through CM. |
 
 ---
 
@@ -111,6 +117,8 @@ All routes are Company-scoped under `/api/companies/{companyId}`, as today.
 
 **Stock routes on a service item:** `409 item_is_service` (R19).
 
+**What POP uses (R23, R26):** the same `GET /items/{id}` with POP's service login, a narrow tolerant decode of `{id, kind, vatCategory}`. POP has no read of an IM item today (only receive and issue), so this is a **new** POP-to-IM call. IM's inbound service allow-list (M1b) is not built yet; **when it is, POP's list must include this GET**, as SOP's does. After the decode fix (live `:33`) POP's existing receive and issue calls already ignore new item fields, so W2 does not break them.
+
 **What SOP uses (R11):** the existing `GET /items/{id}`, with SOP's service login. The same call that already reads the selling price at order time now also carries `vatCategory` and `kind`. No new route and no new allow-list entry: IM's inbound service allow-list (M1b) is not built yet, and when it is, this GET is already on SOP's list because SOP uses it for availability and price.
 
 ---
@@ -125,7 +133,10 @@ All routes are Company-scoped under `/api/companies/{companyId}`, as today.
 | UC-4 | **Change a category.** REDUCED to STANDARD, with a reason; the history shows who, when, from, to, why. |
 | UC-5 | **Order a line.** The user picks an Item (product or service). SOP reads it from IM, copies the category onto the line, WEB shows it read-only. |
 | UC-6 | **The Item has no category.** SOP refuses the line, `409 item_has_no_vat_category`; WEB tells the user to set the category on the Item (and links to it). |
-| UC-7 | **A one-off charge with no Item.** Refused (D6); WEB offers "add a service", which creates the service item and its category in one step. |
+| UC-7 | **A one-off sales charge with no Item.** Refused (D6); WEB offers "add a service", which creates the service item and its category in one step. |
+| UC-7b | **A purchase line for an Item.** POP reads the Item, copies its category onto the line; a typed category on such a line is refused `400`. |
+| UC-7c | **A purchase line with no Item** (rent, utilities). The user states the category explicitly (D8); no IM call. |
+| UC-7d | **The supplier charged something different.** Before the match the user corrects the unposted order's line through POP's set-category route (R25); after the match it is posted and GL holds the truth. |
 | UC-8 | **The Item changes after ordering.** Placed lines keep their copy; a posted invoice reprints exactly as issued. |
 | UC-9 | **GL refuses a category** (`vat_category_not_supported`) at posting: the order cannot post until the Item's category is corrected and the unposted line is re-read (D7). |
 | UC-10 | **A machine tries to change a category.** POP's or SOP's service token gets `403`. |
@@ -162,8 +173,10 @@ All routes are Company-scoped under `/api/companies/{companyId}`, as today.
 - T-SOP-3 Remove the typed per-line category once Wave 4 is live (R22); settle D7.
 
 **POP**
-- T-POP-1 No wire change is required for the field. Rule change: a line is stock only when `itemType` is GOODS **and** its Item's `kind` is `STOCK` (R21): "has an itemId" is no longer enough, because a service item has one too. IM refuses receipts for a service item, so no service line can reach GRNI by mistake.
-- T-POP-2 Confirm whether purchase lines also read and copy the category from IM (section 10, item 2), and verify POP's IM decoder against a real response (CM already assigned this).
+- T-POP-1 At order time, for a line with an `itemId`, read the Item (`GET items/{id}`, service login, narrow tolerant DTO `{id, kind, vatCategory}`), copy the category onto the line, refuse a typed one with `400`; `503` when IM is unreachable; `409 item_has_no_vat_category` when the Item has none (R23, R26).
+- T-POP-2 Derive `itemType` from `kind` at entry: a `SERVICE` item forces `itemType` `SERVICE`, no new column (R21). A line is stock only when `itemType` is GOODS **and** `kind` is `STOCK`. IM refuses receipts for a service item, so no service line can reach GRNI by mistake.
+- T-POP-3 Keep the set-category route for unposted orders (R25) and the explicit category on lines without an Item (R24). Not removed with SOP's transition.
+- T-POP-4 Verify POP's IM decoder against a real response (CM already assigned this; POP reports the decode fix is live). POP estimates about 3 days after approval.
 
 **GL**
 - T-GL-1 None. GL stays the authority and computes the figure. Confirm WEB's Company Membership may read `vat-categories`.
@@ -181,10 +194,10 @@ Foundations first, then consumers, then the producer, then the UI, then enforcem
 | Wave | What | Who | Gate to start |
 |---|---|---|---|
 | W0 | Playbook and D1 to D7 approved | Femi (via CM) | none |
-| W1 | **Consumers declare the new fields** (optional, nullable, tolerant) | EA T-EA-1, WEB T-WEB-1, SOP T-SOP-2 (DTO fields only) | W0. **Must be deployed and verified before W2 ships** |
+| W1 | **Consumers declare the new fields** (optional, nullable, tolerant) | EA T-EA-1, WEB T-WEB-1, SOP T-SOP-2 (DTO fields only), **POP** (declares its narrow `{id, kind, vatCategory}` DTO and contract test) | W0. **Must be deployed and verified before W2 ships** |
 | W2 | **IM ships** `vatCategory`, the optional create field, the set and history routes | IM T-IM-1 to T-IM-4 | W1 live in production |
 | W3 | **IM ships service items** and the stock-route guards | IM T-IM-5 | W2 live |
-| W4 | WEB UI; SOP reads and copies at order time, refuses a missing category; POP's stock rule uses `kind` | WEB T-WEB-2/3, SOP T-SOP-2/3, POP T-POP-1 | W2 live for stock items, W3 live for services |
+| W4 | WEB UI; SOP reads and copies at order time, refuses a missing category; POP's stock rule uses `kind` | WEB T-WEB-2/3, SOP T-SOP-2/3, **POP T-POP-1 to T-POP-3 (read at order time after W2, `kind` rule after W3)** | W2 live for stock items, W3 live for services |
 | W5 | IM makes the category **required** at creation | IM T-IM-6 | W4's create forms send it |
 | W6 | Optional: bulk set, CSV column | IM/WEB | Femi's call |
 
@@ -228,7 +241,7 @@ Foundations first, then consumers, then the producer, then the UI, then enforcem
 ## 10. Risks and things nobody asked (candid)
 
 1. **A product-only category cannot express some real VAT.** Exports (zero-rated even though the product is normally standard), reverse charge, and mixed supplies depend on the *transaction*, not the product. Femi's rule (nobody types it on a line) means v2 cannot represent them; the workarounds are a separate Item ("Sugar, export") or a later, tightly controlled transaction-level override. Not decided here; flagged to CM.
-2. **Do POP's purchase lines follow the same rule?** Femi's decision names the *sales* line. The mirror (POP reads the Item's category and copies it for input VAT) is the obvious reading, but I am not assuming it. Asked of CM and POP, not of Femi.
+2. **Purchases (answered by POP and CM).** Purchase lines with an Item read-and-copy (R23); lines without keep an explicit category (R24, D8); POP's correction route stays (R25). The remaining risk is that purchases keep a typed category where sales has none; it is deliberate, because input VAT is what the supplier charged, and it needs Femi's confirmation through D8.
 3. **EA's strict decoder (high).** If IM ships a new field or a null account before EA declares it, every EA call that decodes an IM item throws. W1 exists for this. EA's tile is *already* failing on a removed route, so verify EA end to end, not only its unit test.
 4. **Migration numbers.** IM has VAT, kind, receipt-idempotency (seam A) and the M2 child-table work queued. Only one can take each number; IM has hit this before (V3/V4). CM gates it; build order fixes the sequence.
 5. **Lost update.** `ItemRepository.save()` writes the whole row. Without the per-Item lock a receipt could write a stale category back and the audit would say it changed. This is why the set route takes the lock.
@@ -238,7 +251,8 @@ Foundations first, then consumers, then the producer, then the UI, then enforcem
 9. **POP's IM decoder.** CM confirmed my earlier finding was real; POP now decodes only what it needs. Independent of this work.
 10. **Wrong category means wrong tax.** Mitigations: the reason, the audit and the write gate. No second-person approval in v1.
 11. **Wire change reaches embedded responses.** Receipts, issues and adjustments embed the item, so their responses gain the fields too (R9).
-12. **SOP built the typed per-line category and has not released it.** It is the transition path until W4 (R22); removing it is a tracked task so two sources of truth do not live on.
+12. **POP now depends on IM being up at order time** for any line with an `itemId` (R26): an IM outage turns a purchase order into a `503` until it returns. Deliberate (never a default category); worth knowing for support.
+13. **SOP built the typed per-line category and has not released it.** It is the transition path until W4 (R22); removing it is a tracked task so two sources of truth do not live on.
 
 ---
 
