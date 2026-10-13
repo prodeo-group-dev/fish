@@ -36,7 +36,7 @@ Generated from `docs/ER_Playbook_2_SRS.md` section 1.1 (Femi, 2026-10-13: "RBAC 
 | Item | Owner | Condition |
 |---|---|---|
 | Decide what happens to existing production data (all of it is test data today) | Femi, CM | Live switch |
-| Data fix: every real school Company must have industry type SCHOOL in EA before the SOP school rule is turned on (E12) | CM with Femi (credential-split query) | before E12 |
+| SOP school rule (E12): the Education industry flag IS the definition of a school (Femi 2026-10-13), so no separate school list is needed; any Company that should be a school but lacks the flag is corrected case by case when found | CM, EA | when E12 is switched on |
 | Legacy database names (`schooladmissions_production`, `fish_production`): rename in a planned downtime (docs/Downtime_Maintenance_Backlog.md) | CM | downtime window |
 
 ## D. Operations
