@@ -2,6 +2,8 @@
 
 **Status: DRAFT v0.1, 2026-10-13. Planning only. Nothing is built; no code until Femi approves (RBAC freeze stands).** Written by the Fixed Asset Register (FA) session at Femi's request ("Prepare a playbook that will secure FA"; "A full SPUTO should be done to cover FA"; "Very important to close this gap").
 
+**Peer confirmations, 2026-10-13:** GL confirmed the three readings below against master `743e418` (depreciation has no per-year record; manual journals to 1200 are accepted; the acquisition date is not checked against the Period's dates); EA and POP replied with the platform facts folded into section 6 and section 9. Nothing built.
+
 **Verified against:** GL `origin/master` `ccddf1b`, FiSH `origin/master` `0f50918`. **[verified]** = read from that source. **[reading]** = this session's interpretation of code, **not run**. Nothing here has been exploited or executed.
 
 **What FA is.** No service of its own: aggregate, use cases and routes live in GL; the screen is `FixedAssetRegister.tsx` in WEB's GL page. Every code change below is GL's (and WEB's for screens). FA supplies the analysis and the requirements.
@@ -30,9 +32,9 @@ Still **not** decided, and asked in section 7: whether "fixed at request" also c
 
 **Q: Can I edit or delete an asset?** No. There is no edit, delete or void route; useful life, cost and date are fixed at creation. A mistaken asset can only be disposed of. **[verified]**
 
-**Q: Can I post to account 1200 with a manual journal?** The journal route accepts any account in the Company; only the cash-book path refuses module-owned accounts (`ModuleOwnedAccounts`). So a manual journal to 1200 is not blocked. **[reading; not run]**
+**Q: Can I post to account 1200 with a manual journal?** The journal route accepts any account in the Company; only the cash-book path refuses module-owned accounts (`ModuleOwnedAccounts`). So a manual journal to 1200 is not blocked, and neither are 1210, 1100, 2000, 1300 or 2150. **[confirmed by GL against master 743e418, read in code; not run]**
 
-**Q: Can I run depreciation twice?** The route is idempotent per request key, but nothing remembers which year or period an asset was depreciated for. Two different requests post two charges, until net book value reaches zero. **[verified: no per-asset or per-period record in `recordDepreciation`]**
+**Q: Can I run depreciation twice?** The route is idempotent per request key, but nothing remembers which year or period an asset was depreciated for. Two requests with different keys post two full annual charges, until net book value reaches zero; only the same key and body replays the first answer. **[verified; confirmed by GL]**
 
 **Q: Who did it?** Not recorded on any FA action. The audit log table exists; nothing writes to it. **[verified]**
 
@@ -66,7 +68,7 @@ Each row names the false statement it creates. **Direction** says whether it ove
 | A9 | **Dispose of an asset that still exists** (hide it, or write off a real asset to cut the register) | U | open | FS-7 |
 | A10 | **Manual journal straight to 1200** or its contra accounts, bypassing every control above | O or U | open **[reading]** | FS-10 |
 | A11 | **Cross-Company write**: a period from Company A used to authorize an action on Company B's asset (F-FA1; GL confirmed it is wider than FA) | O or U | open | FS-1 |
-| A12 | **Backdated acquisition** into an earlier open period | O or U | acquisition date is not checked against the period's dates in `CreateFixedAssetUseCase` **[reading; the journal entry may check it, not confirmed]** | FS-8 |
+| A12 | **Backdated acquisition** into an earlier open period | O or U | the date is not checked against the Period's start and end anywhere, for any posting route **[confirmed by GL: new shared GL code, not a reuse; GL's own `docs/GL_Period_Management_Scoping.md` options L1 to L3 await Femi]** | FS-8 |
 | A13 | **Service token** used to call an FA mutation with no person behind it (F-FA3) | either | open | FS-11 |
 | A14 | **Unattributable action**: nobody can say who did it (F-FA2) | either | open | FS-3 |
 | A15 | **Register drifts from the ledger** (an asset with no posting, a posting with no asset) | either | open; cannot be detected today (GL link SPUTO) | FS-2 |
@@ -127,7 +129,7 @@ Rough estimates are the FA session's, to be replaced by GL's own. Every task is 
 |---|---|---|---|---|---|
 | **FS-1** | One shared check on every body-`periodId` posting route: the period must belong to the authorized Company (else "period not found"); tests including the cross-Company negative | GL | statement G1, SPUTO T19 | 1 to 2 days | Asking CM to carve out (integrity fix, changes no one's access) |
 | **FS-2** | Register tied to the ledger: V31 columns, link on create, reconciliation fields on the register response, one-off reported backfill; repair path for unlinked assets | GL, WEB display | GL link SPUTO P1 to P4 | as GL's own SPUTO | Not an RBAC change |
-| **FS-3** | Actor on every FA action and first writers of `AuditLogEntry` (interim GL-local shape if T17 not ready) | GL, EA (T17) | statement G2 | 1 to 1.5 days | Frozen only if it changes who may do what; adding an actor does not |
+| **FS-3** | Actor on every FA action and first writers of `AuditLogEntry` (interim GL-local shape if T17 not ready) | GL, EA (T17) | statement G2 | 1 to 1.5 days (EA: T17 is not written yet; when it is, it is a minimal shared record of who, when, which Company, what action, request key; keep the interim fields compatible with that list) | Frozen only if it changes who may do what; adding an actor does not |
 | **FS-4** | Per-year depreciation guard: asset records the last year depreciated; second charge refused; Flyway migration, tests including double-call | GL | FR-FA6 (new) | 1 day | Not an RBAC change; fixes a money bug |
 | **FS-5** | A void/correct path for an asset (acquisition reversed and the asset removed from the register, with a reason), so the manual-journal block (FS-10) cannot strand a legitimate correction | GL | GL link SPUTO open question 2 | 1 to 2 days | Raised as a request once FS-8 exists; build first as a plain WRITE action |
 | **FS-14** | Role-matrix negative tests for the six FA routes: READ gets 403 on writes, no-membership 403, wrong-Company 403 | GL | statement G7 | 0.5 day | Tests only; asking CM to carve out |
@@ -137,8 +139,8 @@ Rough estimates are the FA session's, to be replaced by GL's own. Every task is 
 | Task | What | Owner | Extends | Estimate | Waits for |
 |---|---|---|---|---|---|
 | **FS-6a** | Evidence fields on acquisition (reference, ownership reference for already-owned), uniqueness per Company, refused when missing | GL | FR-FA1 | 1 to 1.5 days | none (can precede approval; closes A1 partly) |
-| **FS-7** | Disposal and acquisition become request then approve with the immutable stored payload; approve carries no figures; approver differs from requester (Owner flagged); batch form for imports (FR-FA15). Impairment follows once D-FA-B is answered | GL | statement G3, T12, FR-FA2 to FR-FA5, FR-FA15 | 3 to 5 days | GL's pending-action mechanism design; T5a approve capability on `/me` (EA) |
-| **FS-8** | Dates validated against the period (A12): acquisition and disposal dates must fall in the period they post to, or be refused | GL | FR-FA9 sibling | 0.5 day | none |
+| **FS-7** | Disposal and acquisition become request then approve with the immutable stored payload; approve carries no figures; approver differs from requester (Owner flagged); batch form for imports (FR-FA15). Impairment follows once D-FA-B is answered | GL | statement G3, T12, FR-FA2 to FR-FA5, FR-FA15 | 3 to 5 days | GL's pending-action mechanism (GL confirmed 2026-10-13: **none exists yet**; `PostingStatus` has a PENDING state but no use case or route drives it; T12 is design only, and FA will not pick a shape for it). Interim approver check, before T5a, uses only what `/me` carries today (role, access level, modules, `isOwnerAdmin`): a different person from the requester with at least WRITE at the Company, or the Owner, flagged. This is weaker than the target (any writer can approve another writer, and D1's "ADMIN approves nothing" cannot be enforced yet); say so on the screen and in the audit entry. The full capability check waits for T5a (EA) |
+| **FS-8** | Dates validated against the period (A12): acquisition and disposal dates must fall in the period they post to, or be refused. GL confirms this is new shared code for every posting route, not an FA-only fix | GL | FR-FA9 sibling; `docs/GL_Period_Management_Scoping.md` L1 to L3 | 0.5 day for FA's routes; the shared version is GL's call | Femi's answer on GL's period scoping |
 | **FS-9** | Disposal evidence (sale invoice or receipt reference) and the clearing-account check that proceeds were matched to cash | GL | A8 | 1 day | FS-7 |
 
 ### 6.3 Closing the remaining doors
@@ -148,14 +150,14 @@ Rough estimates are the FA session's, to be replaced by GL's own. Every task is 
 | **FS-10** | Manual journals refused on 1200, accumulated depreciation and accumulated impairment, using `ModuleOwnedAccounts`; message names the screen to use | GL | FR-FA8 | 0.5 to 1 day | **FS-5** (a way to correct must exist first); coordinate with GL's journal RBAC statement |
 | **FS-11** | Service credentials refused on FA mutations (importer batch excepted, and via FS-7) | GL, EA, CM | statement G6, F-FA3, T15/D5 | small | the per-credential model (T15) |
 | **FS-12** | Policy: useful-life ranges per category, minimum capitalisation cost, ADMIN-set, audited, per Company | GL, EA (first real ADMIN use) | FR-FA7 | 2 days | FS-3, FS-7 |
-| **FS-13** | Detective: Owner attention items (not depreciated this year, clearing balance, pending requests, Suspense balance, big impairment) via the approved dashboard "Needs your attention" | GL routes, EA dashboard | FR-FA10 | 2 days | FS-2, FS-4, EA dashboard P1 |
+| **FS-13** | Detective: Owner attention items via the approved dashboard "Needs your attention". **Pending requests** ride EA's existing approvals-queue as one more source (a GL read of pending fixed-asset requests, consumer-first, like SOP, IM, POP, HR today). **Counts** (assets not depreciated this year, unmatched disposal proceeds, Suspense balance, big impairment) need small GL read routes whose shape GL defines (like `receivables-payables-summary`); EA then adds an optional dashboard field after WEB declares it. Order: GL read routes first, FA tells EA the shapes, EA adds the fields | GL routes, EA dashboard, WEB declares | FR-FA10 | 2 days | FS-2, FS-4, FS-7, EA dashboard first slice (WEB's attention box over the approvals queue) and Femi's approval of this Playbook |
 
 ### 6.4 Surfaces
 
 | Task | What | Owner | Estimate | Waits for |
 |---|---|---|---|---|
 | **FS-15** | WEB: capability-gated buttons, request and approve forms, pending list, honest "waiting for approval" status, tie-to-ledger display | FiSH+ER WEB | 2 to 3 days | FS-7 contract; T5a; R11 |
-| **FS-16** | Phase 2: PO-driven acquisition: an approved and three-way-matched POP purchase of a capital item creates the pending FA request itself, so the evidence is POP's, not typed | POP, GL | design first | POP's three-way match; FS-7 |
+| **FS-16** | Phase 2 (POP facts, 2026-10-13: a PO is verifiable by id today, `GET /companies/{c}/purchase-orders/{id}` returns `poNumber`, status and total, MATCHED = three-way matched, CLOSED = paid; by PO number or invoice reference there is no route, a read-only lookup is about 0.5 day, additive; `invoiceReference` is typed text at match time, so it proves POP matched an invoice with that text, not that the supplier issued it; calling POP as a module needs its own service credential, CM's domain; POP has no capital-item marker on a line; a matched purchase is booked to one account that GL resolves to Expense today, so a capital purchase would be booked to expense until per-line account routing (GRNI posting-plan work, scheduled, not built) exists; Seam A is a known open fault) PO-driven acquisition: an approved and three-way-matched POP purchase of a capital item creates the pending FA request itself, so the evidence is POP's, not typed | POP, GL | design first | POP's three-way match; FS-7 |
 
 ### 6.5 Dependency order (foundations first)
 
@@ -179,7 +181,7 @@ Why this order: Tier 0 fixes real integrity and money bugs and needs no one's pe
 
 1. **D-FA-A. Should every acquisition need a second person's approval, at any amount?** Recommended: yes. A limit invites splitting one purchase into small ones, and even a small false asset is a false asset.
 2. **D-FA-B. Does "the approver cannot change the figures" also apply to impairments** (writing an asset down)? Recommended: yes, same reasoning as disposal.
-3. **D-FA-C. Until POP can check supplier invoices, may the invoice reference be typed text** (but unique per Company and required), or must acquisitions wait for POP's matched purchase before they are accepted? Recommended: typed text, required and unique, now; matched purchase as the later, stronger rule.
+3. **D-FA-C. (POP can already confirm a purchase order by its id; checking by invoice reference needs a small new POP route, and even then it proves only that POP matched an invoice with that text.) Until POP can check supplier invoices, may the invoice reference be typed text** (but unique per Company and required), or must acquisitions wait for POP's matched purchase before they are accepted? Recommended: typed text, required and unique, now; matched purchase as the later, stronger rule.
 4. **D-FA-D. May manual journals to the fixed asset accounts be blocked?** Today an accountant could post straight to them. Blocking is safer, but only after a proper correction path exists (FS-5).
 5. **D-FA-E. Useful-life ranges and a minimum asset cost: should the platform enforce them, or just warn the approver?** Recommended: warn first, enforce later.
 
@@ -189,10 +191,10 @@ It makes it hard to put a false asset, a false write-down or a false sale into t
 
 ## 9. Coordination and status
 
-- **GL (code owner):** FS-1, 2, 3, 4, 5, 6a, 7 to 14; the shared pending-action mechanism's design. Asked to confirm the reading on manual journals and depreciation (section 1) before FS-4 and FS-10 are built.
-- **EA:** T5a approve capability on `/me`, T6, T17 shape; dashboard attention items (FS-13).
+- **GL (code owner, replied 2026-10-13):** takes FS-1, FS-3 to FS-6a and FS-7 to FS-14 once Femi approves this Playbook and CM gives the go, and will size them then. Confirmed the three readings. Needs the pending-action mechanism (T12) decided first.
+- **EA (replied 2026-10-13):** T5a is a platform contract change, not a small one: capabilities are added additively on `/me`, which five services decode strictly, so GL, POP, SOP, IM, HR and WEB must declare the field first, then EA ships, then a legacy-level migration maps each existing level to the full set it implied so nothing changes on day one. It is behind the RBAC freeze, starts only when Femi decides and CM reviews at HIGH, no date. FS-7 therefore cannot rely on it at first (see FS-7's interim check). T6 is largely true already (the Owner Admin has had an explicit ADMIN-with-all-modules assignment at each Company since 2026-09-23); what remains is a guard that the approver capability cannot be removed from the Owner and a backfill for Companies with no assignment, both waiting on the read-only production check T23 (Femi/CM). T17: EA owns it, not written. FS-13: see that row.
 - **WEB:** FS-15.
-- **POP:** FS-16 (Phase 2) and whether POP can verify an invoice reference.
+- **POP (replied 2026-10-13):** can verify a PO by id now; a lookup by PO number or invoice reference is a 0.5-day read route if wanted; Phase 2 needs a capital-item marker, per-line account routing (GRNI work) and FS-16's pending-request route. Anything requested goes through CM's backlog and coordination doc, and POP then claims a row.
 - **CM:** carve-out of FS-1, FS-14 (and whether FS-4, FS-6a, FS-8 count as RBAC changes); register this Playbook's row; sequencing against the freeze; no code until Femi approves.
 - **Row for the Playbook definition's status table:** FA (code in GL, screen in WEB): operator sheet = section 1 of this document; S/P/U = sections 2, 4, 5; T/O = section 6.
 
@@ -200,4 +202,4 @@ It makes it hard to put a false asset, a false write-down or a false sale into t
 
 Read on 2026-10-13 against GL `ccddf1b`: `FixedAssetRoutes.kt` (error mapping, `respondIdempotently`), `CreateFixedAssetUseCase`, `RecordFixedAssetDepreciationUseCase`, `fixed_asset.kt` (`recordDepreciation`: no per-year or per-period record), `module_owned_accounts.kt` and its three call sites (cash-book entry, undo, counter-account list only; **not** the journal route), `PostJournalEntryUseCase` (checks the Company ownership of accounts and period; no module-owned-account check found).
 
-**Not verified, flagged:** that a manual journal to 1200 is accepted (read, not run); that `JournalEntry` does not itself check the date against the period (the create use case does not); the F-FA1 exploit (never run); how the Jenkins/ECS state of the live service matches master.
+**Not verified, flagged:** that a manual journal to 1200 is accepted (read by FA and GL, not run); the F-FA1 exploit (never run); how the Jenkins/ECS state of the live service matches master.
