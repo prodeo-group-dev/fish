@@ -122,6 +122,7 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 **Alternates / errors**
 - SOP not enabled for the school: `billing_not_enabled`. SOP or EA unavailable: `billing_unavailable`, retry safely; the same key converges to one sale or one collection. [code for the refusal codes]
 - A **parent's tick "paid" is a claim**: it triggers verification and never calls SOP (T-ER3, held). [decided]
+- **A third party pays** (a sponsor, employer or church): the fee desk verifies the payment and records the **payer party and reference**; ER records the collection against the **guardian's** invoice; the guardian stays the customer and the statement shows who paid (Femi, 2026-10-13); no new sale to the sponsor. **New**, P2, needs SOP's additive payer field.
 - The admin alone cannot raise or record (`forbidden`); the admin reads. A missing VAT category refuses the invoice. [decided; new]
 - A retry after a timeout never makes a second invoice (idempotent key). **New with the SOP key.**
 - Over-the-term revenue recognition is a Finance decision (**D6**); first build raises at term start.
