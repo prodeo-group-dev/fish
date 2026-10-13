@@ -28,7 +28,7 @@ Owner: **ER** the Education Runtime, **WEB**, **SOP**, **EA**, **HR**, **CM**. "
 | F5 | **Audit every state-changing ER route for retry-safety** (admissions steps, enrolment, fee-schedule save, staff and device changes, class transfers); list gaps; fix the ones that can double-apply | foundations rule | ER | S to M | | |
 | F6 | **Roles-and-access screen under School Administration** plus a **capabilities read** `GET /schools/{id}/me` (what this person may do here) so WEB hides what would 403; the "no teacher or bursar yet" hint | PL-SET-3, UC-E1, UC-E11 | ER, WEB | M | ⚑ | |
 | F7 | **Form master** as a teacher assigned to an arm (an arm-scoped assignment, not a new global role) | PL-CLS-3, C3 | ER | S to M | ⚑ | F6 |
-| F8 | **Safeguarding access**: remove SCHOOL_ADMIN from `canAccessSafeguarding` (add-a-deny now, CM review, no flag; see `ER_Safeguarding_Admin_Deny_Note.md`); break-glass later behind flag E2 | PL-SAF-1, C2 | ER | S | ⚑ | D13 decided |
+| F8 | **LATER, parked (built, not released; D13 and D13b off the open list).** **Safeguarding access**: remove SCHOOL_ADMIN from `canAccessSafeguarding` (add-a-deny now, CM review, no flag; see `ER_Safeguarding_Admin_Deny_Note.md`); break-glass later behind flag E2 | PL-SAF-1, C2 | ER | S | ⚑ | D13 decided |
 | F9 | Audit extension: log exports, permission changes, score changes after locking, payment actions, views of restricted records; kept six years (proposed) | PL-AUD-1, PL-RPT-4 | ER | M | | |
 | F10 | **Privacy model**: lawful basis per data category, consent records (what, when, how, who), retention schedule per record type, field switches per school and country | PL-PRV-1, 2, PL-CON-5, PL-ENR-3 | ER | M | | |
 | F11 | ****Offline mobile app** design pass** (WEB and ER together): the on-device store, sync queue, conflict rule per entity, the late-sync deadline (D4), device wipe; output is a design doc, then F12 | PL-ATT-2, Part 2 section 5 | ER, WEB | S | | D1 (decided: online and an offline mobile app), **D4** |
@@ -41,7 +41,7 @@ Owner: **ER** the Education Runtime, **WEB**, **SOP**, **EA**, **HR**, **CM**. "
 | C1 | Student master: date of birth, bio-data, admission number format, duplicate **warning**, sensitive identifiers masked | PL-ENR-1 to 4 | ER | M | | F5, F10 |
 | C2 | Health summary (restricted view) | PL-ENR-5 | ER | S | | C1 |
 | C3 | Contacts model: many contacts per student and the reverse, phones, priority, custody, fee payer, communication preference; migrates the embedded guardian list | PL-CON-1 to 3, 5 | ER | L | | C1, F10 |
-| C4 | Court-order and contact-restriction flags (restricted detail, blocks release and pickup) | PL-CON-6 | ER | M | ⚑ | C3, F8 |
+| C4 | **LATER with safeguarding** (country-triggered): Court-order and contact-restriction flags (restricted detail, blocks release and pickup) | PL-CON-6 | ER | M | ⚑ | C3, F8 |
 | C5 | Student photograph with consent | PL-ENR-8 | ER | S | | C1, F10, D2 |
 | C6 | Create controls and lists in WEB for admissions, students and timetable using the school vocabulary | PL-ADM-2, PL-CLS-6 | WEB | M | | |
 | C7 | Offer-letter generation stored as a document | PL-ADM-3 | ER | S | | D2 (documents) |
@@ -105,7 +105,7 @@ Owner: **ER** the Education Runtime, **WEB**, **SOP**, **EA**, **HR**, **CM**. "
 |---|---|---|---|---|
 | X1 | External exams: bodies, series, registration, index numbers, CA export, results, certificates (formats are owned research) | ER | XL | ⚑ |
 | X2 | Boarding: hostels, exeat, visiting days, sick bay (restricted), roll call | ER | XL | ⚑ |
-| X3 | Gate and visitor log, pickup verification, evacuation lists, incident workflow, suspensions | ER | XL | ⚑ |
+| X3 | **LATER, country-triggered.** Gate and visitor log, pickup verification, evacuation lists, incident workflow, suspensions | ER | XL | ⚑ |
 | X4 | WhatsApp adapter and SMS fallback; bulk approval thresholds | ER | L | |
 | X5 | Offline cash receipting from pre-allocated number ranges (needs a SOP design) | ER, SOP | L | ⚑ |
 | X6 | Statutory returns per country (Nigeria first, then Sierra Leone, Liberia): **each starts as a research task** obtaining the format with a local partner | ER | L per country | ⚑ |
@@ -178,8 +178,8 @@ Items **already put to Femi through CM** are marked **(with CM)**; they are list
 | **D10** | **Statutory returns**: who obtains the formats from local partners, per country | a named country lead; ER specifies and builds | X6 |
 | **D11** | **Rankings and promotion defaults** | positions off by default and school-configurable | A2, A5 |
 | **D12** | **Staff: employ once through HR**, ER keeps only the teaching record | yes | S1, S2 |
-| **D13** | **Safeguarding access: the school admin alone loses it** | **Decided 2026-10-13: yes**, as an add-a-deny now; break-glass later behind flag E2 | F8 |
-| **D13b** | **Should the head teacher be added to safeguarding access?** (they do not have it today; adding is a widening) | no: designate the safeguarding lead role instead; the person responsible for child protection should be a deliberate appointment | F8 |
+| **D13** (parked, off the open list) | **Safeguarding access: the school admin alone loses it** | **Decided 2026-10-13: yes**, as an add-a-deny now; break-glass later behind flag E2 | F8 |
+| **D13b** (parked, off the open list) | **Should the head teacher be added to safeguarding access?** (they do not have it today; adding is a widening) | no: designate the safeguarding lead role instead; the person responsible for child protection should be a deliberate appointment | F8 |
 | **D14** | **Student writes: when does the admin lose them?** (decided: they stay until a registrar exists) | at the dev-to-Live switch, after the Staff-and-roles screen ships | F6 |
 | **D15** | **Guardian sign-in in P1**: phone and one-time code (the user pool and SMS are CM's, the screen WEB's, the token-to-guardian mapping ER's; **not EA**: guardians are not EA Users and EA advises against making them so) or a simpler first channel | P1 if SMS or Cognito's phone path is available; otherwise keep email sign-in for the pilot | P2, P3 |
 | **D17** | **Accounting rules for a school** (an accountant's, Femi to name who): how tuition income is released over a term (Q1), principal or agent for exam fees (Q2), (a waiver is **decided**: Discounts Given, see Q3 and Q4) | take the first term at term start; get the rules before exam fees and waivers (P2) | Q1, Q2, X1 |
