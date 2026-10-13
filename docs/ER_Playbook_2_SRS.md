@@ -27,6 +27,28 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | **Children's-data exports** | PL-ENR-9, PL-EXM-2, PL-RPT-4, PL-RPT-5, PL-IMP-3, PL-PRV-5 |
 | **Authentication changes** | PL-PRT-1 (guardian OTP login), PL-SET-4 (MFA for school staff) |
 
+### 1.1 Deferred enforcement (Femi, 2026-10-13: "RBAC is still essential but perhaps easier turned on when other features are built")
+
+**Working rule.** Design every new permission now (name, default holders, who may do what), **build the feature first**, and **enforce the new permission afterwards behind a flag that defaults OFF** (the same pattern as the owner-MFA flags). Each flag below is on CM's **Live-switch checklist** so none is forgotten. **Nothing here weakens any check that exists today** (no loosening), and the **RBAC freeze stays** for anything that changes who can do what today; a flag turned ON is a CM-reviewed change, not a code deploy. A division label is never an authorisation. While a flag is OFF the feature works as it does today (nobody newly refused), and the new permission is recorded and shown but not enforced.
+
+| # | New permission or rule | Requirement | Flag (default OFF) | Where | Default holders (to confirm) | Condition to switch ON |
+|---|---|---|---|---|---|---|
+| E1 | **Set pay basis**, **run payroll**, **approve a pay run** (three separate; preparer is not the approver) | PL-STF-9 | `HR_ENFORCE_PAY_SPLIT` | HR, EA | Proprietor and HR officer set basis; accountant or bursar run; a different person approves | Pay basis on the employment record built; HR's run and approve are separate steps; the Payroll screen is split by division; UAT passed |
+| E2 | **Admin alone loses safeguarding access**; break-glass with reason, time limit and alert | PL-SAF-1 | `ER_ENFORCE_SAFEGUARDING_ADMIN_DENY` | ER | safeguarding lead, pastoral lead, head teacher | **D13** decided (if Femi chooses "now" it ships as an add-a-deny instead and this flag is dropped); the safeguarding lead role is assigned in each school |
+| E3 | **Admin loses the student writes** (create, CSV, photo, transfer, identity link) | PL-ADM-5, D14 | `ER_ENFORCE_ADMIN_STUDENT_WRITE_DENY` | ER | registrar (and an admin who also holds REGISTRAR) | the Roles-and-access screen is live and every school has a registrar; at the dev-to-Live switch |
+| E4 | **Form-master approval of the register** (arm-scoped teacher, delegable) | PL-CLS-3, PL-ATT-8 | `ER_ENFORCE_FORM_MASTER_APPROVAL` | ER | the form master of the arm | the arm-scoped assignment exists and each arm has one; **D3**-style default confirmed |
+| E5 | **Result approval chain and locking** (published marks locked; changes need approval) | PL-ASM-4 | `ER_ENFORCE_RESULT_APPROVAL` | ER | per **D3** (head of department then head teacher, proposed) | approvers assigned per school; **D3** decided; report-card publication built |
+| E6 | **Promotion approval** by the head teacher | PL-ASM-9 | `ER_ENFORCE_PROMOTION_APPROVAL` | ER | head teacher | promotion run built; **D11** defaults decided |
+| E7 | **Contact restrictions block release and pickup** (court orders) | PL-CON-6 | `ER_ENFORCE_CONTACT_RESTRICTIONS` | ER | safeguarding lead, head teacher see detail | the contacts model is live; restricted flags captured for existing students |
+| E8 | **Vetting data visible only** to the head teacher, safeguarding lead, admin | PL-STF-4 | `ER_ENFORCE_VETTING_VISIBILITY` | ER | as stated | the teaching record is live |
+| E9 | **Document sensitivity levels** (a document inherits its record's permission plus a type level) | PL-DOC-2 | `ER_ENFORCE_DOCUMENT_SENSITIVITY` | ER | by document type | documents port built (**D2**) |
+| E10 | **Segregation of duties in fees** (who records a payment cannot approve a waiver or void a receipt) | PL-FEE-10 | `ER_ENFORCE_FEE_SEGREGATION` | ER | bursar approves, fee officer records | waivers and receipts built; **D8** decided |
+| E11 | **Export of restricted fields** needs the field permission and is logged | PL-RPT-4 | `ER_ENFORCE_EXPORT_FIELD_RESTRICTIONS` | ER | by field | the logging is built (it is not behind a flag); standard reports built |
+| E12 | **Service-account scope** for sales, collections and reads at SOP, and the school rule | PL-FEE-2, 3, 7 | existing audience switch (unset audience refuses every ER token) | SOP, EA | the Education Runtime service account | the **data fix** (real school Companies correct in EA), the EA route live, and CM says so; already a deliberate switch |
+| E13 | **Guardian sign-in** (phone and one-time code) and **MFA for school staff** | PL-PRT-1, PL-SET-4 | the owner-MFA flags (existing pattern) | CM, EA, ER | n/a | the Live switch (decided); SMS or Cognito phone path available |
+
+**Rules for the list.** A flag's name and its switch-on condition are written into the task that builds the feature; the task's definition of done includes "listed in this table"; CM's Live-switch checklist is regenerated from this table so it cannot drift; removing a flag (enforcement permanent) is a CM-reviewed change. Anything that **tightens** a check without a flag (an add-a-deny) is allowed inside the freeze only with CM's review, as today. Where a requirement above lists a gate, it is reviewed by CM **before the feature is built**, and again **before its flag is turned on**.
+
 ## 2. Corrections to the specification (each needs the owner's agreement, noted)
 
 | # | Spec says | Reality or decision | Resolution proposed here |

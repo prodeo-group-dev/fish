@@ -4,6 +4,7 @@
 
 ## 0. Rules every task follows
 
+- **Deferred enforcement** (Femi, 2026-10-13): a new permission is designed now, built as a feature first, and **enforced later behind a flag that defaults OFF**, each flag in Part 2 section 1.1 and on CM's Live-switch checklist; a task's definition of done includes that listing.
 - **Tests first**; real Postgres for anything touching money, idempotency, concurrency or a migration; declared test count equals executed count.
 - **One branch per task** in the owner's own checkout, handed to CM as branch and tip; only CM pushes, merges and deploys. A task with a **⚑** has CM's recorded review before its build starts (RBAC change, new service-account scope, cross-Tenant read, children's-data export, authentication change).
 - **Foundations first** (Femi, 2026-10-07): idempotency, concurrency and fail-closed configuration come before the features that depend on them.
