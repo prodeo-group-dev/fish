@@ -55,9 +55,9 @@ Already school words and unchanged: **The Registry** (Administration), **Admissi
 | Suppliers, Purchase Orders, Items | **Suppliers, Purchase Orders, Store items** | OK | Items follows Stock = Stores |
 | Warehouses | **Store rooms** | OK | follows Stock = Stores |
 | Adjustments | **Store adjustments** | OK | follows Stock = Stores |
-| Employees | **Staff** | OK | the button "Add employee" becomes **"Add staff member"** |
+| Employees | **Staff members** (one Staff directory, grouped by kind, see section 7) | OK | the button "Add employee" becomes **"Add staff member"** |
 | Run payroll / Pay runs / Salary advances | unchanged | OK | payroll words are the same in a school |
-| Team | **Staff access** | ASK FEMI | the word "Staff and roles" is **reserved** for ER's own school-roles screen (WEB mapping doc, 2026-10-10), so Team must not take it; or keep "Team" |
+| Team | **Staff** (the same directory: Femi, 2026-10-13, "Staff", by kind: Teaching, Administrative, Supporting, etc.) | OK (Femi) | one Staff area, section 7; "Staff and roles" becomes the **Roles and access** tab inside it |
 | Companies / Company profile | **Schools / School profile** | OK | "+ Add another company" becomes **"+ Add another school"**; fields "Registered name / Registration number" stay (they are legal facts) |
 | Verification: "Business (KYB)" | **School (KYB)** | OK | |
 | Business Owner | unchanged | OK | Femi's own address for the owner; do not change to "School Owner" |
@@ -88,6 +88,23 @@ Already school words and unchanged: **The Registry** (Administration), **Admissi
 
 ## 6. Still open for Femi
 
-1. **Team** (People, Team): **Staff access**, or keep **Team**? Unanswered; keep **Team** until he answers. "Staff and roles" stays reserved for ER's school-roles screen.
+Nothing in this vocabulary. Answered 2026-10-13 and applied above: Enrolment (British); Buy = Purchasing (list "Purchases"); Stock = Stores; Ledger = Accounts; Profitability = Surplus; Profit and loss = Income and Expenditure; Revenue = Income; Team = **Staff**, by kind (Teaching, Administrative, Supporting, etc.). The guiding principle he gave: a school is not a hard-nosed business, so where a business word and a gentler school word both fit, use the school word.
 
-Answered 2026-10-13 and applied above: Enrolment (British); Buy = Purchasing (list "Purchases"); Stock = Stores; Ledger = Accounts; Profitability = Surplus; Profit and loss = Income and Expenditure; Revenue = Income. The guiding principle he gave: a school is not a hard-nosed business, so where a business word and a gentler school word both fit, use the school word.
+## 7. The Staff area: one coherent place (proposal for WEB and ER, 2026-10-13)
+
+**The collision.** The vocabulary mapped the People module (HR) to "Staff" and reserved "Staff and roles" for ER's roles screen; Femi then said the school word for **Team** is also "Staff", by kind. Three things were being called staff: HR's employees, EA's team (who can sign in and which modules), and ER's school roles (what a person may do in the school). They are three different facts about the same person, so the answer is **one Staff area, three kinds of fact about a person, no second "Staff"**.
+
+**Structure** (a school Company; the module label is **Staff**):
+
+| Tab in Staff | What it shows | Source of truth | Who sees it |
+|---|---|---|---|
+| **Staff** (the directory, the default) | one row per person, **grouped or filtered by kind**: **Teaching, Administrative, Supporting, Other**; each row shows name, kind, position and, as small chips, their school roles and the modules they can use | HR owns the person and the employment; the kind is an attribute of the employment | head teacher, admin, bursar (HR roles) |
+| **Roles and access** (replaces "Staff and roles" and "Team") | who can do what in the school: school roles (ER) and, for the Owner Admin, which EA modules each person has; give, change and remove | ER holds school roles; EA holds module access | school admin and the Business Owner |
+| **Teaching records** | registration, vetting, training for staff of kind Teaching | ER | head teacher, safeguarding lead, admin |
+| **Payroll** | Run payroll, Pay runs, Salary advances (payroll words unchanged) | HR | those with HR payroll access |
+
+**Kinds.** Femi's kinds are **Teaching, Administrative, Supporting** and "etc", so the list is configurable with these three as defaults and **Other** as the catch-all. **The kind belongs to the HR employment record** (HR owns employment, decided: employ once through HR); today the employment command EA receives carries only a position of staff, teacher or non-teaching staff, which cannot tell Administrative from Supporting. So: **HR is asked to add a staff kind to the employment**, the EA push to ER carries it, and ER uses it to decide who gets a teaching record (Teaching only, v1). Until that exists, WEB groups on position (Teaching versus Non-teaching) and shows Non-teaching as one group.
+
+**One joined list.** WEB builds the directory by joining the three sources on the person's email (HR employee, EA membership, ER staff assignment); a person with a sign-in but no HR employment (the Business Owner) shows as **Owner** and is not in a kind. This is a read-model in WEB, not a new service.
+
+**Words.** Module **Staff**; list **Staff members**; button **Add staff member**; tab **Roles and access**; the kinds as above. "Team" disappears for a school.

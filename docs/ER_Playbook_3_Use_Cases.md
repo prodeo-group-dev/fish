@@ -25,7 +25,7 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 **Alternates / errors**
 - A person without any role at the school gets a refusal shown as *cross-tenant* on every screen; with a role but not the right one, `forbidden`. [code]
 - Removing the **last admin** is refused (`last_admin`); a registrar cannot make or remove admins (`role_not_grantable`); an unknown role is `unknown_role`. [code]
-- Until a teacher or bursar role exists, **nobody can enter marks or raise invoices** (the admin alone cannot) [decided]: the hint in step 2 and the Staff-and-roles screen are what prevent a dead end. **New:** the screen.
+- Until a teacher or bursar role exists, **nobody can enter marks or raise invoices** (the admin alone cannot) [decided]: the hint in step 2 and the Roles-and-access tab are what prevent a dead end. **New:** the screen.
 - A fee item with no VAT category is refused at save. **New.**
 **Offline:** not applicable (set-up is online).
 
