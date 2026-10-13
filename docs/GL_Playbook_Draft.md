@@ -1,6 +1,6 @@
 GENERAL LEDGER (GL) PLAYBOOK (draft for Omniview's Playbooks tab, service GL)
 
-Written by the GL session, 2026-10-07, from the code on fish-fish-gl-engine master (commit b4723da, PR #61, deployed as task definition fish-gl-engine:98 on 2026-10-07, confirmed live by CM; refreshed from the 5fd7db6 / :97 version for the trading profit-and-loss release). Plain text so it can be pasted straight into the Playbooks tab. Everything below was read from the code, not from older documents; where a statement is a design intention rather than a fact it says so. Update this sheet in the same change as the code it describes.
+REFRESHED 2026-10-13 by the GL session against master ccddf1b (live as GL :126). What changed since the 2026-10-07 text below: cash and bank books, standard accounts, trial balance, the two dashboard reads, bank reconciliation complete and cancel, refused requests no longer spend an Idempotency-Key, same-day order in books, reversals worded in words, jurisdiction currency, the corrected NOT BUILT list. Statements in sections this refresh did not touch are from the 2026-10-07 reading and are marked where they could be stale. Originally written by the GL session, 2026-10-07, from the code on fish-fish-gl-engine master (commit b4723da, PR #61, deployed as task definition fish-gl-engine:98 on 2026-10-07, confirmed live by CM; refreshed from the 5fd7db6 / :97 version for the trading profit-and-loss release). Plain text so it can be pasted straight into the Playbooks tab. Everything below was read from the code, not from older documents; where a statement is a design intention rather than a fact it says so. Update this sheet in the same change as the code it describes.
 
 PLAYBOOK CONTENTS (see docs/Playbook_Definition.md; a playbook is this sheet PLUS the SPUTO set)
 1. Operator sheet: this document.
@@ -36,10 +36,11 @@ Posting (callers: SOP, POP, IM, HR, the generic journal for finance):
 - POST /payroll/record-pay-run and /leave-accruals (+ /remeasure, /utilize) (HR).
 - POST /journal-entries (a generic balanced entry), POST /sales/create-invoice (an older direct cash or credit invoice; SOP is the system for sales now).
 - POST /companies/{id}/accounts (create an account), PUT /companies/{id}/accounts/{id}/expense-classification (tag or untag an expense account as cost of sales, interest, income tax and so on), POST /companies/{id}/accounts/{id}/opening-balance.
+Cash and bank books (people only): GET /companies/{id}/cash-books (the list with balances), GET /companies/{id}/cash-books/{accountId}?from&to (one book: opening balance, rows with running balance, totals), GET .../cash-books/{accountId}/counter-accounts, POST .../cash-books/{accountId}/receipts, /payments, /transfers and /entries/{entryId}/undo, PUT /companies/{id}/accounts/{accountId}/cash-book-kind, POST /companies/{id}/standard-accounts (adds the template accounts an older Company lacks; never changes an existing account).
 Reading: GET /companies/{id}/accounts, /journal-entries, /customers, /sales-invoices, /fixed-assets, /vat-categories, and the posting-context routes (sales, purchase, inventory, payroll) that tell a caller which period and accounts to post to.
-Reports: GET /companies/{id}/reports/balance-sheet, /profit-and-loss, /trading-profit-and-loss, /cash-flow, /working-capital, /fixed-asset-register; GET /expense-velocity, /money-velocity, /sales-to-expense-ratio; POST /accounts-receivable-aging, /accounts-payable-aging, /customer-balances, /supplier-balances.
+Reports: GET /companies/{id}/reports/balance-sheet, /profit-and-loss, /trading-profit-and-loss, /cash-flow, /working-capital, /fixed-asset-register, /trial-balance (profit and loss and cash flow also take ?from and ?to); the dashboard reads GET /companies/{id}/cash-balance-series?days=30 (combined cash and bank balance per day) and GET /companies/{id}/receivables-payables-summary (totals and the part older than 30 days); GET /expense-velocity, /money-velocity, /sales-to-expense-ratio; POST /accounts-receivable-aging, /accounts-payable-aging, /customer-balances, /supplier-balances.
 Tax: GET and POST /companies/{id}/tax (Corporate Income Tax only); POST /companies/{id}/vat-return.
-Other: bank reconciliation (/bank-reconciliations: start, match, unmatch, list, read); fixed assets (create, depreciate, impair, dispose); opening imports (/opening-imports/gl-balances and /fixed-assets, each with a /validate step); POST /tenants/{id}/companies (create a Company; people only, the business's Owner-Admin, never a service login); GET /me; GET /jurisdictions; GET /health (no sign-in, shallow: it shows the process is up, not that every dependency is).
+Other: bank reconciliation (/bank-reconciliations: start, match, unmatch, complete, cancel, list, read); fixed assets (create, depreciate, impair, dispose); opening imports (/opening-imports/gl-balances and /fixed-assets, each with a /validate step); POST /tenants/{id}/companies (create a Company; people only, the business's Owner-Admin, never a service login); GET /me; GET /jurisdictions; GET /health (no sign-in, shallow: it shows the process is up, not that every dependency is).
 
 COMMON QUESTIONS AND HOW TO ANSWER
 
@@ -57,11 +58,11 @@ IDEMPOTENCY (what protects against double posting)
 Q: The caller retried. Did it post twice?
 A: Only if it did not send an Idempotency-Key. Sending the header Idempotency-Key is optional. With it, GL records the request and its answer under (business, route, key). The same key with the same body returns the original answer (status and body) without posting again. The same key with a DIFFERENT body is refused with 422 idempotency_key_reused. Without the header there is no protection: two identical requests are two postings.
 Q: A retry with the same key keeps returning the same error even after the cause was fixed.
-A: By design. Keys are kept forever, and an error produced INSIDE the posting (for example period_not_open, a missing account, vat_category_not_supported) is stored and replayed with the key. After fixing the cause, send a NEW key. Errors raised BEFORE the posting (401, 403, bad request, company_not_found, no_vat_rate_schedule) are not stored.
+A: THIS CHANGED (GL :124, 2026-10-11). Only a SUCCESSFUL answer (2xx) is stored with the key. A refused request (for example period_not_open, a missing account, vat_category_not_supported) does NOT spend the key: fix the cause and send the SAME key and the same body again, and it runs. A key already used for a successful posting with a DIFFERENT body is still refused 422 idempotency_key_reused. (Before :124 the refusal was stored and replayed, and the advice was to send a new key; that advice is retired.)
 Q: Which routes support it?
 A: record-sale, record-collection, record-sales-return, record-obligation, record-payment, record-receipt, record-issue, record-pay-run, leave-accrual remeasure and utilize, create-invoice, POST /journal-entries and the fixed-asset actions. Not: account creation, creating a leave accrual, opening imports, bank reconciliation, tax, VAT return, creating a Company.
 Q: Two requests with the same key at the very same moment?
-A: A known narrow gap: both can run, though only one answer is stored. Sequential retries (the normal case) are safe.
+A: A known narrow gap, still open: both can run, though only one answer is stored. Sequential retries (the normal case) are safe. A design to close it exists (docs/GL_Idempotency_Claim_First_Design_Note.md, awaiting Femi). Related: the aggregate-writing routes (create sales invoice, the fixed-asset actions, leave-accrual remeasure and utilize) are several separate writes, so an exception part-way can leave partial state that a keyed retry repeats; the nine thin posting routes (sale, collection, return, obligation, payment, receipt, issue, pay run, journal entry) are safe on that axis.
 
 VAT
 Q: "no_vat_rate_schedule" (409) on a sale or purchase.
@@ -101,7 +102,13 @@ A: Per account through the opening-balance route, or by uploading a CSV to the v
 
 BANK RECONCILIATION
 Q: How does it work?
-A: Start a reconciliation with the bank statement lines, then match each line to a posted journal entry; a match can be undone. The reconciliation is "fully reconciled" when every line is matched. One entry can be matched to only one line. It does not import bank feeds.
+A: Start a reconciliation on a BANK account with the statement lines, then match each line to a posted journal entry; a match can be undone; when every line is matched, Complete it (or Cancel it). The balance tie-out compares the statement's ending balance, the ledger balance and the outstanding items. The picker offers only POSTED entries on that account that no completed reconciliation has already cleared; an entry that was undone together with its reversal is not offered. One entry can be matched to only one line. It does not import bank feeds.
+
+CASH AND BANK BOOKS
+Q: What is the Cash Book and what are bank books?
+A: Account 1000 is always the Cash Book in every Company; further cash books (petty cash, a mobile-money wallet) and bank accounts are ordinary ledger accounts of kind CASH or BANK, one book per account. Money in, money out and moves between books are recorded in the book itself (the book is a book of original entry); Undo reverses an entry that started in a book (not one made by sales, purchases, payroll or another module: those are reversed where they were made). Only a bank account can be reconciled. The Company's currency comes from its jurisdiction (GBP, EUR, NGN, SLE; SLE is the only currency onboarded across the Mano River operation).
+Q: A row of the book shows a description that is an id, or two same-day rows look out of order.
+A: Old reversals were stored as "Reversal of <id>"; the book and the journal list now word them from the original entry where it can be found (display only). Same-day order is fixed since V35 for every entry recorded after it; entries recorded before V35 are in the order the database held them, which is not necessarily the order they were entered, and cannot be repaired by GL (a correcting journal is the honest fix).
 
 FIXED ASSETS AND TAX
 Q: What exists?
@@ -114,8 +121,8 @@ WHAT TO COLLECT BEFORE ESCALATING
 The route and method, the Company id and business (Tenant) id, the exact "error" and "detail", the Idempotency-Key if one was sent, the journal entry id if one came back, the time (UTC) and the request id from the response header.
 
 NOT BUILT, NOT DEPLOYED, OR NOT YET EXERCISED (do not promise these)
-- Period management: no route to create, open or close a period, no period roll-over, no "as at" date on the balance sheet, no profit and loss for a chosen period.
-- Reversal over HTTP: the logic exists but no route exposes it, so a posted entry cannot be reversed by a caller yet (void a receipt, cancel an invoice).
+- Period management: no route to create, open, close or reopen a period (one Period holds a Company's whole history), no period roll-over, no "as at" date on the balance sheet. Profit and loss and cash flow take a date range. Decided direction (Femi, 2026-10-10): the next month opens automatically, closing is explicit; designed, deferred, nothing built (docs/GL_Period_Management_Scoping.md).
+- Reversal over HTTP: still no generic route. The only correction path over HTTP is Undo of an entry that started in a cash or bank book. A posted sale, collection, supplier payment, pay run or manual entry cannot be reversed by a caller; a correction is a new entry.
 - Audit trail: the store exists and is tested, but nothing writes to it yet. GL cannot answer "who posted this" except the entry's source (manual, integration, reversal); there is no actor on an entry.
 - VAT: Ireland and the UK only are live. Sierra Leone is loaded but unverified (refuses). Liberia, Guinea, Cote d'Ivoire and Nigeria have no rates. No exempt-only path. VAT returns are Irish-shaped. Nothing records who verified or changed a rate (an audit trail for that is required before any country is switched on).
 - Trading profit-and-loss: live, but only as good as the tagging. Existing Companies are untagged; re-tagging has no audit trail and moves gross margin; it uses the single open period (no chosen period or date range); no work-in-progress adjustment for manufacturers.
@@ -124,5 +131,9 @@ NOT BUILT, NOT DEPLOYED, OR NOT YET EXERCISED (do not promise these)
 - Bulk or batch posting: one call per document.
 - Receivables, payables and stock opening figures by CSV (partly built in SOP, POP and IM, not in GL).
 - Market-support aggregates for Omniview (designed and held, not built).
-- Row-level database isolation between businesses (tenancy is enforced in the application), metrics and tracing, rate limiting, a documented backup and recovery drill, graceful shutdown, API versioning (see docs/GL_Production_Readiness_Assessment.md).
+- Row-level database isolation between businesses (tenancy is enforced in the application; scoped in docs/GL_RLS_Scoping.md, held), metrics and tracing, rate limiting, a documented backup and recovery drill (automated RDS backups exist, retention 1 day by default, single-AZ, no restore runbook), graceful shutdown, API versioning (see docs/GL_Production_Readiness_Assessment.md).
+- Stock purchases are double counted when both the IM receipt and the POP match post (the receipt credits Accounts Payable, the match credits it again): measured live 2026-10-12. The fix (GRNI) is designed and awaits Femi (docs/POP_IM_GL_Purchase_Posting_Design_GL_Half.md). Existing test entries keep the old postings; GL cannot repair them.
+- Sales returns and credit notes: record-sales-return posts one amount with no VAT reversal, and there is no Sales Returns account yet; Discounts Given and Discounts Received are decided (Femi, 2026-10-13) but not built (docs/Sales_Returns_Credit_Notes_GL_Half.md).
+- Fixed assets: no once-per-year depreciation guard (two requests with different keys post two annual charges), manual journals to the fixed-asset accounts are accepted, acquisition dates are not checked against a Period (docs/Fixed_Assets_Security_Playbook.md, awaiting Femi). The cross-Company Period check IS in place (T19).
+- Foreign-currency accounts (IAS 21): designed, not built; one currency per Company.
 - Not yet exercised with real money: the platform is still in its Development phase; production data is legacy test data until Femi announces the switch to Live.
