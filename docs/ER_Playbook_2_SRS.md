@@ -22,7 +22,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | Gate type | Requirements |
 |---|---|
 | **RBAC changes** (roles, predicates, grants) | PL-ADM-5, PL-CLS-3, PL-ASM-4, PL-ASM-9, PL-SAF-1, PL-SAF-5, PL-STF-4, PL-SET-3, PL-SET-5, PL-CON-6, PL-FEE-10, PL-BRD-1 |
-| **New service-account scopes** (a new route a runtime may call at a generic service) | PL-FEE-2, PL-FEE-3, PL-FEE-7, PL-FEE-9, PL-FEE-11, PL-FEE-12, PL-NOT-1, PL-DOC-2, PL-STF-5 |
+| **New service-account scopes** (a new route a runtime may call at a generic service) | PL-FEE-2, PL-FEE-3, PL-FEE-7, PL-FEE-9, PL-FEE-11, PL-FEE-12, PL-NOT-1, PL-DOC-2, PL-STF-5 (inbound route from EA) |
 | **Cross-Tenant or cross-Company reads** | PL-RPT-6 (group dashboards), PL-SET-6 (multi-school groups); every generic-service read is already per Company |
 | **Children's-data exports** | PL-ENR-9, PL-EXM-2, PL-RPT-4, PL-RPT-5, PL-IMP-3, PL-PRV-5 |
 | **Authentication changes** | PL-PRT-1 (guardian OTP login), PL-SET-4 (MFA for school staff) |
@@ -91,7 +91,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | PL-STF-2 | Professional registration (TRCN, NTC, TSC; country list TBC) with expiry | STF-003 | ER | P1 | | none |
 | PL-STF-3 | Vetting and safeguarding checks: identity, references, background check, child-protection training; restricted view | STF-004, 005 | ER | P1 | | none |
 | PL-STF-4 | Who may see vetting data: head teacher, safeguarding lead, admin (decided); not other teachers | STF-004 | ER | P1 | ⚑ | none |
-| PL-STF-5 | "Employ once through HR": a new teacher is created in HR and EA, and ER receives the link; **a new ER-to-HR read** | STF-001 | ER + G:HR, G:EA | P1 | ⚑ | designed, not built |
+| PL-STF-5 | "Employ once through HR": the Owner Admin employs in HR; HR pushes one command to EA; EA pushes to ER `PUT /schools/{schoolId}/staff/{email}/employment` (employmentId, TEACHER duty only, dates, version) and an end route on dismissal. **ER never calls HR**; it holds the teaching record and the employmentId. A new inbound service-account route (corrected 2026-10-13 after EA's reply) | STF-001 | ER + G:EA, G:HR | P1 | ⚑ | designed, not built; open: which EA Role a teacher holds |
 | PL-STF-6 | Expiry reminders for registrations, checks, contracts | STF-006 | ER | P2 | | none |
 | PL-STF-7 | Staff data for ministry returns | STF-007 | ER | P2 | | none |
 
@@ -214,7 +214,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 
 | ID | Requirement | Spec | Owner | Ph | Gate | State |
 |---|---|---|---|---|---|---|
-| PL-PRT-1 | Guardian sign-in (phone and OTP) linked to all their children | PPT-001 | G:EA / identity | P1 | ⚑ | platform authentication change |
+| PL-PRT-1 | Guardian sign-in (phone and OTP) linked to all their children. **Not an EA build** (guardians are not EA Users): the user pool and SMS sending are CM's, the screen WEB's, ER maps a token to a guardian by phone claim (corrected 2026-10-13 after EA's reply) | PPT-001 | CM, WEB, ER | P1 | ⚑ | platform authentication change; general SMS is parked |
 | PL-PRT-2 | View published results, attendance, timetable, notices; **per-child scope**: a guardian sees only a linked child | PPT-002, 005 | ER, WEB | P1 | | API built (per-child read decided and live); no WEB screens confirmed |
 | PL-PRT-3 | Fee statements, invoices, payment through the platform's session, receipts | PPT-003, FIN-INT-007 | ER + G:SOP | P1 | | invoices read; no payment channel |
 | PL-PRT-4 | Low-data mode and SMS result summaries | PPT-006 | ER, WEB | P2 | | none |
@@ -229,7 +229,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | PL-SET-3 | **A Staff-and-roles screen** so an admin can give roles (today API only); a brand-new school cannot grade or bill until roles are assigned | | ER, WEB | P1 | ⚑ | no screen |
 | PL-SET-4 | MFA for school staff on privileged and finance roles (Live-switch item, C6) | SEC-003 | G:EA | Live | ⚑ | parked |
 | PL-SET-5 | Termly access review report and prompt removal of leavers; the closed role list and the last-admin guard stay | RBAC-006 | ER | P1 | ⚑ | guard built |
-| PL-SET-6 | Multi-school groups: a Tenant view across school Companies (C7); every read stays per Company | CLS-008 | G:EA | P2 | ⚑ | none |
+| PL-SET-6 | Multi-school groups: a Tenant view across school Companies (C7); every read stays per Company. **No EA build**: `GET /api/me` already lists them; WEB lists and calls ER per school; a group head holds an assignment in each school (corrected 2026-10-13) | CLS-008 | WEB | P2 | ⚑ | none |
 | PL-SET-7 | Registered devices: register, revoke, wipe offline data remotely | SEC-006 | ER | P1 | | register and revoke built; wipe not |
 | PL-PRV-1 | Lawful basis recorded per data category; children under 18; guardian consent where consent is the basis | PRV-002, 003 | ER | P1 | | none |
 | PL-PRV-2 | Retention schedule by record type per country (defaults TBC); disposal review list | PRV-006 | ER | P1 | | none |
@@ -298,7 +298,7 @@ Rules: minimum collection, fields switchable per school and country; purpose and
 |---|---|---|---|---|
 | **SOP** | customer create and read (cleared); credit sale; collection; reads of balances and sales | `ER-guardian-{id}`, `ER-invoice-{id}`, `ER-payment-{id}` | 401 or 403 means `billing_not_enabled`; 503 or unreachable means `billing_unavailable`; anything else loud | new routes ⚑ per route |
 | **EA** | none; EA calls ER (provisioning, first admin) | idempotent on organisation id | | fixtures wave 2 |
-| **HR** | (planned) read of a new teacher's HR link | read-only | | PL-STF-5 ⚑ |
+| **HR** | none: HR pushes to EA and EA pushes to ER (corrected 2026-10-13); ER never calls HR | | | PL-STF-5 ⚑ |
 | **GL** | none, ever | | | |
 | **IM / POP** | none | | | |
 | **Messaging, documents** | generic ports, ER first (D2) | per message and per file | | PL-NOT-1, PL-DOC-2 ⚑ |
@@ -325,7 +325,7 @@ Taken from the spec and tied to what the platform decided: security (TLS, encryp
 | Contributor | Asked |
 |---|---|
 | **SOP** | the sale and collection routes' opt-in per route; the cash-account choice; "raised by"; receipt numbering and the offline number range (PL-FEE-11); whether a payment-provider channel is planned |
-| **EA** | the HR-to-ER teacher link, group views across Companies (PL-SET-6), guardian sign-in (PL-PRT-1), MFA timing |
+| **EA** | confirmed 2026-10-13: provisioning and first admin as built; guardian OTP is not EA's; group view needs no EA build; MFA at the Live switch; the HR-to-ER push (PL-STF-5), and which EA Role a teacher holds |
 | **HR** | the employ-once flow and what teaching-record fields HR will not hold |
 | **GL, IM, POP** | confirm ER needs nothing from them in the first two phases |
 | **WEB** | the screen list per area (part 3) and the offline client design |
