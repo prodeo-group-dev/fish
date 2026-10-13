@@ -94,6 +94,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | PL-STF-5 | "Employ once through HR": the Owner Admin employs in HR; HR pushes one command to EA; EA pushes to ER `PUT /schools/{schoolId}/staff/{email}/employment` (employmentId, TEACHER duty only, dates, version) and an end route on dismissal. **ER never calls HR**; it holds the teaching record and the employmentId. A new inbound service-account route (corrected 2026-10-13 after EA's reply) | STF-001 | ER + G:EA, G:HR | P1 | ⚑ | designed, not built; open: which EA Role a teacher holds |
 | PL-STF-6 | Expiry reminders for registrations, checks, contracts | STF-006 | ER | P2 | | none |
 | PL-STF-7 | Staff data for ministry returns | STF-007 | ER | P2 | | none |
+| PL-STF-8 | **Staff kind**: Teaching, Administrative, Supporting, Other (configurable list), an attribute of the HR employment, carried in the EA push to ER; only kind Teaching has a teaching record; one **Staff directory** grouped by kind (see `School_Vocabulary_For_WEB.md` section 7) | (Femi 2026-10-13) | G:HR, G:EA, ER, WEB | P1 | | not modelled: HR carries only staff, teacher, non-teaching staff |
 
 ### 3.5 School structure, timetable and curriculum (ER-CLS)
 
@@ -226,7 +227,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 |---|---|---|---|---|---|---|
 | PL-SET-1 | School provisioned by EA (school id, organisation id) and a first admin set by EA, both idempotent | | G:EA, ER | done | | built |
 | PL-SET-2 | School profile and settings (levels, terms, grading, positions on or off, fee line on report cards) as configuration packs per country | CLS-001 | ER | P1 | | none |
-| PL-SET-3 | **A Staff-and-roles screen** so an admin can give roles (today API only); a brand-new school cannot grade or bill until roles are assigned | | ER, WEB | P1 | ⚑ | no screen |
+| PL-SET-3 | **A Roles-and-access tab inside the Staff area** (was "Staff-and-roles screen") so an admin can give roles (today API only); a brand-new school cannot grade or bill until roles are assigned | | ER, WEB | P1 | ⚑ | no screen |
 | PL-SET-4 | MFA for school staff on privileged and finance roles (Live-switch item, C6) | SEC-003 | G:EA | Live | ⚑ | parked |
 | PL-SET-5 | Termly access review report and prompt removal of leavers; the closed role list and the last-admin guard stay | RBAC-006 | ER | P1 | ⚑ | guard built |
 | PL-SET-6 | Multi-school groups: a Tenant view across school Companies (C7); every read stays per Company. **No EA build**: `GET /api/me` already lists them; WEB lists and calls ER per school; a group head holds an assignment in each school (corrected 2026-10-13) | CLS-008 | WEB | P2 | ⚑ | none |
