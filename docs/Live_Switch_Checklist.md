@@ -60,3 +60,10 @@ Rules: this file is the single list; items are removed only by CM with a note of
 | GL: known accounting-correctness gaps (seam A GRNI, sales returns without VAT reversal, fixed-asset gaps, non-atomic aggregate routes, simultaneous-duplicate gap) | GL, POP, IM | each scheduled; none may be left silent at Live |
 | IM: opening stock has no route; no stock reservation against open orders | IM | before a customer with existing stock |
 
+## F. Log-first switches now live (CM reads the logs, then flips)
+
+| Switch | Where | Now | Flip to enforce when |
+|---|---|---|---|
+| `ER_SCHOOL_ROW_MODE` (ER :96, 2026-10-13) | ER task definition | log | a normal day of real use shows no "WOULD REFUSE school_row_missing" in /ecs/fish-school-admissions (or each id shown is fixed by EA reprovision) |
+| `ER_DPID_BINDING_MODE` (ER :97, 2026-10-13) | ER task definition | log | each school using BuzzMe/DPID devices has been enabled by its admin (PUT /schools/{id}/integrations/dpid), and no unexpected "WOULD REFUSE dpid_not_enabled" remains |
+| `FISH_SETTLEMENT_ACCOUNT_MODE`, `FISH_BANK_RECONCILIATION_MODE` (GL, earlier) | GL task definition | log | CM reads GL logs and finds no would-refuse |
