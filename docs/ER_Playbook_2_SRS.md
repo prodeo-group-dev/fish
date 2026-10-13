@@ -21,7 +21,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 
 | Gate type | Requirements |
 |---|---|
-| **RBAC changes** (roles, predicates, grants) | PL-ADM-5, PL-CLS-3, PL-ASM-4, PL-ASM-9, PL-SAF-1, PL-SAF-5, PL-STF-4, PL-SET-3, PL-SET-5, PL-CON-6, PL-FEE-10, PL-BRD-1 |
+| **RBAC changes** (roles, predicates, grants) | PL-ADM-5, PL-CLS-3, PL-ASM-4, PL-ASM-9, PL-SAF-1, PL-SAF-5, PL-STF-4, PL-SET-3, PL-SET-5, PL-CON-6, PL-FEE-10, PL-BRD-1, PL-STF-9 |
 | **New service-account scopes** (a new route a runtime may call at a generic service) | PL-FEE-2, PL-FEE-3, PL-FEE-7, PL-FEE-9, PL-FEE-11, PL-FEE-12, PL-NOT-1, PL-DOC-2, PL-STF-5 (inbound route from EA) |
 | **Cross-Tenant or cross-Company reads** | PL-RPT-6 (group dashboards), PL-SET-6 (multi-school groups); every generic-service read is already per Company |
 | **Children's-data exports** | PL-ENR-9, PL-EXM-2, PL-RPT-4, PL-RPT-5, PL-IMP-3, PL-PRV-5 |
@@ -95,6 +95,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | PL-STF-6 | Expiry reminders for registrations, checks, contracts | STF-006 | ER | P2 | | none |
 | PL-STF-7 | Staff data for ministry returns | STF-007 | ER | P2 | | none |
 | PL-STF-8 | **Staff division** (Femi 2026-10-13, superseding the earlier kinds): every staff member belongs to a **division**, **Operations** (teaching), **Administrative** (the Registry; the Proprietor is shown above), **Finance**, an attribute of the **HR employment** carried in the EA push to ER; shown inside the three existing tabs, **no fourth top-level tab**; a person appears in every division where they hold a role, payroll in the primary one; only Operations staff have a teaching record | (Femi) | G:HR, G:EA, ER, WEB | P1 | | not modelled: HR carries only staff, teacher, non-teaching staff |
+| PL-STF-9 | **Payroll split** (Femi 2026-10-13: the basis of a pay is Administrative, the pay run is Financial, "RBAC"): the **pay basis** (time, piece, contract or salary) is a field on the HR employment record set by an Administrative permission; the **pay run** (run, approve, post) is Finance with a separate permission; setting a basis never implies running payroll, and the preparer of a run is not its approver; HR owns it, ER only displays the division | (Femi) | G:HR, G:EA, WEB | P1 | ⚑ | to be confirmed by HR: what the employment record holds today |
 
 ### 3.5 School structure, timetable and curriculum (ER-CLS)
 
