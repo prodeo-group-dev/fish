@@ -70,7 +70,7 @@ A tenant is a business that subscribes to FiSH's General Ledger as a Service. Wh
 
 Twelve families, in the order a subscriber meets them. For each: what the need is, who normally answers,
 whether the tenant can self-serve, and what Omniview or its neighbours must provide.
-**Tier:** L1 = Prodeo support operator; L2 = the engineer who owns the service; L3 = a specialist
+**Tier:** L1 = platform support operator; L2 = the engineer who owns the service; L3 = a specialist
 (accountant or tax specialist for the jurisdiction, security lead, the education product owner).
 
 | # | Family | Typical needs | Usual severity | Tier | Self-serve? | What the platform must provide |
@@ -219,6 +219,7 @@ IDs are `FR-SUP-*`. They sit **on top of** the Product Support requirements `FR-
 | NFR-SUP-6 | **Support must not become the weakest door**: operator authentication stays named and revocable (D13) and moves to a managed identity group when the team grows; diagnostic access is the only path to tenant data |
 | NFR-SUP-7 | **Scales with a small team**: macros, knowledge base, routing and automation are first-class so one operator can handle many tenants, and tooling comes before headcount |
 | NFR-SUP-8 | **Jurisdiction-aware**: dates, working days, currency display and the legal basis for handling ticket data follow the tenant's Company, not the operator's location |
+| NFR-SUP-9 | **Landlord principle (Femi, 2026-10-15: "PRODEO is a landlord. It has NO ROLE WHATSOEVER in its tenants data").** No Omniview or operator action reads or edits a Tenant's business data (ledger, transactions, customers, suppliers, employees, pay, stock, orders). What an operator can see is limited to: platform health; the Tenant metadata EA already holds to run the platform (name, status, segment, verification status and deadlines, number of Companies, number of active staff, support activity); a ticket's text, which the Tenant's own Owner Admin wrote to ask for help; the Tenant's setup card only while its Owner Admin has switched sharing on; and a lookup by Tenancy ID. Operators write only their own replies in the support conversation, never into Tenant data. A stuck or wrong Tenant record is recovered on the Tenant's side (an identical retry, or a route for the Tenant's Owner Admin or accountant), never by an operator. **Wording:** an "operator" is a member of the platform's support staff acting on platform operations and support only; the "operator routes" are platform-operations routes (health, overview, support messages, Tenancy ID lookup), and none of them accepts or returns business data. **One thing to confirm with Femi:** Market Support reads consenting Tenants' totals through GL as non-identifying aggregates only (NFR-OV-7); whether that fits this principle is his to confirm, and nothing is built for it until he does. |
 
 ---
 

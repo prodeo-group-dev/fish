@@ -87,6 +87,7 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | FR-PEO-10 | **Offboarding:** an end-date request, approved by the Owner Admin, with a checklist (access removed, equipment, final pay noted, documents retained), and a visible consequence summary. | Must |
 | FR-PEO-11 | **Position, division or line-manager change** recorded with date and who. | Must |
 | FR-PEO-12 | **Change history:** every change to the record audited in the platform shape (actor, time, before and after for sensitive fields). | Must |
+| FR-PEO-19 | **Access changes need the Business Owner's approval** (Femi, 2026-10-15: "if initiated here, it must be approved by the Business Owner"). Inviting someone, changing a role or module, and removing access, when started from Personnel by anyone other than the Owner Admin, become a **request** that only the Owner Admin approves, then EA executes (EA re-authorises with the approver's own token). When the Owner Admin starts one it is approved in the same step, recorded as self-approved. Same machinery and rules as the hire request (D2, D7, D8, FR-PEO-09). | Must |
 | FR-PEO-13 | **Reports for the Owner:** headcount by division, starters and leavers, leave liability, expiring documents, statements overdue, probation ending. | Should |
 | FR-PEO-14 | **Employee self-service:** see own record and leave balance, request leave, update own contact details, later view payslips. Requires the employee to hold a sign-in, which needs the generic `STAFF` role (a pending authorisation decision). | Should (blocked on the `STAFF` decision) |
 | FR-PEO-15 | **Disciplinary and grievance record:** confidential notes and outcomes, visible only to the Owner Admin and named HR roles, retention per jurisdiction. | Should |
@@ -104,12 +105,15 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | NFR-PEO-04 | Contract fixtures for every cross-service payload (Personnel to EA access leg, Personnel to Payroll flows), strict decode, consumer first. |
 | NFR-PEO-05 | Hire and leave execution is crash-safe and retryable (the approval-lease and per-leg status machinery already designed for payroll approval). |
 | NFR-PEO-06 | Vocabulary per industry through WEB's existing label vocabularies: a school says "Staff", generic says "Personnel"; the model underneath is one. |
+| NFR-PEO-07 | **Phone check:** every act the Business Owner performs passes the phone check in section 6 (one screen, two-step decision, no wide tables, no figures in notices, online only, confirmed and audited). |
 
 ---
 
 ## 5. Where invite, roles, modules and remove live, and what to call it
 
 **Decided 2026-10-15 (Femi, via CM): option A.** The invite, roster, role and module changes, and remove stay in HR under Administration > Personnel. EA stays the system of record and the authority: HR's `/team` routes forward the caller's own token and EA re-authorises and executes every call, exactly as built on 2026-09-29. **The name is Personnel; there is no separate "Access" name.**
+
+**Approval rule, added 2026-10-15 (Femi): "if initiated here, it must be approved by the Business Owner".** Today an HR Officer holding ADMIN at a Company can invite staff, change modules and remove staff directly, with no Owner approval (`Membership.canManageStaffAt`, EA). That is stricter than the code. The end state is FR-PEO-19: a delegate **raises** the change in Personnel, only the Owner Admin approves, then EA executes. The Owner Admin acting directly is approved in the same step. **P7 answered 2026-10-15 (Femi): no interim refusal.** Refusing delegates would make the Owner do the HR Officer's job, which is the opposite of the intent ("Delegates can do their work as they deem fit but the final authority over hiring and firing is the Business Owner"). So until the request flow exists, delegates keep acting directly as today, and the real fix is building the flow (3.1). The gap is accepted while everything in production is test data; whether the flow must exist before the Live switch is P8.
 
 **What this means in practice: almost nothing has to be built, because it is already built.** Read on `origin/master` on 2026-10-15: EA has `DELETE /tenants/{tenantId}/memberships/{membershipId}` (`RemoveStaffMemberUseCase`); HR has `POST /team`, `GET /team`, `DELETE /team/{membershipId}` and the EA gateway calls behind them; WEB has `TeamTab` inside `HrTab`, and EA's old `TeamPanel.tsx` is gone. The 2026-09-29 move is complete and live, so "the Team move is back on" means: **stop planning to undo it, and finish what is still missing around it.**
 
@@ -121,11 +125,11 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | B: all in EA's access control | Undo the move. | Not adopted. |
 | C: split by who the person is | Personnel owns employment and triggers access for a hire; a separate EA Access screen owns the rest. | Not adopted (was this note's recommendation). |
 
-**What is still open inside option A (one small question, P1b):** the area is Personnel, and the invite, roster and remove feature lives inside it. WEB still needs a label for that **section within Personnel** (today it is "Team"). Femi has said he dislikes "Team" and that the feature is named Personnel; whether the section inside Personnel has its own word, or the roster is simply part of the Personnel list, is not answered. I do not assume one.
+**P1b answered 2026-10-15 (Femi: "Agreed. My thoughts exactly"): no separate screen and no new label.** Each employee row gets "Give access" or "Remove access" (and a way to change their role or modules), and one button, **"Invite someone who isn't an employee"**, covers a person such as the outside accountant. Every one of these acts follows the approval rule above (FR-PEO-19): the Owner Admin acts directly, anyone else raises a request the Owner Admin approves. Detail left to WEB: where a person who has access but is not an employee is shown (a marker in the same list), which this note does not decide.
 
 **What changes on screen (WEB's to build, not EA's):**
 - Administration sections: Dashboard, **Personnel**, Companies, Verification (Payroll moves to Finance with the payroll split). No separate Access section.
-- Personnel sections: Employees (with Add employee), the roster and invite feature (label per P1b), Leave, Onboarding and leavers, Documents (when built). Pay runs and Salary advances move to Payroll under Finance.
+- Personnel sections: Employees (with Add employee, and per-row Give access, Change access and Remove access, plus the button "Invite someone who isn't an employee"; no separate Team or Access section), Leave, Onboarding and leavers, Documents (when built). Pay runs and Salary advances move to Payroll under Finance.
 - HR's `/team` proxies **stay**. The earlier plan to retire them is withdrawn.
 
 ---
@@ -148,11 +152,34 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | UC-PEO-12 | See who needs attention | Owner Admin | Overdue statements, expiring documents, probation ending, leavers this month. | FR-PEO-13 |
 | UC-PEO-13 | Handle a data-subject request | Owner Admin or HR Officer | Export or erase within retention rules. | FR-PEO-16 |
 | UC-PEO-14 | Record a disciplinary or grievance | Owner Admin or named HR role | Confidential record, restricted view. | FR-PEO-15 |
-| UC-ACC-01 | Give access to someone who is not being hired | Owner Admin or delegate with ADMIN, Personnel, through EA | Invite by email with role, level, modules at chosen Companies. | Section 5 |
-| UC-ACC-02 | Change or remove access | same | Change role or modules; remove; the Owner Admin cannot be removed. | Section 5 |
-| UC-ACC-03 | See who can sign in | same | Roster of Memberships with their grants. | Section 5 |
+| UC-ACC-01 | Give access to someone who is not being hired | Owner Admin directly; a delegate raises a request the Owner Admin approves (FR-PEO-19) | Invite by email with role, level, modules at chosen Companies. | Section 5 |
+| UC-ACC-02 | Change or remove access | same rule | Change role or modules; remove; the Owner Admin cannot be removed. | Section 5 |
+| UC-ACC-03 | See who can sign in | same | Shown on each employee row (has access or not) and, for someone who is not an employee, as a marked entry in the same list; the roster of Memberships with their grants remains EA's data. | Section 5 |
 
 (UC-ACC are the roster and invite section inside Personnel; they already exist as routes in HR that call EA, and are listed so the access side is complete.)
+
+---
+
+### Phone check for the Business Owner's acts
+
+**Phone check (Femi, 2026-10-15: the Business Owner can run the business from a mobile device).** An act the Business Owner performs passes only if all of these hold. WEB tests each one on a phone before it ships; the playbook for this area inherits the table below as its acceptance list.
+
+1. **One screen** at phone width (WEB's tests used about 400 px) shows who, what, the effect in money or access, and what happens next. No sideways scrolling to understand it.
+2. **Two-step decision:** after reading that screen the Owner chooses Approve or Reject (a reason is required on reject, optional on approve). No second step that only works on a desktop.
+3. **Long lists are cards or summaries** with a way to open the detail, never a wide table that must be scrolled sideways.
+4. **Notices carry no figures and no names** ("3 items need you"); the detail appears only after sign-in.
+5. **Online only:** nothing of the business's data is stored on the phone.
+6. **The result is confirmed on the same screen and audited**, including a flagged self-approval.
+7. **A failed or partial result says in plain words what happened and what to do** (for example Retry), never a bare error code.
+
+| Owner act | What the one screen shows | Decision |
+|---|---|---|
+| UC-PEO-01 approve a hire | Name, position, division, start date, employment type, whether system access is requested, who raised it | Approve or Reject |
+| UC-PEO-11 approve an offboarding | Name, end date, what happens to their access, notes on final pay | Approve or Reject |
+| FR-PEO-19 approve an access change (give, change or remove access) | Who, which Company, the role and modules before and after, who raised it | Approve or Reject |
+| UC-PEO-07 approve leave (when the Owner is the approver) | Who, dates, type, balance before and after, cover | Approve or Reject |
+| UC-PEO-12 see who needs attention | Overdue statements, expiring documents, probation ending, leavers; opens detail | No decision (read) |
+| UC-PEO-08 set the leave policy | Current rules and the change, in plain words | Save or Cancel |
 
 ---
 
@@ -161,11 +188,11 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | # | Item | Owner | Depends on |
 |---|---|---|---|
 | **Wave 0: decisions (Femi, via CM)** | | | |
-| 0.1 | P3 to P6 and P1b (section 8); P1 and P2 are answered | Femi | none |
+| 0.1 | P3 to P7 (section 8); P1, P1b and P2 are answered | Femi | none |
 | 0.2 | Statutory duties sourcing per jurisdiction (statement due dates, right-to-work, working-time, retention), with Sierra Leone from the primary Act and counsel | HR with Femi; counsel | none |
 | 0.3 | Confirm or assign an HR owner session | CM, Femi | none |
 | **Wave 1: no code, wording and boundaries** | | | |
-| 1.1 | Rename People to Personnel on screen; label the roster section (P1b); Payroll sections to Finance (with the payroll split). No Access section | WEB | P1b |
+| 1.1 | Rename People to Personnel on screen; per-row Give, Change and Remove access and the button "Invite someone who isn't an employee" instead of the Team section; Payroll sections to Finance (with the payroll split). No Access section and no new label | WEB | none |
 | 1.2 | Reconcile D16: school "Staff" = the people list; Access has one name for all industries | ER, WEB | 0.1 |
 | 1.3 | ~~EA publishes the Access contract and marks HR's `/team` proxies to be retired~~ **Withdrawn (option A adopted).** EA's membership routes stay as they are and remain the contract HR calls | EA | none |
 | 1.4 | Already done, no work: EA's `DELETE .../memberships/{membershipId}`, HR's `/team` routes and their EA gateway calls, WEB's `TeamTab`, EA's `TeamPanel.tsx` removed (all on master). Only residual check: that nothing still points at the old "People" or "Team" wording after the Personnel rename | EA, HR, WEB | none |
@@ -174,8 +201,9 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | 2.2 | Leave policy per Company and jurisdiction (replace the hard-coded numbers); migration keeps today's values as the default | HR | 0.2 |
 | 2.3 | Absence record | HR | 2.1 |
 | **Wave 3: the flows** | | | |
-| 3.1 | Hire and leave request machinery (`StaffChangeRequest`: approve, execute HR then EA then ER, per-leg status, approval lease) with the "needs access" leg through EA | HR, EA, ER | 2.1, EA's position-to-role mapping, Femi's `STAFF` decision for non-school hires |
+| 3.1 | Hire, leave and **access-change** request machinery (`StaffChangeRequest`, with kinds for access grant, access change and access revoke so FR-PEO-19 uses the same approve-and-execute path: approve, execute HR then EA then ER, per-leg status, approval lease) with the "needs access" leg through EA | HR, EA, ER | 2.1, EA's position-to-role mapping, Femi's `STAFF` decision for non-school hires |
 | 3.2 | Close the direct paths: employee create and end-date change become Owner-only direct acts; delegates use the request route | HR | 3.1 |
+| 3.5 | ~~Interim: refuse delegates on invite, modules and remove~~ **Withdrawn (P7 answered: no interim refusal).** The fix is 3.1, the request flow | EA, WEB | none |
 | 3.3 | ~~Retire HR's `/team` proxies~~ **Withdrawn (option A adopted).** Keep them | HR | none |
 | 3.4 | Onboarding and offboarding checklists | HR, WEB | 3.1 |
 | **Wave 4: statutory duties and files** | | | |
@@ -195,12 +223,14 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 
 ## 8. Decisions asked of Femi (one batch, via CM)
 
-1. ~~**P1, the name**~~ **Answered 2026-10-15:** Personnel; the feature formerly called Team is named Personnel (no "Access"). New small question **P1b:** inside Personnel, what is the invite, roster and remove section labelled (it is "Team" today, which Femi dislikes), or is it simply part of the Personnel list?
+1. ~~**P1, the name**~~ **Answered 2026-10-15:** Personnel; the feature formerly called Team is named Personnel (no "Access"). ~~**P1b**~~ **Answered:** no separate section and no new label; per-row "Give access" / "Remove access" and a button "Invite someone who isn't an employee".
 2. ~~**P2, the home**~~ **Answered 2026-10-15:** option A: it stays in HR/Personnel under Administration; EA stays the system of record and authority.
 3. **P3, the depth:** approve section 4's Must, Should, Could and Won't lists for an SME. Particular calls: documents store in the first release (Should), disciplinary and grievance record (Should), staff working-time record (Must only where the law requires it), 360 appraisal parked (Won't now).
 4. **P4, jurisdictions first** for statutory timers: UK and Ireland (sourced); Sierra Leone after the primary Act and counsel confirm.
 5. **P5, the leave policy:** configurable per Company and jurisdiction (recommended), or keep one fixed policy for now?
 6. **P6, self-service:** employee self-service waits on the generic `STAFF` role decision; asking again so it is not forgotten.
+7. ~~**P7, the interim for access changes**~~ **Answered 2026-10-15:** no interim refusal; delegates keep acting directly until the request flow (3.1) exists.
+8. **P8, a gate for the Live switch:** should the access-change approval flow (3.1) be a **required item before the Live switch** (my recommendation, because after it real businesses would have delegates adding and removing staff with no Owner approval), or may it follow Live?
 
 ## 9. What I could not verify
 

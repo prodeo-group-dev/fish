@@ -19,7 +19,7 @@ This SRS defines the functional and non-functional requirements for
 **Omniview's purpose is two things (Femi, 2026-10-04):**
 
 1. **Product Support.** The home of product support: a tenant's Owner
-   Admin raises a ticket from inside FiSH, and a Prodeo operator answers
+   Admin raises a ticket from inside FiSH, and a platform operator answers
    it from Omniview (§3.5).
 2. **Market Support.** Aggregate, non-identifying market reports for
    Prodeo Capital: the number of tenants, the number of staff,
@@ -155,7 +155,7 @@ lives in Omniview.
 | Platform Health | At-a-glance reachability for GL/POP/SOP/IM/HR |
 | Platform Overview | Every Tenant's onboarding/KYB/support status at once |
 | Operator Messaging (interim) | Read-only view of EA's existing operator threads, until Product Support replaces it |
-| Product Support (draft) | Tickets raised from inside FiSH by a tenant's Owner Admin are owned by Omniview and answered by Prodeo operators from it (§3.5) |
+| Product Support (draft) | Tickets raised from inside FiSH by a tenant's Owner Admin are owned by Omniview and answered by platform operators from it (§3.5) |
 | Console | Sign-in (operator token entry), layout hosting the above |
 
 ### 2.3 User Classes and Characteristics
@@ -251,7 +251,7 @@ quote is superseded by this.
 | ID | Requirement | Priority |
 |---|---|---|
 | FR-OV-S1 | A chat started inside FiSH by a tenant's Owner Admin shall create a support ticket owned by Omniview. **Only the Owner Admin raises a ticket; employees do not** (Femi, 2026-10-04) | Draft |
-| FR-OV-S2 | A Prodeo operator shall triage and answer tickets from Omniview | Draft |
+| FR-OV-S2 | A platform operator shall triage and answer tickets from Omniview | Draft |
 | FR-OV-S3 | Tickets and replies shall be stored in Omniview's own database, never written into EA or any other FiSH service (NFR-OV-6) | Draft |
 | FR-OV-S4 | The person who raised a ticket shall see the replies in the FiSH chat, read back from Omniview. FiSH pulls the reply; Omniview never pushes a reply or notification into FiSH or any tenancy | Draft |
 | FR-OV-S5 | EA's tenancy-internal communication (owner and staff of one tenant) shall be unchanged and not conflated with product support: two separate channels | Draft |
@@ -343,6 +343,7 @@ Omniview.
 | NFR-OV-7 | **Non-identification is sacrosanct (Femi, 2026-10-04).** Every figure Omniview publishes about the market shall be an aggregate that identifies no tenant. There shall be no per-tenant figure or breakdown anywhere: not in any view, API, export, log or stored snapshot. Each published figure shall cover at least a minimum number of tenants, **determined statistically (minimum sample sizes), not chosen arbitrarily** (Femi, 2026-10-04); anything below it is suppressed. A statistical minimum makes an estimate reliable, but it does not by itself make a figure non-identifying, because one dominant tenant can reveal itself in a large cohort. So a concentration rule applies as well (no single tenant may account for more than a set share of a published total), and the stricter of the two tests governs. Suppression shall also defeat differencing, so that a total and its segments can never be combined to derive a small segment. Enforced in code with tests, not by convention. Tenants' permission for aggregate use shall be taken before any report is shown (Femi, 2026-10-04). **No cohort is ever large enough to waive these rules**: even with a hundred million tenants, the concentration rule, the suppression rule and the ban on per-tenant breakdowns still apply in full | Draft |
 | NFR-OV-6 | Omniview shall be strictly read-only toward every other FiSH service: its outbound gateways issue only `GET`, and no write method (`POST`/`PUT`/`PATCH`/`DELETE`) to any sibling shall exist in its code. Its only writes are to its own support-ticket database (§3.5). Omniview shall never write into any tenancy's data (Femi: it is not its business); a ticket may reference a tenant ID, nothing in a tenancy is altered. Verified by a test asserting the gateways expose no write operation, and enforced in review. Added 2026-10-04 on Femi's direct decision |
 | NFR-OV-5 | Deployed the same way every sibling is (ECS/Fargate, Jenkins CI/CD) — no bespoke infrastructure |
+| NFR-OV-8 | **Landlord principle (Femi, 2026-10-15: "PRODEO is a landlord. It has NO ROLE WHATSOEVER in its tenants data").** No Omniview or operator action reads or edits a Tenant's business data (ledger, transactions, customers, suppliers, employees, pay, stock, orders). What an operator can see is limited to: platform health; the Tenant metadata EA already holds to run the platform (name, status, segment, verification status and deadlines, number of Companies, number of active staff, support activity); a ticket's text, which the Tenant's own Owner Admin wrote to ask for help; the Tenant's setup card only while its Owner Admin has switched sharing on; and a lookup by Tenancy ID. Operators write only their own replies in the support conversation, never into Tenant data. A stuck or wrong Tenant record is recovered on the Tenant's side (an identical retry, or a route for the Tenant's Owner Admin or accountant), never by an operator. **Wording:** an "operator" is a member of the platform's support staff acting on platform operations and support only; the "operator routes" are platform-operations routes (health, overview, support messages, Tenancy ID lookup), and none of them accepts or returns business data. **One thing to confirm with Femi:** Market Support reads consenting Tenants' totals through GL as non-identifying aggregates only (NFR-OV-7); whether that fits this principle is his to confirm, and nothing is built for it until he does. |
 
 ---
 

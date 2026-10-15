@@ -11,7 +11,7 @@ SPUTO formalises decisions already made; it does not re-make them. Already decid
 **The problem.** Payroll is the most sensitive and most regulated thing FiSH does for a business. Today it lives inside HR, is approved by an identity test (Owner Admin), accepts a hand-typed "deductions" figure, and puts only a netted cash movement in the ledger. Femi wants it separated (RBAC), and wants PAYE deductions properly **accounted** (in the books) and **managed** (computed, tracked, remitted, reported).
 
 **In scope**
-1. **Split:** People (HR) and Payroll (PAY): first as two modules in one service (Move 1), then, if the seam is clean, as its own service before the Live switch (Move 2).
+1. **Split:** Personnel (HR) and Payroll (PAY): first as two modules in one service (Move 1), then, if the seam is clean, as its own service before the Live switch (Move 2).
 2. **Permissions:** the EA module `PAYROLL`; three separate permissions (set pay basis, run payroll, approve a pay run); preparer is not approver; enforced later behind `HR_ENFORCE_PAY_SPLIT`.
 3. **PAYE and other statutory deductions, end to end:** compute (PAYE, social insurance such as NI, PRSI, USC, NASSIT; employee and employer sides), **account** (expense and liabilities in the ledger), **manage** (year-to-date records, amounts due, remittance, reconciliation, schedules, payslips, corrections).
 4. Salary advances and expense claims as Payroll's money-out flows.
@@ -47,7 +47,7 @@ SPUTO formalises decisions already made; it does not re-make them. Already decid
 
 | ID | Requirement | MoSCoW |
 |---|---|---|
-| FR-PAY-01 | Payroll is its own module (`PAYROLL`) and screen group (Finance); People stays in Administration. | Must |
+| FR-PAY-01 | Payroll is its own module (`PAYROLL`) and screen group (Finance); Personnel stays in Administration. | Must |
 | FR-PAY-02 | Three permissions are separate: set pay basis (HR), run payroll (PAYROLL WRITE), approve a pay run (PAYROLL APPROVE). | Must |
 | FR-PAY-03 | A non-Owner approver may not approve a run they prepared; the Owner may, and it is recorded and flagged `selfApproved`. | Must |
 | FR-PAY-04 | Pay terms (rate, frequency, bank details) are Payroll's and Owner-Admin-controlled; the HR side never reads bank details. | Must |
@@ -61,7 +61,7 @@ SPUTO formalises decisions already made; it does not re-make them. Already decid
 | FR-PAY-12 | **Statutory schedules** (per employee PAYE and contribution lines per period) are exportable per jurisdiction format (D3: shape varies by jurisdiction). | Should |
 | FR-PAY-13 | **Payslips** show gross, each deduction, net, year-to-date; delivered through a protected channel only (never an open email attachment); every download is audited. | Should (employment-law floor in the UK, per the HR MVP note) |
 | FR-PAY-14 | Corrections and reversals (a mistaken run, a late change) produce visible adjusting entries and an adjusted amount due, never an edit of a posted figure. | Should |
-| FR-PAY-15 | Salary advances: request in People, approve and recover in Payroll through the run; expense claims: request in People, reimburse in Payroll. | Must |
+| FR-PAY-15 | Salary advances: request in Personnel, approve and recover in Payroll through the run; expense claims: request in Personnel, reimburse in Payroll. | Must |
 | FR-PAY-16 | Reports for the Owner: staff cost, PAYE and contributions owed, amounts remitted, next due, and anything overdue, by Company and period. | Should |
 | FR-PAY-17 | Hooks for later filing (the pay run and remittance data shaped so an RTI or ROS submission can be built from it), no filing now. | Could |
 
@@ -72,11 +72,12 @@ SPUTO formalises decisions already made; it does not re-make them. Already decid
 | NFR-PAY-01 | Every money-moving or access-changing act is audited with the platform shape (`docs/reports/Playbooks/EA/EA_Audit_Record_Shape_T17.md`): actor, Company, action, `selfApproved`, request key; same transaction as the act; append-only. |
 | NFR-PAY-02 | Every ledger posting stays idempotent and replay-safe: new posting kinds join `PayrollPostingPlanner`'s keyed plan, resume and retry exactly as today. |
 | NFR-PAY-03 | Money is `Money` (amount and currency), decimal arithmetic with a stated rounding rule per jurisdiction (rounding of PAYE to the penny or whole unit is a rule, not an accident). |
-| NFR-PAY-04 | Pay data is the most sensitive data held: least privilege between People and Payroll (own service identity and database role after Move 2), bank details and tax IDs encrypted, no figures in notifications or logs. |
+| NFR-PAY-04 | Pay data is the most sensitive data held: least privilege between Personnel and Payroll (own service identity and database role after Move 2), bank details and tax IDs encrypted, no figures in notifications or logs. |
 | NFR-PAY-05 | Strict decoding on every cross-service payload (consumer-first, contract fixtures in `fish-contracts` from day one, never `ignoreUnknownKeys`). |
 | NFR-PAY-06 | Rule data is reproducible: a past run can be recomputed from its recorded rule-set version and inputs. |
 | NFR-PAY-07 | Retention of payroll and statutory records at least the legal minimum per jurisdiction. The periods are **not sourced here**; they are a question for Femi and counsel, not a number I will supply. |
 | NFR-PAY-08 | Strangler discipline for the split: each step is a separately revertible release; never a half-split (one employee id across both sides, no copies). |
+| NFR-PAY-09 | **Phone check:** every act the Business Owner performs passes the phone check in section 5 (one screen, two-step decision, no wide tables, no figures in notices, online only, confirmed and audited). |
 
 ---
 
@@ -101,7 +102,7 @@ Actor names: **Officer** (prepares), **Approver**, **Owner Admin**, **Accountant
 
 | UC | Name | Actor and module | Main flow (short) | Postconditions and alternates | Traces |
 |---|---|---|---|---|---|
-| UC-PAY-01 | Set a pay basis | HR Officer, HR | Choose time, salaried, piece, contract for an employee. | Basis stored in People; Payroll sees it via the crossing read. Pay rate, frequency and bank details are separate (UC-PAY-02). | FR-PAY-02, 04 |
+| UC-PAY-01 | Set a pay basis | HR Officer, HR | Choose time, salaried, piece, contract for an employee. | Basis stored in Personnel; Payroll sees it via the crossing read. Pay rate, frequency and bank details are separate (UC-PAY-02). | FR-PAY-02, 04 |
 | UC-PAY-02 | Set pay terms and bank details | Owner Admin, PAYROLL | Enter rate, frequency, bank details. | Encrypted at rest; only the Owner Admin sees bank details; audited. | FR-PAY-04, NFR-PAY-04 |
 | UC-PAY-03 | Maintain an employee's tax profile | Owner Admin or Officer, PAYROLL | Record jurisdiction, tax ID, PAYE inputs. | Refused if the jurisdiction's currency is not onboarded or inputs are missing (names what is missing). | FR-PAY-05 |
 | UC-PAY-04 | Prepare a pay run | Officer, PAYROLL WRITE | Choose Company, period, date; System reads employment records and unpaid-leave days; computes each line (FR-PAY-07). | Run is PENDING with its rule-set version; duplicate period refused; unpaid employees excluded. | FR-PAY-06, 07, 08, 15 |
@@ -116,9 +117,33 @@ Actor names: **Officer** (prepares), **Approver**, **Owner Admin**, **Accountant
 | UC-PAY-13 | Export a statutory schedule | Officer, PAYROLL READ | Choose jurisdiction, period, format. | File shaped per jurisdiction; audited as a download. | FR-PAY-12 |
 | UC-PAY-14 | Issue a payslip | System, delivered to the employee | After approval, produce a payslip; deliver through the protected channel. | Download audited; none by open email attachment. | FR-PAY-13 |
 | UC-PAY-15 | Correct a posted run | Approver, PAYROLL APPROVE | Create an adjusting run for the difference. | Visible adjustment; amounts due updated; original untouched. | FR-PAY-14 |
-| UC-PAY-16 | Request and recover a salary advance | Employee requests (People); Approver approves; Payroll recovers in later runs | Advance approved; recovery appears as a deduction line. | Balance reaches zero; ledger effect per D-PAY-A. | FR-PAY-15 |
+| UC-PAY-16 | Request and recover a salary advance | Employee requests (Personnel); Approver approves; Payroll recovers in later runs | Advance approved; recovery appears as a deduction line. | Balance reaches zero; ledger effect per D-PAY-A. | FR-PAY-15 |
 | UC-PAY-17 | Reimburse an expense claim | Approver, PAYROLL APPROVE | Approve; reimburse through a run or a payment. | Posting and audit. | FR-PAY-15 |
 | UC-PAY-18 | Maintain statutory rule sets | Platform operator or a named finance role (D-PAY-C) | Add the next tax year's rule set with an effective date and source. | Existing runs keep their recorded version; the new set applies from its date. | FR-PAY-06, NFR-PAY-06 |
+
+---
+
+### Phone check for the Business Owner's acts
+
+**Phone check (Femi, 2026-10-15: the Business Owner can run the business from a mobile device).** An act the Business Owner performs passes only if all of these hold. WEB tests each one on a phone before it ships; the playbook for this area inherits the table below as its acceptance list.
+
+1. **One screen** at phone width (WEB's tests used about 400 px) shows who, what, the effect in money or access, and what happens next. No sideways scrolling to understand it.
+2. **Two-step decision:** after reading that screen the Owner chooses Approve or Reject (a reason is required on reject, optional on approve). No second step that only works on a desktop.
+3. **Long lists are cards or summaries** with a way to open the detail, never a wide table that must be scrolled sideways.
+4. **Notices carry no figures and no names** ("3 items need you"); the detail appears only after sign-in.
+5. **Online only:** nothing of the business's data is stored on the phone.
+6. **The result is confirmed on the same screen and audited**, including a flagged self-approval.
+7. **A failed or partial result says in plain words what happened and what to do** (for example Retry), never a bare error code.
+
+| Owner act | What the one screen shows | Decision |
+|---|---|---|
+| UC-PAY-02 set pay terms and bank details | The person, what changes (rate, frequency, bank), the effect on the next run; bank details masked until the Owner asks to see them | Save or Cancel |
+| UC-PAY-05 and 07 preview and approve a pay run | Period, number of people, total gross, each kind of deduction, employer cost, net, and the ledger effect; who prepared it; any overrides with their reasons | Approve or Reject |
+| UC-PAY-08 reject a pay run | The same summary | Reject with a required reason |
+| UC-PAY-10 see what is owed to authorities | Per body: due, remitted, outstanding, overdue; opens detail | No decision (read) |
+| UC-PAY-11 record a remittance (above the limit, D-PAY-E) | Body, period, amount due, amount entered, the difference | Approve or Reject |
+| UC-PAY-15 correct a posted run | What was posted, what changes, the adjusting amount | Approve or Reject |
+| UC-PAY-16 and 17 approve a salary advance or an expense claim | Who, how much, the reason, the recovery or reimbursement plan | Approve or Reject |
 
 ---
 
@@ -131,7 +156,7 @@ Owner column: **EA, GL, HR, WEB, CM, Femi**. HR tasks need an owner session (E12
 | # | Item | Owner | Depends on |
 |---|---|---|---|
 | 0.1 | The four PAYROLL module questions, D-PAY-A, B, C, D, E (section 8) | Femi, via CM | none |
-| 0.2 | HR seam note: section 5 of the research note made exact: two crossing flows, what each table becomes, what is People's and Payroll's | HR | none |
+| 0.2 | HR seam note: section 5 of the research note made exact: two crossing flows, what each table becomes, what is Personnel's and Payroll's | HR | none |
 | 0.3 | Tax-rule sourcing note: UK tax code and cumulative basis, Irish credits and RPN, SL personal reliefs, per-jurisdiction tax year, rounding, remittance due dates, retention periods, each with a source; SL threshold unit resolved or kept flagged | HR (with Femi for sources) | none |
 | 0.4 | PAYE accounting design note: account roles, journal shape for approval, disbursement, remittance, correction; chart template additions | GL (with HR) | 0.1 (D-PAY-A) |
 | 0.5 | Confirm or assign an owner session for HR work | CM, Femi | none |
@@ -149,9 +174,9 @@ Owner column: **EA, GL, HR, WEB, CM, Femi**. HR tasks need an owner session (E12
 
 | # | Item | Owner | Depends on |
 |---|---|---|---|
-| 2.1 | Split HR's code into People and Payroll packages with a narrow interface and architecture tests that fail on a direct cross-package call | HR | 0.2 |
+| 2.1 | Split HR's code into Personnel and Payroll packages with a narrow interface and architecture tests that fail on a direct cross-package call | HR | 0.2 |
 | 2.2 | EA defaults and backfill for `PAYROLL` per Femi's answers (Owner Admin, ACCOUNTANT; backfill for existing HR WRITE holders per Q2) | EA, CM | 1.3 stable, 0.1 |
-| 2.3 | Tabs: People under Administration, Payroll under Finance | WEB | 2.1 |
+| 2.3 | Tabs: Personnel under Administration, Payroll under Finance | WEB | 2.1 |
 | 2.4 | `HR_ENFORCE_PAY_SPLIT` flag and the PAYROLL checks on payroll routes, default off (design: `EA_Payroll_Module_Design.md` §6) | HR | 2.1, 2.2 |
 | 2.5 | Move 1 check: is the interface narrow and stable? Written result | HR, CM | 2.1 to 2.4 |
 
@@ -164,7 +189,7 @@ Owner column: **EA, GL, HR, WEB, CM, Femi**. HR tasks need an owner session (E12
 | 3.3 | Computation engine for UK and Ireland first (D-PAY-B): PAYE on the correct basis, employee and employer social insurance, USC, rounding; every run records its rule-set version; manual override with reason | HR | 1.4, 3.1, 3.2 |
 | 3.4 | Account roles for PAYE, NI/social, pension, net-pay payables and employer-cost expense in the posting context and chart template | GL | 0.4 |
 | 3.5 | Liability-first posting at approval behind a flag, as new posting kinds in `PayrollPostingPlanner`; disbursement clearing posting; old net-only posting retired after verification | HR, GL | 3.3, 3.4, 0.1 (D-PAY-A = L) |
-| 3.6 | Contract fixtures for every new cross-service payload (HR to GL, People to Payroll) | HR, GL, EA | with 3.5 |
+| 3.6 | Contract fixtures for every new cross-service payload (HR to GL, Personnel to Payroll) | HR, GL, EA | with 3.5 |
 | 3.7 | Employer-cost computation (Epic 2.3) | HR | 3.3 |
 | 3.8 | WEB: preview shows each deduction and the ledger effect; override with reason; tax profile form | WEB | 3.3 |
 
@@ -187,6 +212,8 @@ Owner column: **EA, GL, HR, WEB, CM, Femi**. HR tasks need an owner session (E12
 |---|---|---|---|
 | 5.1 | Turn `HR_ENFORCE_PAY_SPLIT` on per environment | CM, Femi | 2.5, 4.8 |
 | 5.2 | Move 2: Payroll as its own service (`fish-payroll`), before the Live switch, only if 2.5 is clean: verified table copy, credentials and idempotency keys moved, EA approvals queue and WEB repointed, infrastructure, backup and recovery on the Live checklist | CM, HR, EA, WEB | 2.5 clean, 5.1 |
+
+**Kept in view (KIV), not scheduled:** per-module access levels (Femi, 2026-10-15). One access level per assignment is accepted; triggers and cost are in `docs/EA_Payroll_Module_Design.md` section 4 (KIV). **Answered 2026-10-15:** D-PAY-A yes (liability first, staged, through GL's generic journal route, PayRun untouched); the four PAYROLL questions (only Owner Admins and Accountants get PAYROLL at the switch, pay basis and rate and bank changes Owner Admin only, one level per assignment). D-PAY-B to E remain open.
 
 **Critical path:** 0.1 and 0.2, then 2.1, then 3.1 to 3.3, with 0.4 and 3.4 in parallel for the ledger side, then 3.5, 4.1 to 4.3. Compute inside the Payroll package after the seam so PAYE is not built twice and moved.
 
