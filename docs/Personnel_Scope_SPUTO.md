@@ -112,7 +112,7 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 
 **Decided 2026-10-15 (Femi, via CM): option A.** The invite, roster, role and module changes, and remove stay in HR under Administration > Personnel. EA stays the system of record and the authority: HR's `/team` routes forward the caller's own token and EA re-authorises and executes every call, exactly as built on 2026-09-29. **The name is Personnel; there is no separate "Access" name.**
 
-**Approval rule, added 2026-10-15 (Femi): "if initiated here, it must be approved by the Business Owner".** Today an HR Officer holding ADMIN at a Company can invite staff, change modules and remove staff directly, with no Owner approval (`Membership.canManageStaffAt`, EA). That is stricter than the code. The end state is FR-PEO-19: a delegate **raises** the change in Personnel, only the Owner Admin approves, then EA executes. The Owner Admin acting directly is approved in the same step. Until the request flow exists, the interim is an open question (P7).
+**Approval rule, added 2026-10-15 (Femi): "if initiated here, it must be approved by the Business Owner".** Today an HR Officer holding ADMIN at a Company can invite staff, change modules and remove staff directly, with no Owner approval (`Membership.canManageStaffAt`, EA). That is stricter than the code. The end state is FR-PEO-19: a delegate **raises** the change in Personnel, only the Owner Admin approves, then EA executes. The Owner Admin acting directly is approved in the same step. **P7 answered 2026-10-15 (Femi): no interim refusal.** Refusing delegates would make the Owner do the HR Officer's job, which is the opposite of the intent ("Delegates can do their work as they deem fit but the final authority over hiring and firing is the Business Owner"). So until the request flow exists, delegates keep acting directly as today, and the real fix is building the flow (3.1). The gap is accepted while everything in production is test data; whether the flow must exist before the Live switch is P8.
 
 **What this means in practice: almost nothing has to be built, because it is already built.** Read on `origin/master` on 2026-10-15: EA has `DELETE /tenants/{tenantId}/memberships/{membershipId}` (`RemoveStaffMemberUseCase`); HR has `POST /team`, `GET /team`, `DELETE /team/{membershipId}` and the EA gateway calls behind them; WEB has `TeamTab` inside `HrTab`, and EA's old `TeamPanel.tsx` is gone. The 2026-09-29 move is complete and live, so "the Team move is back on" means: **stop planning to undo it, and finish what is still missing around it.**
 
@@ -179,7 +179,7 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | **Wave 3: the flows** | | | |
 | 3.1 | Hire, leave and **access-change** request machinery (`StaffChangeRequest`, with kinds for access grant, access change and access revoke so FR-PEO-19 uses the same approve-and-execute path: approve, execute HR then EA then ER, per-leg status, approval lease) with the "needs access" leg through EA | HR, EA, ER | 2.1, EA's position-to-role mapping, Femi's `STAFF` decision for non-school hires |
 | 3.2 | Close the direct paths: employee create and end-date change become Owner-only direct acts; delegates use the request route | HR | 3.1 |
-| 3.5 | **Interim (P7):** until 3.1 exists, delegates are refused on EA's invite, modules and remove routes (an add-a-deny change in EA, about 0.5 day with tests; WEB hides the controls from delegates); the Owner Admin keeps the direct path | EA, WEB | P7, CM review |
+| 3.5 | ~~Interim: refuse delegates on invite, modules and remove~~ **Withdrawn (P7 answered: no interim refusal).** The fix is 3.1, the request flow | EA, WEB | none |
 | 3.3 | ~~Retire HR's `/team` proxies~~ **Withdrawn (option A adopted).** Keep them | HR | none |
 | 3.4 | Onboarding and offboarding checklists | HR, WEB | 3.1 |
 | **Wave 4: statutory duties and files** | | | |
@@ -205,7 +205,8 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 4. **P4, jurisdictions first** for statutory timers: UK and Ireland (sourced); Sierra Leone after the primary Act and counsel confirm.
 5. **P5, the leave policy:** configurable per Company and jurisdiction (recommended), or keep one fixed policy for now?
 6. **P6, self-service:** employee self-service waits on the generic `STAFF` role decision; asking again so it is not forgotten.
-7. **P7, the interim for access changes** (FR-PEO-19): until the request flow is built, **refuse delegates** (an HR Officer with ADMIN) on invite, change modules and remove, leaving the Owner Admin the only one who can act (recommended: it matches Femi's rule now and is an add-a-deny), or keep delegates acting directly until the flow exists?
+7. ~~**P7, the interim for access changes**~~ **Answered 2026-10-15:** no interim refusal; delegates keep acting directly until the request flow (3.1) exists.
+8. **P8, a gate for the Live switch:** should the access-change approval flow (3.1) be a **required item before the Live switch** (my recommendation, because after it real businesses would have delegates adding and removing staff with no Owner approval), or may it follow Live?
 
 ## 9. What I could not verify
 
