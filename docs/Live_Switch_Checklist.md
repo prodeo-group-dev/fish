@@ -67,3 +67,9 @@ Rules: this file is the single list; items are removed only by CM with a note of
 | `ER_SCHOOL_ROW_MODE` (ER :96, 2026-10-13) | ER task definition | log | a normal day of real use shows no "WOULD REFUSE school_row_missing" in /ecs/fish-school-admissions (or each id shown is fixed by EA reprovision) |
 | `ER_DPID_BINDING_MODE` (ER :97, 2026-10-13) | ER task definition | log | each school using BuzzMe/DPID devices has been enabled by its admin (PUT /schools/{id}/integrations/dpid), and no unexpected "WOULD REFUSE dpid_not_enabled" remains |
 | `FISH_SETTLEMENT_ACCOUNT_MODE`, `FISH_BANK_RECONCILIATION_MODE` (GL, earlier) | GL task definition | log | CM reads GL logs and finds no would-refuse |
+
+## Added 2026-10-16 (Femi's decisions)
+
+- **P8, access-change approval flow**: a delegate raises an invite, role, module or remove-access change in Personnel and only the Business Owner approves (the Owner may raise and approve in one step, recorded self-approved). REQUIRED before the Live switch. Owner: HR (StaffChangeRequest kinds access grant, change, revoke; FR-PEO-19) with EA executing.
+- **PAYROLL switch-day warning**: at the PAYROLL switch only Owner Admins and Accountants get it, so list and warn every other holder of HR at WRITE or above first (EA's read-only report `docs/reports/Switch_Day/payroll_switch_day_report.sql`).
+- **Early-payment (settlement) discount VAT**: do not enable any settlement-discount posting until the Settlement Discount VAT SPUTO is approved and a tax professional has confirmed each jurisdiction's rule.

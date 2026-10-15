@@ -15,7 +15,7 @@
 
 Omniview is Prodeo Capital's read-only view across all tenancies. It exists for two purposes:
 
-1. **Product Support.** A tenant's Owner Admin raises a ticket from inside FiSH. A Prodeo operator answers it from Omniview.
+1. **Product Support.** A tenant's Owner Admin raises a ticket from inside FiSH. A platform operator answers it from Omniview.
 2. **Market Support.** Aggregate, non-identifying market reports for Prodeo Capital.
 
 The platform-health strip and the tenant overview stay as supporting tools for those two purposes (DECIDED: "implied").
@@ -44,7 +44,7 @@ The platform-health strip and the tenant overview stay as supporting tools for t
 ### 1.4 Actors
 
 - **Tenant Owner Admin**: raises tickets from inside FiSH; reads replies there.
-- **Prodeo operator**: answers tickets, views health, overview and reports.
+- **platform operator**: answers tickets, views health, overview and reports.
 - Prodeo Capital is the consumer of market reports (via the operator).
 
 ### 1.5 Context
@@ -70,7 +70,7 @@ Existing IDs are kept where unchanged so nothing already written breaks. The v2 
 | ID | Requirement | Status |
 |---|---|---|
 | FR-OV-S1 | A chat started inside FiSH by a tenant's Owner Admin creates a ticket owned by Omniview | DECIDED |
-| FR-OV-S2 | A Prodeo operator triages and answers tickets from Omniview | DECIDED |
+| FR-OV-S2 | A platform operator triages and answers tickets from Omniview | DECIDED |
 | FR-OV-S3 | Tickets and replies live in Omniview's own database, never written into EA or any service | DECIDED |
 | FR-OV-S4 | The Owner Admin sees replies in the FiSH chat, pulled from Omniview | DECIDED |
 | FR-OV-S5 | EA's tenancy-internal communication is unchanged and separate | DECIDED |

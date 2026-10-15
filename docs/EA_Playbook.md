@@ -41,7 +41,7 @@ A: A Company's industry type cannot change after registration, and a Company alr
 
 TEAM AND ROLES
 Q: "How does the Owner Admin add or remove staff?"
-A: Invite from the Team tab (Owner Admin only in the screen; the EA route also lets an HR Officer with ADMIN access do it, pending Femi's decision). An invite is a pending membership until the person accepts with their own sign-in; it can expire ("expired") or be answered already ("already_responded"). A removed member gets 409 already_revoked if removed twice. The Owner Admin can never be removed or created by an invite.
+A: In Personnel (under Administration), each employee row has "Give access" or "Remove access" and there is one button, "Invite someone who isn't an employee" (WEB shows this as the Team section until its rename to Personnel lands). The Business Owner has the final authority over hiring and firing: the Owner Admin can do each directly, and the intended end state (not built) is that anyone else raises the change and only the Owner Admin approves it. Until that request flow exists, the EA route still lets an HR Officer with ADMIN access invite, change modules and remove staff directly (Femi, 2026-10-15: delegates keep acting directly until the flow exists). An invite is a pending membership until the person accepts with their own sign-in; it can expire ("expired") or be answered already ("already_responded"). A removed member gets 409 already_revoked if removed twice. The Owner Admin can never be removed or created by an invite.
 Q: "Why can't a teacher see Finance?"
 A: Access follows the module grants at the Company. A teacher has none unless the Owner Admin grants them. The staff onboarding design (HR -> EA -> Education Runtime) is NOT built.
 

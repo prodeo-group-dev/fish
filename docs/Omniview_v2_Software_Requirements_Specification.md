@@ -33,7 +33,7 @@ EA (D3, **DECIDED by Femi:** "Definitely.. It is where the owner Admin lives. Th
 
 Omniview is Prodeo Capital's read-only view across all tenancies, for two
 purposes: **Product Support** (a tenant's Owner Admin raises a ticket from
-inside FiSH; a Prodeo operator answers it from Omniview) and **Market
+inside FiSH; a platform operator answers it from Omniview) and **Market
 Support** (aggregate, non-identifying market reports for Prodeo Capital).
 The health strip and the tenant overview stay as supporting tools.
 
@@ -49,6 +49,7 @@ The health strip and the tenant overview stay as supporting tools.
 8. **Reports are unaudited.** Prodeo Capital is engaged as accountants, not auditors.
 9. ~~**Gold is the base currency** for Prodeo Capital's market analysis.~~ **DEFERRED.** Femi: "It is not required now" and "This leaving the area of accounting and into the treasury management and investment analysis space... and that will be done later." Market Support reports in accounting terms with **fiat as the unit** (FR-OV-M18); translating to gold or any common factor belongs to a later Treasury & Investment Analysis phase (§11).
 10. **Omniview is never internet-facing.** It is reachable only on Prodeo's private network. A tenant's browser never reaches it: a ticket arrives only through a FiSH service, over the private network, and replies come back the same way. No public hostname, no public listener rule, no public certificate. (NFR-OV-8)
+11. **Landlord principle (Femi, 2026-10-15: "PRODEO is a landlord. It has NO ROLE WHATSOEVER in its tenants data").** No Omniview or operator action reads or edits a Tenant's business data (ledger, transactions, customers, suppliers, employees, pay, stock, orders). What an operator can see is limited to: platform health; the Tenant metadata EA already holds to run the platform (name, status, segment, verification status and deadlines, number of Companies, number of active staff, support activity); a ticket's text, which the Tenant's own Owner Admin wrote to ask for help; the Tenant's setup card only while its Owner Admin has switched sharing on; and a lookup by Tenancy ID. Operators write only their own replies in the support conversation, never into Tenant data. A stuck or wrong Tenant record is recovered on the Tenant's side (an identical retry, or a route for the Tenant's Owner Admin or accountant), never by an operator. **Wording:** an "operator" is a member of the platform's support staff acting on platform operations and support only; the "operator routes" are platform-operations routes (health, overview, support messages, Tenancy ID lookup), and none of them accepts or returns business data. **One thing to confirm with Femi:** Market Support reads consenting Tenants' totals through GL as non-identifying aggregates only (NFR-OV-7); whether that fits this principle is his to confirm, and nothing is built for it until he does.
 
 ### 1.3 The problem, restated for v2
 
@@ -123,7 +124,7 @@ exhaustion, so Omniview's pool stays small.
 | ID | Requirement | Status |
 |---|---|---|
 | FR-OV-S1 | A chat started inside FiSH by a tenant's Owner Admin creates a ticket owned by Omniview, **delivered by a FiSH service over the private network, never by a tenant's browser** | DECIDED |
-| FR-OV-S2 | A Prodeo operator triages and answers tickets from Omniview | DECIDED |
+| FR-OV-S2 | A platform operator triages and answers tickets from Omniview | DECIDED |
 | FR-OV-S3 | Tickets and replies live in Omniview's own database, never written into EA or any service | DECIDED |
 | FR-OV-S4 | The Owner Admin sees replies in the FiSH chat, pulled from Omniview **through the same relay**. Omniview never pushes | DECIDED |
 | FR-OV-S5 | EA's tenancy-internal communication is unchanged and separate | DECIDED |
@@ -230,6 +231,7 @@ exhaustion, so Omniview's pool stays small.
 | NFR-OV-15 | Operators reach Omniview only by private access (D4); the console is never exposed on the shared public load balancer | DECIDED (private) / OPEN (how) |
 | NFR-OV-17 | **Network exposure and authorization of the GL aggregate route (GL feedback).** GL sits behind a public ALB, so a new operator route there is internet-addressable and gated only by a token, which cuts against never-internet-facing for the one route that exposes cross-tenant data. It needs a private path or an ALB rule blocking its path prefix (CM, 7B.3). Omniview's identity must be a **separate named authentication provider used only on this route**: GL's shared authentication list lets service-account callers bypass the tenant check, so adding Omniview there would let its token reach every GL route. The route has its own platform-operator authorization check **Its provider fails closed when unconfigured and never falls back to a shared or human verifier (NFR-OV-14).** **Requirements for Omniview's provider in GL (GL feedback):** its verifier is a required, non-null parameter with no default and no fall-back to the human verifier; if its audience is unset the route group is not registered (or answers 503); the provider is used only on the aggregate route group and is never added to the shared authentication list; the validator checks that the token is a service principal and carries the Omniview identity; and a test asserts that a **human Cognito token gets 401 on the aggregate route with the audience both configured and unconfigured**. | PROPOSED |
 | NFR-OV-18 | **Operator-access log (GL feedback).** GL's audit entry requires a tenant and a Company, so it cannot describe a platform-level read. A separate small log records operator, report date, segment and outcome counts only, never values. GL recommends it **fails closed** (if the audit write fails, no figure is served), consistent with Femi's fail-closed decision on the audit trail; his call (D32). A service token identifies Omniview, not which human operator: Omniview passes an operator id that GL records but cannot verify, a stated limitation | PROPOSED |
+| NFR-OV-19 | The landlord principle in section 1.2, item 11, binds every feature: no operator action reads or edits a Tenant's business data. A test lists every operator-facing route and asserts that none returns or accepts a ledger, transaction, customer, supplier, employee, pay, stock or order field. | PROPOSED |
 | NFR-OV-16 | **DEFERRED to the treasury phase (§11):** controlled egress for a daily rate download. Full text preserved in §11. Omniview needs no outbound internet access for Product Support or accounting-terms Market Support | DEFERRED |
 
 ---
