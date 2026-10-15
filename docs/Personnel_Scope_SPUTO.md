@@ -124,11 +124,11 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | B: all in EA's access control | Undo the move. | Not adopted. |
 | C: split by who the person is | Personnel owns employment and triggers access for a hire; a separate EA Access screen owns the rest. | Not adopted (was this note's recommendation). |
 
-**What is still open inside option A (one small question, P1b):** the area is Personnel, and the invite, roster and remove feature lives inside it. WEB still needs a label for that **section within Personnel** (today it is "Team"). Femi has said he dislikes "Team" and that the feature is named Personnel; whether the section inside Personnel has its own word, or the roster is simply part of the Personnel list, is not answered. I do not assume one.
+**P1b answered 2026-10-15 (Femi: "Agreed. My thoughts exactly"): no separate screen and no new label.** Each employee row gets "Give access" or "Remove access" (and a way to change their role or modules), and one button, **"Invite someone who isn't an employee"**, covers a person such as the outside accountant. Every one of these acts follows the approval rule above (FR-PEO-19): the Owner Admin acts directly, anyone else raises a request the Owner Admin approves. Detail left to WEB: where a person who has access but is not an employee is shown (a marker in the same list), which this note does not decide.
 
 **What changes on screen (WEB's to build, not EA's):**
 - Administration sections: Dashboard, **Personnel**, Companies, Verification (Payroll moves to Finance with the payroll split). No separate Access section.
-- Personnel sections: Employees (with Add employee), the roster and invite feature (label per P1b), Leave, Onboarding and leavers, Documents (when built). Pay runs and Salary advances move to Payroll under Finance.
+- Personnel sections: Employees (with Add employee, and per-row Give access, Change access and Remove access, plus the button "Invite someone who isn't an employee"; no separate Team or Access section), Leave, Onboarding and leavers, Documents (when built). Pay runs and Salary advances move to Payroll under Finance.
 - HR's `/team` proxies **stay**. The earlier plan to retire them is withdrawn.
 
 ---
@@ -153,7 +153,7 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | UC-PEO-14 | Record a disciplinary or grievance | Owner Admin or named HR role | Confidential record, restricted view. | FR-PEO-15 |
 | UC-ACC-01 | Give access to someone who is not being hired | Owner Admin directly; a delegate raises a request the Owner Admin approves (FR-PEO-19) | Invite by email with role, level, modules at chosen Companies. | Section 5 |
 | UC-ACC-02 | Change or remove access | same rule | Change role or modules; remove; the Owner Admin cannot be removed. | Section 5 |
-| UC-ACC-03 | See who can sign in | same | Roster of Memberships with their grants. | Section 5 |
+| UC-ACC-03 | See who can sign in | same | Shown on each employee row (has access or not) and, for someone who is not an employee, as a marked entry in the same list; the roster of Memberships with their grants remains EA's data. | Section 5 |
 
 (UC-ACC are the roster and invite section inside Personnel; they already exist as routes in HR that call EA, and are listed so the access side is complete.)
 
@@ -164,11 +164,11 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | # | Item | Owner | Depends on |
 |---|---|---|---|
 | **Wave 0: decisions (Femi, via CM)** | | | |
-| 0.1 | P3 to P6 and P1b (section 8); P1 and P2 are answered | Femi | none |
+| 0.1 | P3 to P7 (section 8); P1, P1b and P2 are answered | Femi | none |
 | 0.2 | Statutory duties sourcing per jurisdiction (statement due dates, right-to-work, working-time, retention), with Sierra Leone from the primary Act and counsel | HR with Femi; counsel | none |
 | 0.3 | Confirm or assign an HR owner session | CM, Femi | none |
 | **Wave 1: no code, wording and boundaries** | | | |
-| 1.1 | Rename People to Personnel on screen; label the roster section (P1b); Payroll sections to Finance (with the payroll split). No Access section | WEB | P1b |
+| 1.1 | Rename People to Personnel on screen; per-row Give, Change and Remove access and the button "Invite someone who isn't an employee" instead of the Team section; Payroll sections to Finance (with the payroll split). No Access section and no new label | WEB | none |
 | 1.2 | Reconcile D16: school "Staff" = the people list; Access has one name for all industries | ER, WEB | 0.1 |
 | 1.3 | ~~EA publishes the Access contract and marks HR's `/team` proxies to be retired~~ **Withdrawn (option A adopted).** EA's membership routes stay as they are and remain the contract HR calls | EA | none |
 | 1.4 | Already done, no work: EA's `DELETE .../memberships/{membershipId}`, HR's `/team` routes and their EA gateway calls, WEB's `TeamTab`, EA's `TeamPanel.tsx` removed (all on master). Only residual check: that nothing still points at the old "People" or "Team" wording after the Personnel rename | EA, HR, WEB | none |
@@ -199,7 +199,7 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 
 ## 8. Decisions asked of Femi (one batch, via CM)
 
-1. ~~**P1, the name**~~ **Answered 2026-10-15:** Personnel; the feature formerly called Team is named Personnel (no "Access"). New small question **P1b:** inside Personnel, what is the invite, roster and remove section labelled (it is "Team" today, which Femi dislikes), or is it simply part of the Personnel list?
+1. ~~**P1, the name**~~ **Answered 2026-10-15:** Personnel; the feature formerly called Team is named Personnel (no "Access"). ~~**P1b**~~ **Answered:** no separate section and no new label; per-row "Give access" / "Remove access" and a button "Invite someone who isn't an employee".
 2. ~~**P2, the home**~~ **Answered 2026-10-15:** option A: it stays in HR/Personnel under Administration; EA stays the system of record and authority.
 3. **P3, the depth:** approve section 4's Must, Should, Could and Won't lists for an SME. Particular calls: documents store in the first release (Should), disciplinary and grievance record (Should), staff working-time record (Must only where the law requires it), 360 appraisal parked (Won't now).
 4. **P4, jurisdictions first** for statutory timers: UK and Ireland (sourced); Sierra Leone after the primary Act and counsel confirm.
