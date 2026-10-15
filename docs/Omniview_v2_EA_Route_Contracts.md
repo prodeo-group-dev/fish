@@ -170,6 +170,8 @@ EA is the **public edge for support** and also the authorization service every o
 
 ## 7. Legacy operator thread and cutover (D1/D2 OPEN)
 
+**Landlord check (2026-10-15).** The operator routes (`X-Operator-Token`: tenants overview, platform health, support threads and messages, Tenancy ID lookup, support card) carry platform metadata and support messages only; none accepts or returns business data (ledger, transactions, customers, suppliers, employees, pay, stock, orders). The operator POST into a tenant's support thread is a message in the support conversation, not a write into business data, and it is legacy: it stops once the ticket cutover (FR-OV-S18) lands.
+
 - **Recommended:** legacy read-only, nothing migrated. Existing `/tenants/{tenantId}/support-thread/messages` GET/POST and the operator routes (`X-Operator-Token`, WEB `/operator`) **stay unchanged** until WEB's widget has moved (additive, FR-OV-S23).
 - After the widget moves, retiring the legacy tenant **POST** is a separate lockstep change (answers `409 legacy_thread_read_only`); the legacy GET stays so history remains readable. WEB `/operator` stays the reply surface for any legacy thread still awaiting an answer, because Omniview cannot write into EA (FR-OV-S18).
 - Retiring the legacy POST also ends today's operator email on each tenant message. **D34 (new-ticket alerting) is open and must be settled first**, or support would not learn of new tickets.
