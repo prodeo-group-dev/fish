@@ -105,6 +105,7 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | NFR-PEO-04 | Contract fixtures for every cross-service payload (Personnel to EA access leg, Personnel to Payroll flows), strict decode, consumer first. |
 | NFR-PEO-05 | Hire and leave execution is crash-safe and retryable (the approval-lease and per-leg status machinery already designed for payroll approval). |
 | NFR-PEO-06 | Vocabulary per industry through WEB's existing label vocabularies: a school says "Staff", generic says "Personnel"; the model underneath is one. |
+| NFR-PEO-07 | **Phone check:** every act the Business Owner performs passes the phone check in section 6 (one screen, two-step decision, no wide tables, no figures in notices, online only, confirmed and audited). |
 
 ---
 
@@ -156,6 +157,29 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | UC-ACC-03 | See who can sign in | same | Shown on each employee row (has access or not) and, for someone who is not an employee, as a marked entry in the same list; the roster of Memberships with their grants remains EA's data. | Section 5 |
 
 (UC-ACC are the roster and invite section inside Personnel; they already exist as routes in HR that call EA, and are listed so the access side is complete.)
+
+---
+
+### Phone check for the Business Owner's acts
+
+**Phone check (Femi, 2026-10-15: the Business Owner can run the business from a mobile device).** An act the Business Owner performs passes only if all of these hold. WEB tests each one on a phone before it ships; the playbook for this area inherits the table below as its acceptance list.
+
+1. **One screen** at phone width (WEB's tests used about 400 px) shows who, what, the effect in money or access, and what happens next. No sideways scrolling to understand it.
+2. **Two-step decision:** after reading that screen the Owner chooses Approve or Reject (a reason is required on reject, optional on approve). No second step that only works on a desktop.
+3. **Long lists are cards or summaries** with a way to open the detail, never a wide table that must be scrolled sideways.
+4. **Notices carry no figures and no names** ("3 items need you"); the detail appears only after sign-in.
+5. **Online only:** nothing of the business's data is stored on the phone.
+6. **The result is confirmed on the same screen and audited**, including a flagged self-approval.
+7. **A failed or partial result says in plain words what happened and what to do** (for example Retry), never a bare error code.
+
+| Owner act | What the one screen shows | Decision |
+|---|---|---|
+| UC-PEO-01 approve a hire | Name, position, division, start date, employment type, whether system access is requested, who raised it | Approve or Reject |
+| UC-PEO-11 approve an offboarding | Name, end date, what happens to their access, notes on final pay | Approve or Reject |
+| FR-PEO-19 approve an access change (give, change or remove access) | Who, which Company, the role and modules before and after, who raised it | Approve or Reject |
+| UC-PEO-07 approve leave (when the Owner is the approver) | Who, dates, type, balance before and after, cover | Approve or Reject |
+| UC-PEO-12 see who needs attention | Overdue statements, expiring documents, probation ending, leavers; opens detail | No decision (read) |
+| UC-PEO-08 set the leave policy | Current rules and the change, in plain words | Save or Cancel |
 
 ---
 
