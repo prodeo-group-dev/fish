@@ -1,6 +1,6 @@
 # Discounts Received: POP's half, and the request to GL (SPUTO)
 
-**Status: DRAFT, 2026-10-15, POP session. Planning only. Nothing is built, nothing is deployed, and no code starts until Femi decides section 7.** Written because Femi, asked about "Discounts Received", answered on 2026-10-15: *"Early Payment is just one type of discount. There are various discounts that exist in today's high octane business environment which must be factored in."* My earlier question had only covered the early-payment (settlement) discount; this note covers the whole family.
+**Status: DECIDED 2026-10-15 (Femi approved all seven decisions in section 7, recorded in `docs/Decisions_Log.md`), POP session. Nothing is built or deployed yet. Build order is section 6: T-D1 first; the early-payment discount (T-D4) waits for T8 (T-D2), GL's supplier half of S8 (T-D3), and a tax professional's confirmation of Ireland's VAT treatment.** Written because Femi, asked about "Discounts Received", answered on 2026-10-15: *"Early Payment is just one type of discount. There are various discounts that exist in today's high octane business environment which must be factored in."* My earlier question had only covered the early-payment (settlement) discount; this note covers the whole family.
 
 **Written from.** POP master `2670f76` (POP `:46`), GL's design note `docs/Sales_Returns_Credit_Notes_GL_Half.md` (section 2.4, D-SR7, FR-SR60 to FR-SR64, task S8), the Decisions Log (2026-10-13: "Discounts Given, Discounts Received"), `docs/IFRS_GL_Posting_Matrix.md` (A.5), and three outside sources for the VAT and accounting treatment (section 9). Everything marked **checked** was read in code or in the named document; everything marked **not verified** says so.
 
@@ -111,7 +111,7 @@ Sizes are my estimates and unproven.
 
 ---
 
-## 7. Decisions for Femi (plain words, each with my recommendation)
+## 7. Decisions for Femi (plain words, each with my recommendation): ALL SEVEN APPROVED 2026-10-15, as recommended
 
 1. **Which kinds first?** *Recommendation:* trade discount, invoice discount, early-payment discount and the price-allowance credit note first; the yearly rebate when its credit note arrives (recorded, not accrued); price lists and bonus goods only when a customer asks.
 2. **Where does a discount received go in the accounts?** GL plans one account, `Discounts Received` (4920), shown under other income. Some accountants instead treat a rebate or an early-payment discount as a **reduction of the cost of what was bought** (the accounting standard says trade discounts and rebates reduce the cost of stock, and a 2004 interpretation says discounts actually received for early payment do too). *Recommendation:* use the one account for the first build and let the accountant choose how it is shown in reports; adjusting the stock's cost is a later step, only for stock still on hand. Needs an accountant's confirmation.
