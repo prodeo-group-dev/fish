@@ -4,6 +4,8 @@
 
 **Name (Femi, 2026-10-15, via CM): the area is called PERSONNEL** ("Personnel is more appropriate and more professional"), so Administration > Personnel replaces "People" throughout this note, including the generic label for the HR module in WEB's vocabulary (today "People"). The school label for the same list stays "Staff" (D16) unless Femi says otherwise. **He has answered only the name: P1 to P6 in section 8 are still open, and this note's recommendations are recommendations, not decisions.** The file was renamed from `People_HR_Scope_SPUTO.md`; the old name is a one-line pointer.
 
+**Answered 2026-10-15 (Femi, via CM; CM's reading, logged in the Decisions_Log, Femi may correct it): P1 and P2.** "Personnel, not Team. EA holds sway over HR. Let it stay in HR. That is where it should be." Read as: the feature formerly called Team is part of **Personnel** (no separate "Access" name), and **option A is adopted**: invite, roles, modules and remove stay in HR/Personnel under Administration, with EA remaining the system of record and authority (HR calls EA with the human's own token and EA re-authorises every call). **Option C, which this note recommended, is NOT adopted**; sections 5 to 8 are updated accordingly and keep C only as the record of what was weighed. **P3 (depth), P4, P5 and P6 are still open.**
+
 **This document reopens one earlier decision and says so:** on 2026-09-29 Femi chose to move the Team surface (invite, roster, remove) into HR ("That feature needs to be there in HR"). Femi now asks the question again with the payroll split in view. Section 5 sets out the options; it does not treat the earlier choice as settled or as wrong.
 
 ---
@@ -107,22 +109,24 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 
 ## 5. Where invite, roles, modules and remove live, and what to call it
 
-**Options**
+**Decided 2026-10-15 (Femi, via CM): option A.** The invite, roster, role and module changes, and remove stay in HR under Administration > Personnel. EA stays the system of record and the authority: HR's `/team` routes forward the caller's own token and EA re-authorises and executes every call, exactly as built on 2026-09-29. **The name is Personnel; there is no separate "Access" name.**
 
-| Option | What it means | For | Against |
-|---|---|---|---|
-| **A: all in Personnel** (today's UI, since 2026-09-29) | The access feature stays a section of Personnel; HR proxies it to EA. | One place for "my people". | Mixes two audiences: an HR Officer managing records is not automatically someone who should grant GL access. Personnel who have access but no employment (the outside accountant) have no natural home. HR carries proxy code for a system it does not own. The name "Team" is ambiguous for exactly this reason. |
-| **B: all in EA's access control** | Undo the move: Personnel has no invite at all. | Clean ownership; EA is the authorisation system of record; fewer proxies. | A hire has no "give access" step in the hiring flow; reopens the 2026-09-29 decision fully. |
-| **C: split by who the person is (recommended)** | **Personnel** owns the *employment* and, when a hire says "needs access", **triggers** the grant as a leg executed through EA (already the 2026-10-06 design). **EA's access screen** owns everything else about access: invite someone who is not being hired (the outside accountant), change roles and modules, remove access, see who can sign in. Both live under **Administration**. | Matches the three-way model in section 1. Administration still governs HR (it holds both). HR sheds the proxy routes once WEB points the screen at EA. A hire still ends in access without a second trip to another screen. No change to the authorisation model. | Two screens instead of one; the hire form needs a visible link to the access it will create. Reverses the *location* (not the data) decided on 2026-09-29. |
+**What this means in practice: almost nothing has to be built, because it is already built.** Read on `origin/master` on 2026-10-15: EA has `DELETE /tenants/{tenantId}/memberships/{membershipId}` (`RemoveStaffMemberUseCase`); HR has `POST /team`, `GET /team`, `DELETE /team/{membershipId}` and the EA gateway calls behind them; WEB has `TeamTab` inside `HrTab`, and EA's old `TeamPanel.tsx` is gone. The 2026-09-29 move is complete and live, so "the Team move is back on" means: **stop planning to undo it, and finish what is still missing around it.**
 
-**Recommendation: C.** The data, rules and every authorisation check were never in HR (E5: HR's routes are pure proxies), so C moves a screen, not a system. Deciding who may sign in and with what power is a security act with a different audience from keeping personnel records, and the platform already enforces that with EA's per-Company role, level and module model. The hire-driven path stays inside Personnel because Femi decided onboarding and offboarding happen through HR.
+**Options weighed (kept for the record):**
 
-**What to call it.** "Team" is ambiguous (employees? users? a department?). Recommended name for the access screen: **Access** (verbs: "Give access", "Change access", "Remove access"; headline "Who can use FiSH"). The same word for every industry, because access is not an industry concept. The personnel list keeps "Personnel" (generic) and "Staff" (school, D16), which resolves D16's collision: "Staff" is the employees list, and nothing else is called Staff. Alternatives if "Access" does not suit: "Sign-in access", "Users and access". I would avoid "Team", "Members" and "Roles" (roles is one attribute, not the feature).
+| Option | What it means | Outcome |
+|---|---|---|
+| **A: all in Personnel** | The access feature stays a section of Personnel; HR proxies it to EA. | **Adopted.** One place for "my people"; no screen moves. Known cost, accepted: two audiences share a section (an HR Officer managing records versus someone who grants system access), and people with access but no employment (the outside accountant) still appear in a Personnel roster. EA's per-Company rules (`canManageStaffAt`) already decide who may do what inside it. |
+| B: all in EA's access control | Undo the move. | Not adopted. |
+| C: split by who the person is | Personnel owns employment and triggers access for a hire; a separate EA Access screen owns the rest. | Not adopted (was this note's recommendation). |
+
+**What is still open inside option A (one small question, P1b):** the area is Personnel, and the invite, roster and remove feature lives inside it. WEB still needs a label for that **section within Personnel** (today it is "Team"). Femi has said he dislikes "Team" and that the feature is named Personnel; whether the section inside Personnel has its own word, or the roster is simply part of the Personnel list, is not answered. I do not assume one.
 
 **What changes on screen (WEB's to build, not EA's):**
-- Administration sections become: Dashboard, **Personnel**, **Access**, Companies, Verification (Payroll moves to Finance with the split).
-- Personnel sections: Employees (with Add employee), Leave, Onboarding and leavers, Documents (when built). Pay runs and Salary advances move to Payroll under Finance.
-- Remove the Team section from Personnel once Access is live; keep HR's `/team` proxies until WEB has cut over, then retire them.
+- Administration sections: Dashboard, **Personnel**, Companies, Verification (Payroll moves to Finance with the payroll split). No separate Access section.
+- Personnel sections: Employees (with Add employee), the roster and invite feature (label per P1b), Leave, Onboarding and leavers, Documents (when built). Pay runs and Salary advances move to Payroll under Finance.
+- HR's `/team` proxies **stay**. The earlier plan to retire them is withdrawn.
 
 ---
 
@@ -144,11 +148,11 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | UC-PEO-12 | See who needs attention | Owner Admin | Overdue statements, expiring documents, probation ending, leavers this month. | FR-PEO-13 |
 | UC-PEO-13 | Handle a data-subject request | Owner Admin or HR Officer | Export or erase within retention rules. | FR-PEO-16 |
 | UC-PEO-14 | Record a disciplinary or grievance | Owner Admin or named HR role | Confidential record, restricted view. | FR-PEO-15 |
-| UC-ACC-01 | Give access to someone who is not being hired | Owner Admin or delegate with ADMIN, EA Access | Invite by email with role, level, modules at chosen Companies. | Section 5 |
+| UC-ACC-01 | Give access to someone who is not being hired | Owner Admin or delegate with ADMIN, Personnel, through EA | Invite by email with role, level, modules at chosen Companies. | Section 5 |
 | UC-ACC-02 | Change or remove access | same | Change role or modules; remove; the Owner Admin cannot be removed. | Section 5 |
 | UC-ACC-03 | See who can sign in | same | Roster of Memberships with their grants. | Section 5 |
 
-(UC-ACC are EA's Access screen; they already exist as routes and are listed so the split is complete.)
+(UC-ACC are the roster and invite section inside Personnel; they already exist as routes in HR that call EA, and are listed so the access side is complete.)
 
 ---
 
@@ -157,13 +161,14 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | # | Item | Owner | Depends on |
 |---|---|---|---|
 | **Wave 0: decisions (Femi, via CM)** | | | |
-| 0.1 | P1 to P6 (section 8) | Femi | none |
+| 0.1 | P3 to P6 and P1b (section 8); P1 and P2 are answered | Femi | none |
 | 0.2 | Statutory duties sourcing per jurisdiction (statement due dates, right-to-work, working-time, retention), with Sierra Leone from the primary Act and counsel | HR with Femi; counsel | none |
 | 0.3 | Confirm or assign an HR owner session | CM, Femi | none |
 | **Wave 1: no code, wording and boundaries** | | | |
-| 1.1 | Rename and relocate on screen: Access (EA) beside Personnel under Administration; Team section removed from Personnel after cutover; Payroll sections to Finance (with the payroll split) | WEB | 0.1 |
+| 1.1 | Rename People to Personnel on screen; label the roster section (P1b); Payroll sections to Finance (with the payroll split). No Access section | WEB | P1b |
 | 1.2 | Reconcile D16: school "Staff" = the people list; Access has one name for all industries | ER, WEB | 0.1 |
-| 1.3 | EA publishes the Access contract (existing routes as the contract), marks the HR `/team` proxies as to be retired | EA | 0.1 |
+| 1.3 | ~~EA publishes the Access contract and marks HR's `/team` proxies to be retired~~ **Withdrawn (option A adopted).** EA's membership routes stay as they are and remain the contract HR calls | EA | none |
+| 1.4 | Already done, no work: EA's `DELETE .../memberships/{membershipId}`, HR's `/team` routes and their EA gateway calls, WEB's `TeamTab`, EA's `TeamPanel.tsx` removed (all on master). Only residual check: that nothing still points at the old "People" or "Team" wording after the Personnel rename | EA, HR, WEB | none |
 | **Wave 2: the employment record** | | | |
 | 2.1 | Extend the employment record: position, division, line manager, contact, emergency contact, probation end; consumers declare first (WEB, EA mirror); fixtures | HR, WEB | 0.3, 1.2 |
 | 2.2 | Leave policy per Company and jurisdiction (replace the hard-coded numbers); migration keeps today's values as the default | HR | 0.2 |
@@ -171,7 +176,7 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | **Wave 3: the flows** | | | |
 | 3.1 | Hire and leave request machinery (`StaffChangeRequest`: approve, execute HR then EA then ER, per-leg status, approval lease) with the "needs access" leg through EA | HR, EA, ER | 2.1, EA's position-to-role mapping, Femi's `STAFF` decision for non-school hires |
 | 3.2 | Close the direct paths: employee create and end-date change become Owner-only direct acts; delegates use the request route | HR | 3.1 |
-| 3.3 | Retire HR's `/team` proxies | HR | 1.1 cutover live |
+| 3.3 | ~~Retire HR's `/team` proxies~~ **Withdrawn (option A adopted).** Keep them | HR | none |
 | 3.4 | Onboarding and offboarding checklists | HR, WEB | 3.1 |
 | **Wave 4: statutory duties and files** | | | |
 | 4.1 | Terms record and statutory due dates with Owner-visible overdue list | HR | 0.2, 2.1 |
@@ -190,8 +195,8 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 
 ## 8. Decisions asked of Femi (one batch, via CM)
 
-1. **P1, the name:** "Access" for the invite, roles, modules and remove feature (recommended), or "Sign-in access" / "Users and access"?
-2. **P2, the home:** option C (recommended): hires trigger access from Personnel; everything else about access in EA's Access screen; both under Administration. Or A (leave it in Personnel) or B (move it all to EA)?
+1. ~~**P1, the name**~~ **Answered 2026-10-15:** Personnel; the feature formerly called Team is named Personnel (no "Access"). New small question **P1b:** inside Personnel, what is the invite, roster and remove section labelled (it is "Team" today, which Femi dislikes), or is it simply part of the Personnel list?
+2. ~~**P2, the home**~~ **Answered 2026-10-15:** option A: it stays in HR/Personnel under Administration; EA stays the system of record and authority.
 3. **P3, the depth:** approve section 4's Must, Should, Could and Won't lists for an SME. Particular calls: documents store in the first release (Should), disciplinary and grievance record (Should), staff working-time record (Must only where the law requires it), 360 appraisal parked (Won't now).
 4. **P4, jurisdictions first** for statutory timers: UK and Ireland (sourced); Sierra Leone after the primary Act and counsel confirm.
 5. **P5, the leave policy:** configurable per Company and jurisdiction (recommended), or keep one fixed policy for now?
