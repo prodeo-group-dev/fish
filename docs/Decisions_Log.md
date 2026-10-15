@@ -82,5 +82,7 @@ Format: `date | decision | source session | acts`
 
 - 2026-10-15 | Landlord principle, Femi's gloss: "That is why it has tenants for its GLaaS. FiSH delivers GLaaS." Prodeo is the landlord, its Tenants are its customers, and FiSH is the GL-as-a-Service it delivers to them; the relationship is landlord and Tenant, never party and counterparty.
 
+- 2026-10-15 | PAYROLL Q3 and Q4 answered (Femi, accepting the recommendations). Q3: changes to an employee's pay basis, pay rate, pay frequency and bank details are OWNER ADMIN ONLY, unchanged (an Accountant prepares runs but cannot change what a person is paid). Q4: ONE access level applies to every module in an assignment at a Company, accepted for now (per-module levels only if a real case needs them; RBAC frozen until the Live switch). Same day, PRIORITY (Femi: "We need to prioritise the split of HR and Payroll"): the HR/Payroll split is now the top platform priority, ahead of Personnel research; HR's order is fixtures tips, then the seam note, then the Move 1 build plan with estimates.
+
 ## Earlier, still in force
 - Only CM pushes, merges and deploys. Coordination is the prime directive. Everything in production is test data until Femi announces the Live switch. RBAC freeze: only add-a-deny changes without CM. Unknown keys are never tolerated in auth payloads (strict decoding). SLE is the only onboarded currency across the Mano River operation.
