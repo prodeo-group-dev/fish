@@ -18,7 +18,7 @@
 | Module `IM` | Stock | **Stores** | OK (Femi) | decided 2026-10-13 |
 | Module `GL` | Ledger | **Accounts** | OK (Femi) | decided 2026-10-13. Do **not** use "Bursary": the earlier "Bursary"/"Registry" was illustrative, not a Finance relabel |
 | Module `TAX` | Tax | Tax | OK | unchanged |
-| Module `HR` | People | **Staff** (a module and permission word only: **no top-level Staff tab**, see section 7) | OK | payroll beneath it stays a payroll word |
+| Module `HR` | Personnel (was "People"; renamed by Femi 2026-10-15, see Decisions_Log) | **Staff** (a module and permission word only: **no top-level Staff tab**, see section 7) | OK | payroll beneath it stays a payroll word |
 | Module `EDUCATION_RUNTIME` | Education | **Education Operations** | OK | already the school's own name |
 | Hint for `SOP` | sales and customers | fees and guardians | OK | |
 | Hint for `POP` | purchases and suppliers | purchases and suppliers | OK | unchanged |
@@ -82,7 +82,7 @@ Already school words and unchanged: **The Registry** (Administration), **Admissi
 
 ## 5. What this does not do
 
-- It hides nothing. Whether a school should see Buy, Stock, People, the Ledger's manual journal or the business dashboard tiles at all is a separate question that Femi did **not** answer; ask again only for a specific module.
+- It hides nothing. Whether a school should see Buy, Stock, Personnel, the Ledger's manual journal or the business dashboard tiles at all is a separate question that Femi did **not** answer; ask again only for a specific module.
 - It does not rename anything in an API, route, role or wire value. Only text a person reads.
 - It does not touch the other runtimes: a future runtime adds its own vocabulary the same way.
 
