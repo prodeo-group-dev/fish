@@ -77,6 +77,7 @@ SPUTO formalises decisions already made; it does not re-make them. Already decid
 | NFR-PAY-06 | Rule data is reproducible: a past run can be recomputed from its recorded rule-set version and inputs. |
 | NFR-PAY-07 | Retention of payroll and statutory records at least the legal minimum per jurisdiction. The periods are **not sourced here**; they are a question for Femi and counsel, not a number I will supply. |
 | NFR-PAY-08 | Strangler discipline for the split: each step is a separately revertible release; never a half-split (one employee id across both sides, no copies). |
+| NFR-PAY-09 | **Phone check:** every act the Business Owner performs passes the phone check in section 5 (one screen, two-step decision, no wide tables, no figures in notices, online only, confirmed and audited). |
 
 ---
 
@@ -119,6 +120,30 @@ Actor names: **Officer** (prepares), **Approver**, **Owner Admin**, **Accountant
 | UC-PAY-16 | Request and recover a salary advance | Employee requests (People); Approver approves; Payroll recovers in later runs | Advance approved; recovery appears as a deduction line. | Balance reaches zero; ledger effect per D-PAY-A. | FR-PAY-15 |
 | UC-PAY-17 | Reimburse an expense claim | Approver, PAYROLL APPROVE | Approve; reimburse through a run or a payment. | Posting and audit. | FR-PAY-15 |
 | UC-PAY-18 | Maintain statutory rule sets | Platform operator or a named finance role (D-PAY-C) | Add the next tax year's rule set with an effective date and source. | Existing runs keep their recorded version; the new set applies from its date. | FR-PAY-06, NFR-PAY-06 |
+
+---
+
+### Phone check for the Business Owner's acts
+
+**Phone check (Femi, 2026-10-15: the Business Owner can run the business from a mobile device).** An act the Business Owner performs passes only if all of these hold. WEB tests each one on a phone before it ships; the playbook for this area inherits the table below as its acceptance list.
+
+1. **One screen** at phone width (WEB's tests used about 400 px) shows who, what, the effect in money or access, and what happens next. No sideways scrolling to understand it.
+2. **Two-step decision:** after reading that screen the Owner chooses Approve or Reject (a reason is required on reject, optional on approve). No second step that only works on a desktop.
+3. **Long lists are cards or summaries** with a way to open the detail, never a wide table that must be scrolled sideways.
+4. **Notices carry no figures and no names** ("3 items need you"); the detail appears only after sign-in.
+5. **Online only:** nothing of the business's data is stored on the phone.
+6. **The result is confirmed on the same screen and audited**, including a flagged self-approval.
+7. **A failed or partial result says in plain words what happened and what to do** (for example Retry), never a bare error code.
+
+| Owner act | What the one screen shows | Decision |
+|---|---|---|
+| UC-PAY-02 set pay terms and bank details | The person, what changes (rate, frequency, bank), the effect on the next run; bank details masked until the Owner asks to see them | Save or Cancel |
+| UC-PAY-05 and 07 preview and approve a pay run | Period, number of people, total gross, each kind of deduction, employer cost, net, and the ledger effect; who prepared it; any overrides with their reasons | Approve or Reject |
+| UC-PAY-08 reject a pay run | The same summary | Reject with a required reason |
+| UC-PAY-10 see what is owed to authorities | Per body: due, remitted, outstanding, overdue; opens detail | No decision (read) |
+| UC-PAY-11 record a remittance (above the limit, D-PAY-E) | Body, period, amount due, amount entered, the difference | Approve or Reject |
+| UC-PAY-15 correct a posted run | What was posted, what changes, the adjusting amount | Approve or Reject |
+| UC-PAY-16 and 17 approve a salary advance or an expense claim | Who, how much, the reason, the recovery or reimbursement plan | Approve or Reject |
 
 ---
 
