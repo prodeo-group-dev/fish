@@ -188,6 +188,8 @@ Owner column: **EA, GL, HR, WEB, CM, Femi**. HR tasks need an owner session (E12
 | 5.1 | Turn `HR_ENFORCE_PAY_SPLIT` on per environment | CM, Femi | 2.5, 4.8 |
 | 5.2 | Move 2: Payroll as its own service (`fish-payroll`), before the Live switch, only if 2.5 is clean: verified table copy, credentials and idempotency keys moved, EA approvals queue and WEB repointed, infrastructure, backup and recovery on the Live checklist | CM, HR, EA, WEB | 2.5 clean, 5.1 |
 
+**Kept in view (KIV), not scheduled:** per-module access levels (Femi, 2026-10-15). One access level per assignment is accepted; triggers and cost are in `docs/EA_Payroll_Module_Design.md` section 4 (KIV). **Answered 2026-10-15:** D-PAY-A yes (liability first, staged, through GL's generic journal route, PayRun untouched); the four PAYROLL questions (only Owner Admins and Accountants get PAYROLL at the switch, pay basis and rate and bank changes Owner Admin only, one level per assignment). D-PAY-B to E remain open.
+
 **Critical path:** 0.1 and 0.2, then 2.1, then 3.1 to 3.3, with 0.4 and 3.4 in parallel for the ledger side, then 3.5, 4.1 to 4.3. Compute inside the Payroll package after the seam so PAYE is not built twice and moved.
 
 **Rollback notes:** `PAYROLL` rows in EA cannot be read by an older EA build (backfill only after the release is stable); the liability-first posting runs beside the old one behind a flag until a month of runs reconciles; Move 2 steps are independent, revertible releases.
