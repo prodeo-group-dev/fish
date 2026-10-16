@@ -138,6 +138,15 @@ From the evidence, a settlement-discount VAT rule is not a boolean. The fields i
 
 Mirror image: Dr cash (received) / Dr 4910 (net discount) / Dr VAT control (the VAT on the discount, tagged `OUTPUT`) / Cr Accounts Receivable (received + net + VAT), at the trigger the jurisdiction's rule names. Irish statute: the supplier's relief is **withheld until the credit note is issued** (s.39(4)), so SOP must be able to issue the credit note and GL must not reduce output VAT before it is posted. Not designed in detail: SOP owns it (`docs/Sales_Returns_Credit_Notes_SOP_Half.md`).
 
+### 5.2a Credit notes for a price allowance or rebate (decided 2026-10-16; not a settlement discount)
+
+A supplier credit note for a **price allowance or a rebate** is a different thing from the settlement discount and is **built**: `POST /purchasing/record-credit-note` (Dr Accounts Payable, Cr Discounts Received 4920, Cr VAT control tagged `INPUT`). Femi, as accountant and tax professional, decided on 2026-10-16:
+1. In both the **UK and Ireland** input VAT falls by **exactly the VAT on the credit note**. (Evidence I had read: Ireland, VATCA 2010 s.67(1)(b); UK, VAT Regulations 1995 reg 38 per HMRC's manual.)
+2. The rate is the rate on the day of the **original purchase** (`originalSupplyDate`); the credit note date applies only when no original date is sent.
+3. **GL's own calculation wins**: no supplier-printed VAT per line.
+
+These answer the "rate date" and "rounding" questions for credit notes only. The settlement-discount questions in section 8 remain open for his review.
+
 ### 5.3 Reporting effect on `VatReturn` (from my review of the code)
 
 - **What changes:** with `VAT_DIRECTION`, a settlement discount that reduces input VAT shows as **a reduction of input VAT**, not as extra output VAT; a seller's discount shows as **a reduction of output VAT**, not as extra input VAT. Without the tag a credit to VAT control would be read as output VAT, which would put the adjustment in the wrong box.
