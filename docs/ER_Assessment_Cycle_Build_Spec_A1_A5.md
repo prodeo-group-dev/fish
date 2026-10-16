@@ -1,6 +1,6 @@
 # Education Runtime: assessment cycle build spec (A1 to A5)
 
-**Status:** design only, for Femi's approval, 2026-10-16. Nothing in this document is built, and nothing here is built before the Playbook is approved. Author: +ER Education. Reviewer: CM (every item that touches an access gate, below).
+**Status:** design only, for Femi's approval, 2026-10-16. D3 agreed by Femi the same day; D11 still open. Nothing in this document is built, and nothing here is built before the Playbook is approved. Author: +ER Education. Reviewer: CM (every item that touches an access gate, below).
 **Parent:** `ER_Playbook_4_Tasks_And_Order.md` section 1, tasks A1 to A5 (requirements PL-ASM-4 to PL-ASM-9, use cases UC-E5, UC-E6, UC-E16).
 **Method:** every statement about the current code was read at Education Runtime master `e6f7661` (deployed as ER :99). Where something is an assumption or a recommendation, it says so.
 
@@ -32,7 +32,7 @@
 
 ### 3.1 Behaviour
 
-- **Chain.** Each school configures an ordered list of approver roles, for example `[HOD, HEAD_TEACHER]`. A chain of one or two steps is expected; the cap is three. **Default chain: `[HOD, HEAD_TEACHER]`** (the D3 recommendation, still awaiting Femi).
+- **Chain.** Each school configures an ordered list of approver roles, for example `[HOD, HEAD_TEACHER]`. A chain of one or two steps is expected; the cap is three. **Default chain: `[HOD, HEAD_TEACHER]`** (D3, **agreed by Femi 2026-10-16**).
 - **Offering lifecycle.**
   `OPEN` -> submit -> `SUBMITTED` (awaiting step 1) -> approve -> awaiting step 2 -> ... -> approve at the last step -> `APPROVED` (**locked**).
   At any step an approver may **return** with a mandatory comment: `RETURNED` (marks open again), and the next submit starts again at step 1. Only that one offering is reopened.
@@ -167,7 +167,7 @@ Ranking with ties and gaps (1, 2, 2, 4), incomplete student, a class with one of
 
 | # | Point | Recommendation |
 |---|---|---|
-| **D3** | Who approves test marks (already open) | head of department, then head teacher, configurable per school |
+| **D3** | Who approves test marks | **Decided 2026-10-16 (Femi: "D3 Agreed")**: head of department, then head teacher, configurable per school |
 | **D11** | Positions and promotion defaults (already open) | positions **off** by default, school-configurable; promotion by average plus compulsory subjects |
 | O-1 | How approved S1 results reach guardians, given the Parent Gateway reads only the older grade-string model | the Parent Gateway reads the **published snapshot** (A4); the older grade-string path is retired once A4 ships. Until then both exist |
 | O-2 | If the only eligible approver teaches the offering, who may approve | the school names an alternate approver; the Proprietor is the last resort and the approval is recorded as such (no silent self-approval) |
