@@ -1,5 +1,7 @@
 # FiSH GL Engine — Sales Processing Requirements Specification
 
+> **Note, 2026-10-17 (landlord principle, Decisions_Log 2026-10-15):** Prodeo is a landlord: it provides the FiSH platform to its Tenants and has no role whatsoever in any Tenant's data, purchase orders, accounts or transactions. Trade finance described in this document (Bill for Collection, aval, facilities, the original sugar-import scenario, and any "Prodeo", "Purse" or "the Group" party wording) is the Tenant's own arrangement with a lender the Tenant chooses; Prodeo does not provide, arrange or confirm it. The text below is the historical record and is not rewritten: where it names Prodeo, Purse, the Group or a specific counterparty as a party to a deal, read "the Tenant" and "the Tenant's own lender". Built behaviour is unchanged.
+
 **Version:** 1.0
 **Author:** Copilot (for Femi)
 **Standards Basis:** IFRS 15, IAS 2, IFRS 9, IAS 21, IAS 1, IFRS 13
