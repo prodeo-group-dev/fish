@@ -1,6 +1,6 @@
 # Education Runtime Playbook, part 3 of 4: Use cases (U)
 
-**Status:** DRAFT, 2026-10-13, planning only; nothing is built before Femi approves the whole Playbook (parts 1 to 4 together). Parts 1 and 2 are `docs/ER_Playbook_1_Scope.md` and `docs/ER_Playbook_2_SRS.md`. Written by the Education Runtime (+ER) session. Evidence tags as before: **[code]** read in `fish-education-runtime` on 2026-10-13, **[decided]** recorded Femi decision, **[TBC]** unverified or undecided.
+**Status:** DRAFT, 2026-10-13, planning only; nothing is built before Femi approves the whole Playbook (parts 1 to 4 together). Parts 1 and 2 are `docs/ER_Playbook_1_Scope.md` and `docs/ER_Playbook_2_SRS.md`. Written by the Education Runtime (+ER) session. **Revised 2026-10-17:** the app is online only (Decisions_Log 2026-10-15), so every "Offline:" line below now says what the person does with no signal (nothing is entered or stored on the device), D3 and D11 are decided, and "Staff and roles" reads "Roles and access". Evidence tags as before: **[code]** read in `fish-education-runtime` on 2026-10-13, **[decided]** recorded Femi decision, **[TBC]** unverified or undecided.
 
 **What these are.** Sixteen use cases that together run a school term, each written so it can be used as a **UAT script**: who, what must already be true, the main flow, the alternate and error flows, which Part 2 requirements it proves, and what the offline behaviour is. The error flows use the real refusals the code gives today where they exist (named in backticks) and say "new" where the refusal does not exist yet. Screens are WEB's; this part says what the person does and sees, not how it looks. Words are the school vocabulary (`School_Vocabulary_For_WEB.md`).
 
@@ -19,15 +19,15 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 **Main flow**
 1. EA provisions the school in the Education Runtime (school id, organisation id) and sets the first admin.
 2. The first admin signs in and sees an empty school with a hint: "No teachers, registrar or bursar yet: add staff and roles."
-3. The admin opens **Staff and roles**, adds each person with a role (registrar, bursar, teachers, timetabler). A person must exist in the platform; a role is a school-level grant.
+3. The admin opens **Roles and access**, adds each person with a role (registrar, bursar, teachers, timetabler). A person must exist in the platform; a role is a school-level grant.
 4. The admin configures the school: academic year and terms, levels and arms, subjects, grading scale and score structure, fee schedule items (each with a Finance-set VAT category), positions on or off.
-5. The admin registers devices for attendance (UC-E15).
+5. The admin registers attendance reader devices (UC-E15).
 **Alternates / errors**
 - A person without any role at the school gets a refusal shown as *cross-tenant* on every screen; with a role but not the right one, `forbidden`. [code]
 - Removing the **last admin** is refused (`last_admin`); a registrar cannot make or remove admins (`role_not_grantable`); an unknown role is `unknown_role`. [code]
 - Until a teacher or bursar role exists, **nobody can enter marks or raise invoices** (the admin alone cannot) [decided]: the hint in step 2 and the Roles-and-access tab are what prevent a dead end. **New:** the screen.
 - A fee item with no VAT category is refused at save. **New.**
-**Offline:** not applicable (set-up is online).
+**No signal:** set-up is online; nothing is stored on the device.
 
 ## UC-E2 Admit and enrol a student
 
@@ -44,7 +44,7 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 - Admissions officer can take an application to Accepted but not enrol (`Enrol requires register rights`). [code]
 - SOP refuses (billing not switched on for this school): `billing_not_enabled`; SOP unavailable: `billing_unavailable`; the guardian account stays and the same request works later. [code]
 - Duplicate student by name, date of birth and phone: a warning the registrar can override with a reason. **New.**
-**Offline:** capture works offline; the duplicate check and the SOP link run on sync.
+**No signal:** nothing can be captured; the office keeps a paper record and enters it when the connection returns (D26).
 
 ## UC-E3 Maintain student and contact records
 
@@ -58,46 +58,46 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 - A teacher opens a student outside their classes: the roster is scoped to assigned lessons; the student read is allowed but restricted fields are masked. [code]
 - A guardian-only caller reads only their own linked child; another child answers exactly as a missing one (`not found`). [code]
 - An import row fails validation: the error report names row and field; nothing is partly applied. [code: CSV import exists]
-**Offline:** lookup read-only offline; edits queue and sync (last writer wins for contacts, previous value kept).
+**No signal:** no lookup and no edit (nothing is cached on the device); a PDF class list printed earlier is the only offline copy.
 
-## UC-E4 Take the daily register (offline) and correct it
+## UC-E4 Take the daily register and correct it
 
 **Actors:** teacher, form master, device account. **Reqs:** PL-ATT-1 to 9, PL-CLS-3, PL-SET-7.
-**Pre:** the teacher's phone is a registered device; the arm and lessons exist; the form master is assigned to the arm.
+**Pre:** the teacher is signed in with a teaching role (no device registration is needed for a person; only gate readers are registered devices); the arm and lessons exist; the form master is assigned to the arm.
 **Main flow**
-1. The teacher opens the register for an arm with no connection; the roster is already on the device.
+1. The teacher opens the register for an arm; the roster is read from the server (nothing is cached on the phone).
 2. Marks are entered with the status code (present, absent, late, excused, sick, exeat) and time of arrival for late.
-3. The device stores the marks and shows a sync queue; on connection it pushes them; the server applies each exactly once (a replay of the same operation returns the recorded outcome).
+3. Each mark is sent when entered; the server applies each exactly once (a retry of the same operation returns the recorded outcome); a mark that is not acknowledged is shown as failed so it can be sent again, never silently lost.
 4. The form master sees unexplained absences and approves the register (or delegates).
 5. Guardians of unexplained absentees receive a same-day SMS with no sensitive detail (UC-E12); chronic and consecutive absence alerts go to the form master and head of year.
 6. A reader at the gate posts a mark through the device account.
 **Alternates / errors**
-- A mark for a student not in the arm, a closed period or an unregistered/revoked device is refused (`forbidden`); the queue keeps the rejected item visible. [code: device rules]
+- A mark for a student not in the arm, a closed period or an unregistered/revoked device is refused (`forbidden`) and shown to the teacher. [code: device rules]
 - A correction needs a **reason**; the original mark and audit stay. **New.** Replace-on-remark exists today. [code]
 - The school admin alone cannot take attendance [decided]; an admin who also teaches can.
-- Late sync beyond the school's deadline is flagged for review, not dropped (**D4**).
-**Offline:** the whole use case works for days offline; clock integrity is checked and server time is recorded at sync.
+- With no signal there is no entry (the 2026-10-15 online-only decision supersedes the earlier offline register); the school takes the register on paper and enters it when connected (D26). The late-sync deadline (D4) is moot.
+**No signal:** no entry and nothing stored on the device.
 
 ## UC-E5 Enter a term's marks, submit, approve and lock
 
 **Actors:** teacher (subject), head of department, head teacher; approvers per **D3**. **Reqs:** PL-ASM-1 to 4, 11.
 **Pre:** grading scale and score structure set; a subject offering links an arm, subject, term and teachers.
 **Main flow**
-1. The teacher opens "my offerings", picks one, and enters CA and exam scores per student, offline or online; each cell keeps a version and history.
+1. The teacher opens "my offerings", picks one, and enters CA and exam scores per student; each cell keeps a version and history.
 2. The roster view pages through students, can filter to missing marks, and shows a total per student as scores are entered.
 3. The teacher submits; if any mark is missing the teacher confirms "submit with gaps".
-4. The approver (per the configured chain) reviews, approves or returns with a comment; on approval the marks are **locked**.
+4. The approver (per the configured chain, **default head of department then head teacher, D3 decided**; never the form master by default) reviews, approves or returns with a comment; on approval the marks are **locked**; a person never approves an offering they teach.
 5. A change after locking needs an approval and is audited.
 **Alternates / errors**
 - A teacher who does not teach this offering: `not_your_offering`. The admin alone or the bursar: `forbidden` (the same 403 body as any unauthorised role). [code]
 - A score outside the structure's range: refused with the field; an absent or excused mark follows the structure's rule. [code]
 - A retried mark entry with the same operation id returns the first outcome and writes once; a stale version is refused with the current value (**conflict**), never overwritten. [code]
 - Returning for correction re-opens only that offering. **New.**
-**Offline:** mark entry works offline; submit and approval are online.
+**No signal:** no entry, submit or approval; nothing is stored on the device.
 
 ## UC-E6 Report cards, broadsheets and promotion
 
-**Actors:** teacher (comments), form master, head teacher; guardian (reader). **Reqs:** PL-ASM-5 to 9, PL-RPT-3.
+**Actors:** teacher (comments), form master, head teacher; guardian (reader). **Reqs:** PL-ASM-5 to 9, PL-RPT-3. **Defaults (D11, decided):** positions are shown unless the school switches them off; promotion proposes from the overall average plus the compulsory subjects.
 **Main flow**
 1. After all offerings for an arm are locked, the system computes totals, averages, subject and class positions (if enabled), and highest, lowest and average per subject.
 2. The form master adds affective and psychomotor ratings and a comment; the head teacher adds a comment.
@@ -107,8 +107,8 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 **Alternates / errors**
 - Publishing with an offering not locked is refused naming the offering. **New.**
 - Clearance: a school that configured a clearance policy **withholds the printed card for unpaid fees** only if **D8** allows it; attendance, safeguarding and medical information are never blocked.
-- Positions off: the card omits positions.
-**Offline:** none; this is online.
+- Positions are on by default; a school that switched them off gets a card without positions.
+**No signal:** none; this is online.
 
 ## UC-E7 Raise a term's fees and record a verified payment (through SOP)
 
@@ -126,7 +126,7 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 - The admin alone cannot raise or record (`forbidden`); the admin reads. A missing VAT category refuses the invoice. [decided; new]
 - A retry after a timeout never makes a second invoice (idempotent key). **New with the SOP key.**
 - Over-the-term revenue recognition is a Finance decision (**D6**); first build raises at term start.
-**Offline:** raising and verifying are online only; a cash receipt at the desk is provisional until synced (P2, PL-FEE-11).
+**No signal:** raising and verifying are online only; a cash payment at the desk is recorded online (the provisional offline receipt, PL-FEE-11, is dropped); the school keeps a paper record meanwhile (D26).
 
 ## UC-E8 A guardian sees their child and pays
 
@@ -139,7 +139,7 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 - Another family's child answers exactly like a missing child. A guardian-only principal cannot read staff routes. [code]
 - A restricted contact (court order) never sees the restricted child's information or pickup. **New.**
 - Low data: pages are small; results summary also by SMS for non-smartphones (P2).
-**Offline:** a guardian's own phone: read what is cached.
+**No signal:** the guardian sees nothing new; the app caches none of the school's data (the same online-only rule). A report card or statement the guardian downloaded as a PDF stays on their phone.
 
 ## UC-E9 Record a safeguarding concern (LATER, country-triggered; not in the Nigeria or Sierra Leone packs)
 
@@ -151,7 +151,7 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 **Alternates / errors**
 - Anyone else opening it: refused, and the attempt is logged. A safeguarding detail is **never** in an SMS or exported without a logged reason. [code for notes, flag, masking, access log; new for workflow]
 - **The admin alone does not see safeguarding records by default** (C2, **Femi's decision**); break-glass needs a reason, is time-limited and alerts the group.
-**Offline:** notes queue on the device and sync; the restricted flag applies as soon as synced.
+**No signal:** no note can be written (nothing queues on the device).
 
 ## UC-E10 Manage a teacher's record (employ once)
 
@@ -167,7 +167,7 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 ## UC-E11 Give, change and remove roles
 
 **Actors:** school admin (and the Business Owner). **Reqs:** PL-SET-3, 5.
-**Main flow:** the admin opens Staff and roles, grants or revokes roles; a termly access-review report lists everyone with their roles; a leaver is removed promptly.
+**Main flow:** the admin opens Roles and access, grants or revokes roles (open D24: whether this later needs the Business Owner's approval, Personnel P8; until then delegates act directly); a termly access-review report lists everyone with their roles; a leaver is removed promptly.
 **Alternates / errors:** `role_not_grantable` (only an admin makes or removes an admin), `last_admin` (cannot remove the last), `unknown_role`; removing a role takes effect on the person's next request. [code]
 
 ## UC-E12 Message guardians
@@ -175,7 +175,7 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 **Actors:** form master, bursar, head teacher; the messaging gateway. **Reqs:** PL-NOT-1 to 4, PL-CON-2, 7.
 **Main flow:** a staff member selects a template (absence, fee reminder, results ready, notice), a group (by arm, level, fee status) and sends; each message goes to the guardian's preferred channel and language; delivery status and cost are tracked.
 **Alternates / errors:** a guardian who opted out of non-essential messages is skipped; a message containing health or safeguarding detail is **refused at compose**; SMS fails, then the failure is shown and, in P2, WhatsApp falls back to SMS; a bulk send above the threshold needs approval (P2). **New** (no messaging exists).
-**Offline:** composing queues; sending is online.
+**No signal:** nothing is composed or queued.
 
 ## UC-E13 Run reports and exports
 
@@ -189,11 +189,11 @@ Business Owner, head teacher, **school admin**, registrar, admissions officer, t
 **Main flow:** a guardian asks for their child's data; the admin records the request, gathers the data, responds within the country's deadline; at year end a disposal review lists records past retention; the head teacher approves disposal; consent withdrawals are honoured and logged.
 **Alternates / errors:** an erasure request on a record under legal retention is refused with the legal basis recorded.
 
-## UC-E15 Register or revoke a device
+## UC-E15 Register or revoke an attendance reader
 
 **Actors:** admin. **Reqs:** PL-SET-7, PL-ATT-2.
-**Main flow:** the admin registers a teacher's phone as a device for offline use (a device id is bound to the person); a lost phone is revoked at once; the next sync from it is refused (`forbidden`); remote wipe of the offline store is requested (P1 target).
-**Alternates / errors:** an unregistered or revoked device cannot sync marks or attendance; the person can still use the online app. [code]
+**Main flow:** the admin registers an attendance **reader** (a gate or classroom device account); a lost reader is revoked at once and the next post from it is refused (`forbidden`). The earlier plan to bind a teacher's own phone for offline use, and the remote wipe of its offline store, is dropped (2026-10-15: nothing is persisted on a person's phone; a lost phone is handled by remote sign-out, EA's).
+**Alternates / errors:** an unregistered or revoked device cannot post attendance; the person can still use the online app. [code]
 
 ## UC-E16 Term end and the next term
 

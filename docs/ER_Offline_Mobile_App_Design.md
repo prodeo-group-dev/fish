@@ -1,5 +1,7 @@
 # The Education Runtime offline mobile app: design pass (F11)
 
+> **SUPERSEDED 2026-10-15** (Decisions_Log: one online-only banking-style app for every role; no offline cache, database or outbox). Kept for the record and for the server pieces already built (registered devices, change feed, the claim-first idempotency ledger that makes retries safe). Do **not** build the offline client, the server gaps S1 to S6 or the late-sync rule from this document. See `docs/ER_Playbook_Review_2026-10-17.md`.
+
 **Status:** DRAFT 1, 2026-10-13. **Design only; nothing is built.** Written by the Education Runtime (+ER) session for task **F11** of the Playbook (Part 4), with WEB to co-own the client side. Femi's decision (D1, 2026-10-13): **"Both. Offline is an App on a mobile device"**, so the school gets online use and an offline **mobile app**. Evidence tags: **[code]** read in `fish-education-runtime` on 2026-10-13, **[design]** an existing design document, **[proposal]** mine, to be decided, **[open]** needs WEB, CM or Femi.
 
 **Relation to existing documents.** `Education_Runtime_Local_First_Sync_Design.md` (the server contract and the per-entity conflict policy, 2026-10-02) and `Local_First_Sync_Build_Plan.md` stay the server-side reference; `EduSys_Separate_App_SPUTO.md` (path versus subdomain, a separate installable web app) stays the hosting reference. **This note adds what neither has: the client.** It does not restate them.

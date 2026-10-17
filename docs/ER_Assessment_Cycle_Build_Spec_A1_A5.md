@@ -1,8 +1,8 @@
 # Education Runtime: assessment cycle build spec (A1 to A5)
 
-**Status:** design only, for Femi's approval, 2026-10-16. Nothing in this document is built, and nothing here is built before the Playbook is approved. Author: +ER Education. Reviewer: CM (every item that touches an access gate, below).
+**Status:** design only, for Femi's approval, 2026-10-16; **revised 2026-10-17 for D3 and D11 (both now decided) and the online-only app decision**. Nothing in this document is built, and nothing here is built before the Playbook is approved (the only thing A1 now waits on). Author: +ER Education. Reviewer: CM (every item that touches an access gate, below).
 **Parent:** `ER_Playbook_4_Tasks_And_Order.md` section 1, tasks A1 to A5 (requirements PL-ASM-4 to PL-ASM-9, use cases UC-E5, UC-E6, UC-E16).
-**Method:** every statement about the current code was read at Education Runtime master `e6f7661` (deployed as ER :99). Where something is an assumption or a recommendation, it says so.
+**Method:** every statement about the current code was read at Education Runtime master `e6f7661` (deployed as ER :99) and **re-checked 2026-10-17 at `83b94d6` (ER :100)**: the assessment code has not changed since (findings 1, 2 and 4 below were re-read: `OfferingStatus.APPROVED` and `RETURNED` are still used only in the lock text, the lock text still says "form master", and the structure request still defaults `positionsEnabled` to `true`). Where something is an assumption or a recommendation, it says so.
 
 ---
 
@@ -22,7 +22,7 @@
 1. **Nothing can ever leave `SUBMITTED`.** `APPROVED` and `RETURNED` exist in the enum, but no service, store or route moves an offering into either. `grep` for every use of `OfferingStatus.APPROVED`, `OfferingStatus.RETURNED` and `.transition(` finds only the submit path. So a submitted offering is locked for good: marks are refused (`acceptsMarks` is false) and there is no way back. This is test data today, but it is the first thing A1 must fix.
 2. **The lock text is wrong against a decision.** `SubjectOffering.lockReason` says "Submitted to the form master" and "Approved by the form master". Femi decided (2026-10-10) that the form master is **not** the default approver of test marks. The wording must follow the configured chain (D3).
 3. **A2 is half done.** Per-offering totals and positions exist. Missing: a student's whole-term picture across subjects (sum, average, class position across all subjects), and per-subject highest, lowest and average for the class.
-4. **`positionsEnabled` defaults to `true`** in the structure request (`AssessmentSetupRoutes.kt`, `val positionsEnabled: Boolean = true`). Decision **D11** (proposed) is positions **off** by default. Changing the default affects only structures created afterwards; existing ones keep their stored value.
+4. **`positionsEnabled` defaults to `true`** in the structure request (`AssessmentSetupRoutes.kt`, `val positionsEnabled: Boolean = true`). Decision **D11 is decided: positions stay ON by default, school-configurable**, so **no code change is needed**; the default stays `true` and the earlier idea of flipping it (task A1.5's second half) is dropped.
 5. **Two assessment models exist side by side.** The older `AssessmentService` (a free-text grade string per student and term, `publish` raising `AssessmentCompleted` through the outbox, `releasedToParentGateway` read by the Parent Gateway) and the S1 model (offerings and marks). The Parent Gateway still reads only the older one. How approved S1 results reach guardians is a decision (O-1 below).
 6. **Concepts the playbook assumes that do not exist yet:** a department (so "head of department" is only a role, not scoped to a subject area), a form master (no assignment of a person to a class section, which E4 and A3 both need), a level ladder (what class follows JSS1), and any PDF library (`build.gradle.kts` has none).
 
@@ -32,13 +32,13 @@
 
 ### 3.1 Behaviour
 
-- **Chain.** Each school configures an ordered list of approver roles, for example `[HOD, HEAD_TEACHER]`. A chain of one or two steps is expected; the cap is three. **Default chain: `[HOD, HEAD_TEACHER]`** (the D3 recommendation, still awaiting Femi).
+- **Chain.** Each school configures an ordered list of approver roles, for example `[HOD, HEAD_TEACHER]`. A chain of one or two steps is expected; the cap is three. **Default chain: `[HOD, HEAD_TEACHER]`** (**D3, decided by Femi: head of department, then head teacher, configurable per school**; the form master approves attendance, not test marks).
 - **Offering lifecycle.**
   `OPEN` -> submit -> `SUBMITTED` (awaiting step 1) -> approve -> awaiting step 2 -> ... -> approve at the last step -> `APPROVED` (**locked**).
   At any step an approver may **return** with a mandatory comment: `RETURNED` (marks open again), and the next submit starts again at step 1. Only that one offering is reopened.
 - **Locked means locked.** In `APPROVED`, mark writes are refused as today (`acceptsMarks` is false). No new code is needed for the refusal; the existing lock order (offering first, then cell) already makes a write racing an approval safe.
 - **Changing a mark after approval** is a **change request**, not a reopen: a teacher (or the approver) states offering, student, component, new value or code, and a **reason**. The last-step approver approves or rejects it. On approval the system writes the mark through the normal mark path (history keeps the original value; the actor is the requester, the approver is recorded on the request; the request id is the operation id so a retry writes once). A change to a mark already **published on a report card** also flags the card for re-issue (A4).
-- **Separation of duties.** A person cannot approve an offering they teach, and cannot approve their own change request. If the chain has no eligible person left at a step (for example the only head teacher teaches the offering), the approval is refused with a plain message and the school must name another approver; **the system never self-approves**. Open point O-2 asks Femi whether the Owner (Proprietor) should be the fallback.
+- **Separation of duties.** A person cannot approve an offering they teach, and cannot approve their own change request. If the chain has no eligible person left at a step (for example the only head teacher teaches the offering), the approval is refused with a plain message and the school must name another approver; **the system never self-approves**. Open point O-2 asks Femi whether the Owner (Proprietor) should be the fallback; it is consistent with his standing rule that the Business Owner is the final authority wherever an approval is needed (Decisions_Log 2026-10-13), so the recommendation below is likely only a confirmation.
 - **Who may approve.** A step names a role. In version one **any holder of that role at the school** may act (department scoping needs a department entity that does not exist; that is a later refinement, not guessed now).
 - **Messages never say "contact support".** A stuck offering is recovered by the school's own head teacher (return it), which is the landlord principle applied: no Prodeo route touches a school's marks.
 
@@ -87,7 +87,7 @@ Unit: chain validation, step advance, return reopens, self-approval refused, no-
 | A1.2 | approve and return, state machine, trail, locks and idempotency | M |
 | A1.3 | change requests after lock | M |
 | A1.4 | `ER_ENFORCE_RESULT_APPROVAL` flag plumbing and `WOULD REFUSE` log line (consumed by A4) | S |
-| A1.5 | fix `lockReason` wording; set `positionsEnabled` default per D11 | S |
+| A1.5 | fix `lockReason` wording to follow the configured chain (it says "form master" today); ~~set `positionsEnabled` default per D11~~ **dropped: D11 keeps the default ON, nothing to change** | S |
 
 ---
 
@@ -100,7 +100,7 @@ For one class section and term, over its **approved** offerings only (an unappro
 - **Per student:** total of subject totals, average, number of subjects counted, class position across the whole term (competition ranking, tie flag), subject grades from the scale.
 - **Per subject:** highest, lowest, class average (over students who have a total).
 - **Completeness rule (no guessing):** a student's overall position is computed only if they have a total in **every** approved offering of the class; otherwise position is empty with the reason `incomplete`, and the average is over the subjects they do have, labelled as such. This matches the existing per-offering rule that a missing component keeps the total empty.
-- **Positions are a school setting.** Off unless the score structure (which is already per level and term) says on, per D11. When off, positions are omitted from every output including A4.
+- **Positions are a school setting.** **On by default** (D11, decided), off only where the score structure (already per level and term) says so. When off, positions are omitted from every output including A4.
 - **Computed on read for working views; fixed at publication.** The numbers shown in the approvals and results screens are computed from current approved marks. The report card (A4) uses a **snapshot** taken at publication so a later correction never silently changes a printed card.
 
 ### 4.2 Open modelling point (flagged, not decided)
@@ -123,7 +123,7 @@ Ranking with ties and gaps (1, 2, 2, 4), incomplete student, a class with one of
 
 - **Configuration per school:** a rating scale (for example 1 to 5 with labels) and a list of traits, each tagged `AFFECTIVE` or `PSYCHOMOTOR` (punctuality, neatness, honesty; handwriting, sports). A starter set is offered but editable.
 - **Per student per term:** one rating per trait; a **form master comment** and a **head teacher comment**.
-- **Same safety as marks:** version compare-and-swap per row, append-only history, claim-first idempotency, offline-capable later (it rides the same sync ledger).
+- **Same safety as marks:** version compare-and-swap per row, append-only history, claim-first idempotency (retries are safe; the app is online only since 2026-10-15, so there is no offline mode to plan for).
 - **Who writes:** the form master for ratings and their comment; the head teacher for theirs. **Dependency found:** there is no form-master assignment in the code (no person is tied to a class section). Version one therefore uses a small explicit assignment `class_section_form_master(school_id, class_section_id, subject_id)`, set by the school admin, which is also the missing half of E4 (form-master approval of the register). This is a **new access fact**, so CM reviews it, and enforcement of "only the form master may write ratings" stays behind a flag defaulting to log, as above; until the flag is enforced any teaching role of the school may write (today's behaviour for marks).
 - **Lock:** ratings and comments freeze when the term's report cards are published; a later change is a change request like A1.3.
 - **Tables (provisional):** `rating_scales`, `rating_traits`, `student_term_ratings`, `student_term_comments`, `rating_history` (append-only), `class_section_form_master`.
@@ -145,7 +145,7 @@ Ranking with ties and gaps (1, 2, 2, 4), incomplete student, a class with one of
 
 ## 7. A5: promotion, repeat, probation (PL-ASM-9, PL-IMP-1, needs A2, D11)
 
-- **Criteria, configured per school and level** (version one): minimum overall average; minimum number of subjects passed; named compulsory subjects that must be passed (for example English and Mathematics); optional minimum attendance. Outcome per student: `PROMOTE`, `REPEAT` or `PROBATION` (probation = promoted on condition, a flag, with a note).
+- **Criteria, configured per school and level** (version one). **Default (D11, decided): minimum overall average plus the named compulsory subjects that must be passed** (for example English and Mathematics); the minimum number of subjects passed and a minimum attendance are optional extras a school can switch on. Outcome per student: `PROMOTE`, `REPEAT` or `PROBATION` (probation = promoted on condition, a flag, with a note).
 - **Run.** The head teacher starts a promotion run for a session. The system **proposes** an outcome per student from the criteria (using A2 results). Nothing moves yet.
 - **Preview.** A reviewable list with the proposed destination class for each student; the head teacher may **override** any student with a reason; the preview can be thrown away.
 - **Approve and apply.** The head teacher approves; applying moves each student with the same single-transaction `transferStudentClass` already hardened in the retry-safety audit (R2). The run records each student's previous class so the whole run can be **reversed** while no marks or attendance have yet been recorded in the new classes. A run is idempotent on its run id (a retry applies once) and locked at run level so two applies cannot interleave.
@@ -167,10 +167,10 @@ Ranking with ties and gaps (1, 2, 2, 4), incomplete student, a class with one of
 
 | # | Point | Recommendation |
 |---|---|---|
-| **D3** | Who approves test marks (already open) | head of department, then head teacher, configurable per school |
-| **D11** | Positions and promotion defaults (already open) | positions **off** by default, school-configurable; promotion by average plus compulsory subjects |
+| **D3** | Who approves test marks | **DECIDED (Femi): head of department, then head teacher, configurable per school** |
+| **D11** | Positions and promotion defaults | **DECIDED (Femi): positions ON by default, school-configurable; promotion defaults to the overall average plus compulsory subjects** (the earlier recommendation of positions off is reversed) |
 | O-1 | How approved S1 results reach guardians, given the Parent Gateway reads only the older grade-string model | the Parent Gateway reads the **published snapshot** (A4); the older grade-string path is retired once A4 ships. Until then both exist |
-| O-2 | If the only eligible approver teaches the offering, who may approve | the school names an alternate approver; the Proprietor is the last resort and the approval is recorded as such (no silent self-approval) |
+| O-2 | If the only eligible approver teaches the offering, who may approve | the school names an alternate approver; the Proprietor (Business Owner, the final authority) is the last resort and the approval is recorded as such (no silent self-approval) |
 | O-3 | Optional subjects (electives) | out of version one; a student-to-offering enrolment is added when the first school with options needs it |
 | O-4 | Batch report-card generation needs storage | on-demand first; ask CM for a bucket before the batch job |
 | O-5 | Department entity (so a head of department approves their own subject area only) | role-level for now; add departments when staff structure (S-series) lands |
@@ -182,3 +182,11 @@ Ranking with ties and gaps (1, 2, 2, 4), incomplete student, a class with one of
 - **RBAC freeze:** the only access additions are new capabilities (approve results, form-master assignment); no existing deny is changed. CM reviews them.
 - **Ledger:** nothing in this cycle posts to the ledger or touches SOP. The fee line on a card (if ever turned on) is read through SOP, never computed here.
 - **Vocabulary:** screens use school terms ("Results", "Report card", "Promotion"), through WEB.
+
+## 11. Checked again 2026-10-17 (Decisions_Log 2026-10-15 and 2026-10-16, D3, D11)
+
+- **Online-only banking-style app (2026-10-15):** nothing here depends on an offline client; mark entry, submit, approve, return and change requests are all online calls, retry-safe through the claim-first ledger. A school with no signal enters nothing (see the Playbook's D26 for the paper-fallback question).
+- **Preparation is not audit, the Owner is the final authority (2026-10-16 and 2026-10-13):** the approval trail records who approved what; it is the school's record of its own decisions, not a certification by FiSH. The Owner as last-resort approver (O-2) follows the final-authority rule.
+- **D3 and D11 are decided,** so A1 and A2 are unblocked on every decision; A1 depends on neither F7 (the form master is not an approver) nor D3. A3 still needs the form-master assignment (a new access fact, CM reviews at HIGH).
+- **Personnel P8 (access-change approval) is not touched:** approving results is a capability inside the school, not an EA access change.
+- **The only remaining gate on A1 is Femi's approval of the Playbook,** then CM's review of the access gate before build.

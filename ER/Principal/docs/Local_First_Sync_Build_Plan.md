@@ -1,5 +1,7 @@
 # Local-First Sync — Build Plan
 
+> **SUPERSEDED 2026-10-15** (Decisions_Log: one online-only banking-style app for every role; no offline cache, database or outbox). Kept for the record and for the server pieces already built (registered devices, change feed, the claim-first idempotency ledger that makes retries safe). Do **not** build the offline client, the server gaps S1 to S6 or the late-sync rule from this document. See `docs/ER_Playbook_Review_2026-10-17.md`.
+
 **Date:** 2026-10-02
 **Design reference:** `docs/Education_Runtime_Local_First_Sync_Design.md` — this plan turns that design's §8/§9 into dependency-ordered, buildable tasks.
 

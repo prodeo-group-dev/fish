@@ -1,6 +1,6 @@
 # Education Runtime Playbook, part 1 of 4: Scope (S)
 
-**Status:** DRAFT, 2026-10-13. Written by the Education Runtime (+ER) session at Femi's direction (Decisions_Log, 2026-10-12/13: "+ER should do the full SPUTO to create ER Playbook .. a comprehensive education management information system"). **Planning only. Nothing here is built, and nothing is built until Femi approves the Playbook** (standing rule). Parts land one at a time so CM can review each: **1 Scope (this file)**, 2 Plan / SRS, 3 Use cases, 4 Tasks and Order. Evidence tags: **[code]** read in `fish-education-runtime` on 2026-10-13, **[spec]** the technical specification v0.1, **[decided]** a Femi decision in the Decisions_Log or a recorded instruction, **[TBC]** not verified or not decided.
+**Status:** DRAFT, 2026-10-13. Written by the Education Runtime (+ER) session at Femi's direction (Decisions_Log, 2026-10-12/13: "+ER should do the full SPUTO to create ER Playbook .. a comprehensive education management information system"). **Planning only. Nothing here is built, and nothing is built until Femi approves the Playbook** (standing rule). **Revised 2026-10-17** against the Decisions_Log of 2026-10-15 and 2026-10-16 and the D3 and D11 answers (what changed is listed in `docs/ER_Playbook_Review_2026-10-17.md`): the online-only banking-style app replaces the offline client, D3 and D11 are decided, and the landlord and preparation-is-not-audit principles are added. Parts land one at a time so CM can review each: **1 Scope (this file)**, 2 Plan / SRS, 3 Use cases, 4 Tasks and Order. Evidence tags: **[code]** read in `fish-education-runtime` on 2026-10-13, **[spec]** the technical specification v0.1, **[decided]** a Femi decision in the Decisions_Log or a recorded instruction, **[TBC]** not verified or not decided.
 
 ## 0. How this relates to what already exists (it does not restate it)
 
@@ -9,7 +9,7 @@
 | `FiSH-ER-Education-Runtime-Technical-Req-Spec-and-Use-Cases-v0.1.md` (230 requirements, 14 use cases) | the requirements source of truth | Part 2 selects, orders and corrects against it; it is cited by requirement id, never copied |
 | `ER_Education_Specialty_Scope.md` (2026-10-07) | for every requirement family: generic FiSH provides it, or it is an education specialty | adopted as the classification rule (section 3); this part updates its "built today" column |
 | `Education_Runtime_MVP_Definition.md`, `The_Principal_Backlog.md` | floor versus enhancement; the epics BK-STF/CON/DOC/FIN/NOT | folded into the phasing (section 9) |
-| `Education_Runtime_Local_First_Sync_Design.md`, `Local_First_Sync_Build_Plan.md` | the offline architecture decision | section 6 |
+| `Education_Runtime_Local_First_Sync_Design.md`, `Local_First_Sync_Build_Plan.md` | the offline architecture decision, **SUPERSEDED 2026-10-15** by the online-only banking-app decision (kept for the server pieces already built) | section 6 |
 | `ER_Credential_School_Company_Rule_Design_Note.md` (Parts 1 to 3) | how ER sits on SOP and EA, tuition through SOP | section 4 |
 | `Platform_Contract_Generic_Services_And_Runtimes_SPUTO.md` (EA) | the platform contract for runtimes | section 4 |
 | `School_Vocabulary_For_WEB.md` | the school words | section 8 |
@@ -27,11 +27,13 @@ The Education Runtime (ER, product name **The Principal's EduSys**) is the speci
 
 1. **No duplication of the generic services** (Femi, 2026-10-12: "Education Runtime does not need to duplicate these services. SOP creates income"). ER owns education rules and education records; money, stock, ledger, payroll, identity and tenancy stay where they are.
 2. **Generic first, specialise through the industry type** (as Education already does). A capability another runtime would also need (documents, notifications, import) is designed as a generic port even if ER is its first implementation (decision D2 below).
-3. **Local-first** (Femi: "We are talking about Africa"). Staff-facing work must survive days without connectivity; the server is the secondary path.
+3. **Online-only, banking-app model** (Femi, 2026-10-15: one app for every role, "exactly like most banking apps"). The client is thin and online: no offline cache, no local database, no queue of unsynced entries, nothing of the Tenant's data stored on the device; with no signal there is no data entry. This **supersedes the 2026-10-13 local-first decision** ("We are talking about Africa", an offline app for teachers). Every call stays retry-safe (idempotency keys) because networks drop, not because the client works offline. The cost to a school with power and signal cuts is a real risk, recorded in section 10 (D26), not hidden.
 4. **Children's data is the highest-sensitivity class**: collect the minimum, say why, restrict by role, log access, retain on a schedule.
 5. **ER never posts to the ledger** (enforced in code, `NoDirectGlWrites`); financial effects reach SOP and GL by idempotent calls carrying a verified fact, never a claim.
 6. **Authorisation is the runtime's own and per school**; a person acts only with a role the school's admin gave them. Changes to roles obey the RBAC freeze (CM first; add-a-deny is inside the carve-out).
 7. **Words are the school's** (`School_Vocabulary_For_WEB.md`); **every decision is asked once** and logged in the Decisions_Log.
+8. **Prodeo is a landlord** (Femi, 2026-10-15): it has no role whatsoever in a school's data, accounts or transactions; FiSH delivers GLaaS and the school is the Tenant. ER carries no Prodeo operator route that reads or edits a school's records, no screen or message sends a school to "support" for its own data, and a stuck record is recovered school-side (the head teacher or admin) or by an identical retry.
+9. **Preparation is not audit, and the Owner is the final authority** (Femi, 2026-10-16 and 2026-10-13): ER prepares and calculates accurately (totals, positions, balances); the school owns the records it allows to persist and obtains its own audit; no wording implies FiSH audits or certifies a school's records; where an approval is needed, the Business Owner is the final authority. Femi decides what is parked and what needs a professional's view; ER adds no outside-adviser gate of its own.
 
 ## 3. Coverage map: every EMIS area, who owns what, where it stands
 
@@ -46,8 +48,8 @@ The Education Runtime (ER, product name **The Principal's EduSys**) is the speci
 | 5 | **School structure** | sessions and terms, levels per country, arms, streams, subject catalogue and combinations, houses, multi-campus templates | tenancy | **Partial**: terms, class sections, rooms; no streams, subject combinations, houses or campuses | P1 to P2 |
 | 6 | **Timetable and lessons** | the weekly timetable, conflict rules (simple, not an engine) | none | **Built**: lessons, rooms, teacher-subject checks, conflicts, scheduled lessons | done |
 | 7 | **Curriculum** | topics, progress, schedule | none | **Built**: topics, progress, scheduled lessons, term links | done |
-| 8 | **Attendance** | statutory mark codes, daily and per-lesson registers, absence reasons, thresholds, same-day notice | offline device infrastructure; messaging | **Built**: nine-code table, marks, device capture, server side of offline sync (devices, change feed, push ledger). Not built: absence reasons, alerts, reports, correction-with-reason, the offline client | P1 |
-| 9 | **Assessment, report cards, promotion** | score structures, CA weights, scales, entry, approval and locking, totals, positions, report cards, cumulative records, promotion rules | none | **Partly built (S1)**: grading scales, score structures, subject offerings, mark entry with history and idempotency, submit. Not built: approval and locking, totals and positions, report cards, promotion, SPI/TPI | P1 (the core of the product) |
+| 8 | **Attendance** | statutory mark codes, daily and per-lesson registers, absence reasons, thresholds, same-day notice | device accounts for gate readers; messaging | **Built**: nine-code table, marks, device capture, server side of sync (devices, change feed, idempotent push ledger; kept for retry safety). Not built: absence reasons, alerts, reports, correction-with-reason. **The offline client is dropped** (2026-10-15) | P1 |
+| 9 | **Assessment, report cards, promotion** | score structures, CA weights, scales, entry, approval and locking, totals, positions, report cards, cumulative records, promotion rules | none | **Partly built (S1)**: grading scales, score structures, subject offerings, mark entry with history and idempotency, submit, per-offering totals and positions. Not built: approval and locking (nothing can leave SUBMITTED), whole-term totals, report cards, promotion, SPI/TPI | P1 (the core of the product) |
 | 10 | **External exams** | registration, index numbers, CA export in the body's format, results, certificates | none | **Nothing** | P2 |
 | 11 | **Fees and billing** | fee structure selection rules, scholarship eligibility and approval, clearance policy | **SOP** invoices, collections, receipts; **GL** ledger | **Interim**: ER's own invoice and payment stub that never reaches SOP; guardian to SOP Customer built; **the new design** (Part 3 of the design note) raises tuition in SOP. Statement route and guardian balances exist over ER's own tables | P1 |
 | 12 | **Communications with guardians** | which school events notify whom; sensitive data never in an SMS | messaging gateway (SMS, WhatsApp), templates, delivery | **Nothing** | P1 (SMS) to P2 (WhatsApp) |
@@ -79,7 +81,7 @@ Twelve assignable roles exist **[code]**: SCHOOL_ADMIN, HEAD_TEACHER, HOD, HOY, 
 
 | Area | Decided |
 |---|---|
-| Grades | teachers (head teacher, HOD, HOY included) enter; school admin alone and bursar do not; **who approves test marks is open** (decision D3) |
+| Grades | teachers (head teacher, HOD, HOY included) enter; school admin alone and bursar do not; **test marks are approved by the head of department, then the head teacher, configurable per school** (D3, decided; the form master approves attendance, not test marks) |
 | Fees | bursar and fee officer run the fee desk; the admin has a read-only view of student finance |
 | Student records | the admin has read-only access to student records but **keeps the student writes until a registrar exists** |
 | Attendance | taken by teachers and the form master (approval by the form master, delegable); the admin alone does not |
@@ -87,15 +89,15 @@ Twelve assignable roles exist **[code]**: SCHOOL_ADMIN, HEAD_TEACHER, HOD, HOY, 
 | Safeguarding | restricted to the safeguarding and pastoral leads and the admin; access is logged |
 | Roles | one Business Owner per Tenant; head teacher is the CEO of the school and acts with authority the Owner gives |
 
-## 6. Offline and low-bandwidth reality (the Mano River and Nigeria schools)
+## 6. Connectivity and low bandwidth (the Mano River and Nigeria schools): ONLINE ONLY since 2026-10-15
 
-**[decided]** The client is local-first; **[code]** the server side exists (registered devices, change feed, a push ledger with claim-first idempotency used by attendance and marks); the client store, the conflict rules per entity and the late-sync deadline rule (D11) are **not built or not decided**. Scope classification (Part 2 turns it into requirements):
+**[decided, supersedes the 2026-10-13 local-first and offline-app decisions]** One app for every role, a thin online client modelled on a banking app: no offline cache, no local database, no queue of unsynced entries; only the sign-in credential may be kept, in the phone's secure store; a payslip, statement, report card or other document can be **downloaded as a PDF** (the sanctioned, deliberate copy). **[code]** the server side built for sync stays, because its claim-first idempotency ledger is what makes retries safe (marks, attendance); the offline client, the server gaps S1 to S6 (prefetch and the rest) and the late-sync deadline rule are **dropped**. What this means per area (Part 2 turns it into requirements); the classification below replaces the earlier "must work with no connection for days" table:
 
-| Must work with no connection for days | Queue and sync | Online only |
+| Works with no connection | Queues and syncs later | Online only |
 |---|---|---|
-| attendance register, mark entry, student and class lookup, timetable view | fee payment recorded at the desk (provisional until verified), incident notes | admissions decisions that notify guardians, report-card publication, reports and returns, anything that raises money in SOP |
+| nothing (a printed or downloaded PDF the school made earlier, such as a class list or an evacuation list, is the only offline copy) | nothing | **everything**: attendance register, mark entry, lookups, timetable, fee desk, admissions, report cards, reports, anything that raises money in SOP |
 
-Low bandwidth: paged lists, small payloads, SMS as the guardian channel, no heavy assets. A pilot school's real connectivity is **unknown**, which is decision D1.
+Low bandwidth still matters: paged lists, small payloads, compressed images, SMS as the guardian channel (see D25 on email versus SMS), no heavy assets. A pilot school's real connectivity is **unknown**; with online-only that is now a pilot-selection condition and a stated risk (D26), no longer a reason to build an offline client.
 
 ## 7. Out of scope (for this Playbook)
 
@@ -116,8 +118,8 @@ Payroll and HR performance (HR owns them); a learning management system, homewor
 
 ## 9. Phasing themes (sizes and order come in part 4)
 
-- **P0, done or in flight:** school provisioning and first admin, role model, timetable and curriculum, attendance (online and the sync server), assessment set-up and mark entry (S1 A1 to A3), admin-deny rules, vocabulary, the SOP customer path.
-- **P1, the pilot floor:** assessment approval, totals, report cards and promotion (the product's core); fees through SOP; Staff-and-roles screen; guardians and contacts; staff records; student bio-data and health; documents core; SMS to guardians; standard reports; the offline client for attendance and marks; privacy basics (consent, retention); parent portal basics (WEB).
+- **P0, done or in flight:** school provisioning and first admin, role model, timetable and curriculum, attendance (online; the sync server's idempotent ledger stays), assessment set-up and mark entry (S1 A1 to A3, live as ER :100), admin-deny rules, vocabulary, the SOP customer path with its idempotency key, the schools-row and DPID-binding checks (in log mode; **not** to be enforced until Femi's readout of `docs/reports/ER_Enforcement_Readiness_Query.sql`).
+- **P1, the pilot floor:** assessment approval, totals, report cards and promotion (the product's core); fees through SOP; Roles-and-access screen; guardians and contacts; staff records; student bio-data and health; documents core; messages to guardians (D25); standard reports; privacy basics (consent, retention); parent portal basics (WEB). (The offline client for attendance and marks is **dropped**, 2026-10-15.)
 - **P2:** external exams, boarding, WhatsApp, statutory returns for Nigeria, Sierra Leone and Liberia packs, lesson attendance reports.
 - **LATER (country-triggered), not in the Nigeria or Sierra Leone packs:** safeguarding and child-protection workflows, access rules and the safeguarding status read; brought forward when a country pack or customer requires them (Femi, 2026-10-13). What is built stays as it is: restricted notes, flags, field masking, the access log. The built-but-parked change (admin alone loses access) is on the Education Runtime branch `feature/safeguarding-admin-deny` (cf1c711) and is **not** being reviewed or released.
 - **P3:** Ghana, The Gambia, Guinea, Côte d'Ivoire packs, ministry-scale deployments, analytics, UK variant.
@@ -126,20 +128,23 @@ Payroll and HR performance (HR owns them); a learning management system, homewor
 
 | # | Decision | Recommendation | State |
 |---|---|---|---|
-| D1 | **Pilot shape**: first pilot at a school with confirmed good connectivity (online-only acceptable, offline built in parallel), or no pilot until the offline client covers attendance and marks | the second, because a school with real power and signal cuts is the market; but a connected first pilot is a legitimate shortcut | open |
+| D1 | **Pilot shape** | **Decided 2026-10-13 ("Both. Offline is an App"), then SUPERSEDED 2026-10-15** by the one online-only app: the first pilot is a school with confirmed workable connectivity; see D26 for the residual risk | superseded |
 | D2 | **Notifications and documents**: build as generic platform services (other runtimes need them) or inside ER first | generic ports, first implementation in ER | open |
-| D3 | **Who approves test marks** (form master, head of department, head teacher) | head of department then head teacher; form master approves attendance only | with CM (batch) |
-| D4 | **Late-sync deadline** for offline marks and attendance (D11) | a per-school setting with a conservative default | with CM (batch) |
+| D3 | **Who approves test marks** (form master, head of department, head teacher) | head of department then head teacher; form master approves attendance only | **DECIDED (Femi; relayed to the ER session 2026-10-17, Decisions_Log line owed)**: head of department then head teacher, **configurable per school** |
+| D4 | **Late-sync deadline** for offline marks and attendance | was a per-school setting | **moot** (2026-10-15: no offline sync); the mark deadline is compared with the server's receive time |
 | D5 | **First country pack**: Nigeria reference, or Sierra Leone first | Nigeria is the spec's reference; Sierra Leone is the stated Mano River arrowhead: choose, because the exam and census packs differ | open |
 | D6 | **Tuition VAT category and over-term revenue recognition** | Finance decides per jurisdiction; do not default | with CM (batch) |
 | D7 | **Boarding in the first phases?** | no, P2, unless the pilot school boards | open |
 | D8 | **Clearance policy**: may a school withhold report cards for unpaid fees | no default, needs counsel and a per-country rule | open |
 | D9 | **Contracting entity and processor role** for children's data | needs counsel; scoped before the first paying school | open |
 | D10 | **Statutory returns**: who obtains the formats from local partners | the country lead named by Femi, ER specifies | open |
-| D11 | **Positions and rankings default** (on or off) and **promotion criteria defaults** | off by default, school-configurable | open |
+| D11 | **Positions and rankings default** (on or off) and **promotion criteria defaults** | (was: off by default) | **DECIDED (Femi; relayed to the ER session 2026-10-17, Decisions_Log line owed)**: positions stay **ON by default**, school-configurable; promotion defaults to the **overall average plus the compulsory subjects** |
 | D12 | **Staff: employ once through HR**, ER keeps only the teaching record | yes | open |
+| D24 | **Do ER school roles (duties) fall under the access-change approval rule** (Personnel P8: a delegate raises, only the Business Owner approves)? Today the school admin grants ER duties directly | ER's reading: P8 covers EA's invite, roles, modules and remove; ER duties follow once that request flow exists, and until then the admin keeps granting (Femi 2026-10-15: delegates keep acting directly). EA and CM to confirm the reading before it is put to Femi | open |
+| D25 | **Guardian messages: email first, push later** (decided for the app's notifications 2026-10-15). Does "email first" also govern guardian messaging, where the spec assumes SMS and the SMS account is blocked? | an email adapter first in the notifications port, SMS when the account exists; many guardians may have no email, so SMS stays the target channel | open |
+| D26 | **Online-only and schools with power and signal cuts**: with no offline entry, what does a school do on a day with no signal (register and marks on paper, entered later)? Is a paper fallback the accepted answer for the pilot, and is any short outbox of not-yet-sent entries allowed (CM's 2026-10-15 reading says none; Femi has not confirmed) | paper fallback for the pilot, pick a school with workable connectivity, ask Femi only if a pilot school cannot meet that | open |
 
-Items already with CM's batch (D3, D4, D6) are not asked again.
+D3, D4, D11 and D1 are closed above. D6 is decided (Part 4 section 6).
 
 ## 11. Contributors and review
 
