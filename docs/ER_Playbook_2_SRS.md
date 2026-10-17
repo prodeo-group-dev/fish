@@ -1,6 +1,6 @@
 # Education Runtime Playbook, part 2 of 4: Plan / Software Requirements (P)
 
-**Status:** DRAFT, 2026-10-13, planning only; nothing is built before Femi approves the whole Playbook (parts 1 to 4 together). Part 1 (Scope) is `docs/ER_Playbook_1_Scope.md` (merged). Written by the Education Runtime (+ER) session. Evidence tags as in part 1: **[code]** read in `fish-education-runtime` on 2026-10-13, **[spec]** technical specification v0.1, **[decided]** recorded Femi decision, **[TBC]** unverified or undecided.
+**Status:** DRAFT, 2026-10-13, planning only; nothing is built before Femi approves the whole Playbook (parts 1 to 4 together). Part 1 (Scope) is `docs/ER_Playbook_1_Scope.md` (merged). Written by the Education Runtime (+ER) session. **Revised 2026-10-17** (see `docs/ER_Playbook_Review_2026-10-17.md`): offline requirements are superseded by the online-only banking-style app (Decisions_Log 2026-10-15), D3 and D11 are decided, the payroll rows follow the 2026-10-15 and 2026-10-16 payroll decisions, and the data-fix gate is retired. Evidence tags as in part 1: **[code]** read in `fish-education-runtime` on 2026-10-13, **[spec]** technical specification v0.1, **[decided]** recorded Femi decision, **[TBC]** unverified or undecided.
 
 **How this part relates to the specification.** The v0.1 spec (230 requirements) stays the requirements source. This part does not copy it. It (1) **selects** what the Playbook commits to, per area, with the spec id; (2) **corrects** the spec where the code, a decision or the platform contradicts it (section 2); (3) adds the **requirements the spec does not have** because the platform changed (no duplication, tuition through SOP, runtime rules); (4) **marks the gates**: what CM must review before any build.
 
@@ -33,18 +33,18 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 
 | # | New permission or rule | Requirement | Flag (default OFF) | Where | Default holders (to confirm) | Condition to switch ON |
 |---|---|---|---|---|---|---|
-| E1 | **Set pay basis**, **run payroll**, **approve a pay run** (three separate; preparer is not the approver) | PL-STF-9 | `HR_ENFORCE_PAY_SPLIT` | HR, EA | Proprietor and HR officer set basis; accountant or bursar run; a different person approves | Pay basis on the employment record built; HR's run and approve are separate steps; the Payroll screen is split by division; UAT passed |
+| E1 | **Set pay basis**, **run payroll**, **approve a pay run** (three separate; preparer is not the approver) | PL-STF-9 | `HR_ENFORCE_PAY_SPLIT` | HR, EA | **Updated 2026-10-15/16 (owned by HR and EA, mirrored here):** changes to a person's pay basis, pay rate, frequency and bank details are **Owner Admin only** (Q3); the new PAYROLL module is granted at the switch to **Owner Admins and Accountants only**; a preparer may reject their own run but never approve it, and the Owner may approve their own, flagged self-approved | Move 1 of the HR/Payroll split built (two modules in HR, then Payroll (PAY) as its own service before the Live switch); the Payroll screen under Finance and Personnel under Administration; the switch-day checklist warns each Tenant who loses Pay runs; UAT passed |
 | E2 (LATER, parked) | **Break-glass for safeguarding records** (access with a reason, time-limited, alert to the safeguarding group); **the deny itself is not flagged**: D13 is decided and the admin alone loses access as an add-a-deny now (see `ER_Safeguarding_Admin_Deny_Note.md`) | PL-SAF-1 | `ER_ENFORCE_SAFEGUARDING_BREAK_GLASS` | ER | safeguarding lead, pastoral lead | the Roles-and-access screen is live and each school has a lead appointed; break-glass built |
 | E3 | **Admin loses the student writes** (create, CSV, photo, transfer, identity link) | PL-ADM-5, D14 | `ER_ENFORCE_ADMIN_STUDENT_WRITE_DENY` | ER | registrar (and an admin who also holds REGISTRAR) | the Roles-and-access screen is live and every school has a registrar; at the dev-to-Live switch |
-| E4 | **Form-master approval of the register** (arm-scoped teacher, delegable) | PL-CLS-3, PL-ATT-8 | `ER_ENFORCE_FORM_MASTER_APPROVAL` | ER | the form master of the arm | the arm-scoped assignment exists and each arm has one; **D3**-style default confirmed |
-| E5 | **Result approval chain and locking** (published marks locked; changes need approval) | PL-ASM-4 | `ER_ENFORCE_RESULT_APPROVAL` | ER | per **D3** (head of department then head teacher, proposed) | approvers assigned per school; **D3** decided; report-card publication built |
-| E6 | **Promotion approval** by the head teacher | PL-ASM-9 | `ER_ENFORCE_PROMOTION_APPROVAL` | ER | head teacher | promotion run built; **D11** defaults decided |
+| E4 | **Form-master approval of the register** (arm-scoped teacher, delegable) | PL-CLS-3, PL-ATT-8 | `ER_ENFORCE_FORM_MASTER_APPROVAL` | ER | the form master of the arm | the arm-scoped assignment exists and each arm has one (the form master approves attendance only; **D3** decided: test marks go to the head of department, then the head teacher) |
+| E5 | **Result approval chain and locking** (published marks locked; changes need approval) | PL-ASM-4 | `ER_ENFORCE_RESULT_APPROVAL` | ER | per **D3, decided**: head of department, then head teacher, configurable per school | approvers assigned per school; report-card publication built |
+| E6 | **Promotion approval** by the head teacher | PL-ASM-9 | `ER_ENFORCE_PROMOTION_APPROVAL` | ER | head teacher | promotion run built (**D11** decided: overall average plus compulsory subjects by default) |
 | E7 | **Contact restrictions block release and pickup** (court orders) | PL-CON-6 | `ER_ENFORCE_CONTACT_RESTRICTIONS` | ER | safeguarding lead, head teacher see detail | the contacts model is live; restricted flags captured for existing students |
 | E8 | **Vetting data visible only** to the head teacher, safeguarding lead, admin | PL-STF-4 | `ER_ENFORCE_VETTING_VISIBILITY` | ER | as stated | the teaching record is live |
 | E9 | **Document sensitivity levels** (a document inherits its record's permission plus a type level) | PL-DOC-2 | `ER_ENFORCE_DOCUMENT_SENSITIVITY` | ER | by document type | documents port built (**D2**) |
 | E10 | **Segregation of duties in fees** (who records a payment cannot approve a waiver or void a receipt) | PL-FEE-10 | `ER_ENFORCE_FEE_SEGREGATION` | ER | bursar approves, fee officer records | waivers and receipts built; **D8** decided |
 | E11 | **Export of restricted fields** needs the field permission and is logged | PL-RPT-4 | `ER_ENFORCE_EXPORT_FIELD_RESTRICTIONS` | ER | by field | the logging is built (it is not behind a flag); standard reports built |
-| E12 | **Service-account scope** for sales, collections and reads at SOP, and the school rule | PL-FEE-2, 3, 7 | existing audience switch (unset audience refuses every ER token) | SOP, EA | the Education Runtime service account | the **data fix** (real school Companies correct in EA), the EA route live, and CM says so; already a deliberate switch |
+| E12 | **Service-account scope** for sales, collections and reads at SOP, and the school rule | PL-FEE-2, 3, 7 | existing audience switch (unset audience refuses every ER token) | SOP, EA | the Education Runtime service account | the EA industry route and the SOP school rule live; **the Education industry flag is the definition of a school** (Femi 2026-10-13), so the earlier pre-switch data fix is **retired as a gate** (a Company that should be a school but lacks the flag is corrected case by case) |
 | E13 | **Guardian sign-in** (phone and one-time code) and **MFA for school staff** | PL-PRT-1, PL-SET-4 | the owner-MFA flags (existing pattern) | CM, EA, ER | n/a | the Live switch (decided); SMS or Cognito phone path available |
 
 **Rules for the list.** A flag's name and its switch-on condition are written into the task that builds the feature; the task's definition of done includes "listed in this table"; CM's Live-switch checklist is regenerated from this table so it cannot drift; removing a flag (enforcement permanent) is a CM-reviewed change. Anything that **tightens** a check without a flag (an add-a-deny) is allowed inside the freeze only with CM's review, as today. Where a requirement above lists a gate, it is reviewed by CM **before the feature is built**, and again **before its flag is turned on**.
@@ -56,7 +56,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | C1 | **FIN-INT** is a two-way event bus (StudentEnrolled, BillingRunRequested, PaymentReceived and others) with a FiSH core that owns the billing account | Femi: ER does not duplicate SOP; SOP creates income. SOP is the FiSH core for tuition (MVP definition, design note Part 3). SOP has direct sale and collection routes, not that event set | ER calls SOP's credit-sale and collection routes directly, one idempotency key per invoice and per payment; the event bus is **not** built; the outbox relay carries non-financial events only. FIN-INT-001 to 009 and 011 are re-expressed as PL-FEE-1 to PL-FEE-9 |
 | C2 | NFR-RBAC-004: "Administrators do not automatically get child protection access" | **[code]** `canAccessSafeguarding` includes SCHOOL_ADMIN | proposed deny: the admin loses safeguarding by default and gets it only with SAFEGUARDING_LEAD or PASTORAL_LEAD, or a logged break-glass (NFR-RBAC-005); this is **PL-SAF-1** ⚑ and a decision for Femi |
 | C3 | ER-ATT-001: the form master takes the register per arm | **[code]** no form master is modelled; attendance is gated by role only | model the form master as a teacher assigned to an arm (PL-CLS-3) ⚑; **[decided]** attendance approval is the form master's, delegable |
-| C4 | ER-ASM-004: teacher, form master, principal approve results | **[decided]** the form master is **not** the default approver of test marks; the approver is open (D3 with CM) | the approval chain is configurable per school; default settles with D3 (PL-ASM-4) ⚑ |
+| C4 | ER-ASM-004: teacher, form master, principal approve results | **[decided]** the form master is **not** the default approver of test marks; the approver is **decided (D3, relayed 2026-10-17)**: head of department, then head teacher | the approval chain is configurable per school with that default (PL-ASM-4) ⚑ |
 | C5 | ER-STF-001 holds contact details, next of kin, start and exit dates | **[decided]** staff are employed once through HR; HR owns employment | ER holds only the **teaching record** (subjects, arms, registration, vetting, expiry); contacts and employment come from HR by reference (PL-STF-1 to 5) |
 | C6 | NFR-SEC-003: MFA mandatory for privileged and finance roles | **[decided]** Owner MFA policy parked until the Live switch; flags stay off | MFA is a Live-switch item, not a pilot-floor requirement; PL-SET-4 is phased accordingly |
 | C7 | ER-CLS-008 multi-campus within one tenant | **[decided]** one school per Company (D-ER5) | a campus is a school Company in the same Tenant; groups are a Tenant-level view (PL-SET-6) ⚑ |
@@ -66,6 +66,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | C11 | NFR-HST: in-country or regional hosting options | **[code]** one AWS region (London) for every service | residency per country is parked (Localization Principle); PL-PRV-7 records it, no build |
 | C12 | NFR-SEC-003 phone + OTP login for parents | **[code]** guardians sign in through the platform identity today | the OTP login is a platform authentication change (PL-PRT-1) ⚑, not an ER feature |
 | C13 | NFR-RBAC-003 scoped access (teacher sees own subjects and arms; house master sees house) | **[code]** a plain TEACHER is scoped to assigned lessons for roster and curriculum; houses do not exist | extend the same scoping rule to marks and attendance corrections; house scoping arrives with houses (P2) |
+| C14 | NFR-OFF-001 to 003 and ER-ATT-002: offline write-capable (Must), per-entity conflict rules, local-first architecture | **[decided 2026-10-15]** one online-only banking-style app for every role: no offline cache, local database or outbox; documents may be downloaded as PDF | the offline requirements are **dropped, not deferred**; idempotent retry stays (PL-ATT-2, section 5); the residual connectivity risk is D26 |
 
 ## 3. Requirements by area
 
@@ -117,7 +118,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | PL-STF-6 | Expiry reminders for registrations, checks, contracts | STF-006 | ER | P2 | | none |
 | PL-STF-7 | Staff data for ministry returns | STF-007 | ER | P2 | | none |
 | PL-STF-8 | **Staff division** (Femi 2026-10-13, superseding the earlier kinds): every staff member belongs to a **division**, **Operations** (teaching), **Administrative** (the Registry; the Proprietor is shown above), **Finance**, an attribute of the **HR employment** carried in the EA push to ER; shown inside the three existing tabs, **no fourth top-level tab**; a person appears in every division where they hold a role, payroll in the primary one; only Operations staff have a teaching record | (Femi) | G:HR, G:EA, ER, WEB | P1 | | not modelled: HR carries only staff, teacher, non-teaching staff |
-| PL-STF-9 | **Payroll split** (Femi 2026-10-13: the basis of a pay is Administrative, the pay run is Financial, "RBAC"): the **pay basis** (time, piece, contract or salary) is a field on the HR employment record set by an Administrative permission; the **pay run** (run, approve, post) is Finance with a separate permission; setting a basis never implies running payroll, and the preparer of a run is not its approver; HR owns it, ER only displays the division | (Femi) | G:HR, G:EA, WEB | P1 | ⚑ | to be confirmed by HR: what the employment record holds today; **HR facts**: pay basis today is employment type SALARIED (rate per frequency), HOURLY or UNPAID, with **no piece-rate, contract or commission basis yet**; run and approve are separate today, approve is Owner-Admin only, and preparer-not-approver is **not enforced** |
+| PL-STF-9 | **Payroll split** (**approved 2026-10-15 and started 2026-10-16**: Payroll (PAY) and Human Resources (HR), the HR area is named **Personnel**; HR Move 1 is in progress; pay-basis, rate, frequency and bank changes are Owner Admin only; owned by HR and EA, ER only displays the division) (Femi 2026-10-13: the basis of a pay is Administrative, the pay run is Financial, "RBAC"): the **pay basis** (time, piece, contract or salary) is a field on the HR employment record set by an Administrative permission; the **pay run** (run, approve, post) is Finance with a separate permission; setting a basis never implies running payroll, and the preparer of a run is not its approver; HR owns it, ER only displays the division | (Femi) | G:HR, G:EA, WEB | P1 | ⚑ | to be confirmed by HR: what the employment record holds today; **HR facts**: pay basis today is employment type SALARIED (rate per frequency), HOURLY or UNPAID, with **no piece-rate, contract or commission basis yet**; run and approve are separate today, approve is Owner-Admin only, and preparer-not-approver is **not enforced** |
 
 ### 3.5 School structure, timetable and curriculum (ER-CLS)
 
@@ -137,7 +138,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | ID | Requirement | Spec | Owner | Ph | Gate | State |
 |---|---|---|---|---|---|---|
 | PL-ATT-1 | Daily register per arm with configurable status codes (nine-code table) | ATT-001 | ER | done | | built |
-| PL-ATT-2 | Works fully offline on a registered device and syncs later with no loss | ATT-002, OFF-001 | ER | P1 | | server side built; client not |
+| PL-ATT-2 | ~~Works fully offline on a registered device and syncs later with no loss~~ **SUPERSEDED 2026-10-15** (one online-only banking-style app: no offline cache, no local database, no outbox). Replaced by: a register entry is **acknowledged or visibly failed**, never silently lost, and a retry never double-applies (idempotency key) | ATT-002, OFF-001 | ER | P1 | | idempotent push ledger built and kept; offline client dropped |
 | PL-ATT-3 | Absence reasons, lateness time, **correction with a reason**, original mark and audit kept | ATT-003, 008 | ER | P1 | | replace-on-remark exists; reasons not |
 | PL-ATT-4 | Lesson-by-lesson attendance by subject teachers with a flag for present at registration but absent from a lesson | ATT-004 | ER | P2 | | lesson attendance built; flag not |
 | PL-ATT-5 | Same-day notice to guardians of unexplained absence (configurable) | ATT-005 | ER + G:messaging | P1 | | none |
@@ -152,13 +153,13 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 |---|---|---|---|---|---|---|
 | PL-ASM-1 | Score structure per level and term: CA components, weights, exam weight, total validated to 100 | ASM-001 | ER | done | | built (S1 A1) |
 | PL-ASM-2 | Grading scales per level and country with bands and remarks | ASM-002 | ER | done | | built (S1 A1) |
-| PL-ASM-3 | Mark entry per subject offering and class: range validation, history never deleted, idempotent offline replay, a submission deadline | ASM-003 | ER | done | | built; deadline rule is D4 |
-| PL-ASM-4 | **Approval workflow** and locking: configurable chain; published results are locked; changes after locking need approval and are audited | ASM-004 | ER | P1 | ⚑ | not built (S1 A4; approver is D3) |
-| PL-ASM-5 | Totals, averages, subject and class positions, highest, lowest, average per subject; positions switchable off per school or level | ASM-005 | ER | P1 | | none |
+| PL-ASM-3 | Mark entry per subject offering and class: range validation, history never deleted, idempotent retry, a submission deadline | ASM-003 | ER | done | | built; the deadline is compared with the server's receive time (D4 is moot, no offline sync) |
+| PL-ASM-4 | **Approval workflow** and locking: configurable chain, **default head of department then head teacher (D3, decided)**; published results are locked; changes after locking need approval and are audited; the Owner is the final authority if no eligible approver remains | ASM-004 | ER | P1 | ⚑ | not built: nothing can leave SUBMITTED today and the lock text wrongly says form master (see `ER_Assessment_Cycle_Build_Spec_A1_A5.md`) |
+| PL-ASM-5 | Totals, averages, subject and class positions, highest, lowest, average per subject; **positions ON by default (D11, decided)**, switchable off per school or level | ASM-005 | ER | P1 | | per-offering totals and positions built (positions default ON in code already); whole-term view not built |
 | PL-ASM-6 | Affective and psychomotor ratings with configurable scales | ASM-006 | ER | P1 | | none |
 | PL-ASM-7 | Report cards per term and a cumulative or annual one, from configurable templates; PDF; the fee line is configurable | ASM-007 | ER | P1 | | none |
 | PL-ASM-8 | Broadsheets per arm and level | ASM-008 | ER | P1 | | none |
-| PL-ASM-9 | Promotion, repeat and probation at session end by configurable criteria, head-teacher approval, guardian notice | ASM-009 | ER | P1 | ⚑ | none |
+| PL-ASM-9 | Promotion, repeat and probation at session end by configurable criteria (**default: overall average plus the compulsory subjects**, D11 decided; subjects-passed count and attendance are optional extras), head-teacher approval, guardian notice | ASM-009 | ER | P1 | ⚑ | none |
 | PL-ASM-10 | Performance analytics by subject, arm, teacher and term; SPI and TPI (formulae blocked, O1) | ASM-011 | ER | P2 | | blocked |
 | PL-ASM-11 | **Who enters**: teachers including head teacher, HOD, HOY; never the admin alone or the bursar (decided) | (decided) | ER | done | | enforced |
 
@@ -185,7 +186,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | PL-FEE-9 | Scholarships, bursaries, discounts, waivers: ER owns eligibility and approval; SOP posts credit | FEE-006, 009 | ER + G:SOP | P2 | ⚑ | none |
 | PL-FEE-14 | **Third-party payer**: a sponsor, employer or church may pay a guardian's invoice; the **guardian stays the customer** and the sponsor is the payer of a collection applied to the invoice, recorded as payer party and reference; the guardian statement shows who paid (Femi, 2026-10-13); depends on SOP's additive payer field | FEE-003 | ER + G:SOP | P2 | ⚑ | none; SOP field not yet defined |
 | PL-FEE-10 | Clearance policy (C10), segregation of duties between recording and approving | FEE-008, 009 | ER | P2 | ⚑ | decision D8 |
-| PL-FEE-11 | Offline cash receipt: provisional receipt from a pre-allocated number range, posted on sync | FIN-INT-013 | ER + G:SOP | P2 | ⚑ | none; needs a SOP number-range design |
+| PL-FEE-11 | ~~Offline cash receipt: provisional receipt from a pre-allocated number range, posted on sync~~ **SUPERSEDED 2026-10-15** (no offline entry, no outbox): a cash payment is recorded online at the desk, verified, then posted; on a no-signal day the school keeps a paper record and enters it later (see D26) | FIN-INT-013 | ER + G:SOP | dropped | | none |
 | PL-FEE-12 | Online and mobile-money payment: a payment-provider integration the platform does not yet have (O3) | FEE-003, 010 | G:SOP | P2 | ⚑ | blocked |
 | PL-FEE-13 | Who: fee desk is the bursar and fee officer; admin has a read-only view (decided) | (decided) | ER | done | | enforced |
 
@@ -207,7 +208,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | PL-DOC-1 | Attach, version and retention-tag documents on students, staff and contacts; type allow-list and size limit; malware scan | DOC-001 to 005 | G:documents (ER first) | P1 | | none |
 | PL-DOC-2 | Document types are the school's (birth certificate, transfer letter, testimonial); permission inherits the record's, plus a sensitivity level | DOC-001, 006 | ER | P1 | ⚑ | none |
 | PL-DOC-3 | Transcripts and testimonials generated with a verification code | DOC-007 | ER | P2 | | none |
-| PL-DOC-4 | Camera capture with offline queueing | DOC-008 | ER | P2 | | none |
+| PL-DOC-4 | Camera capture, online (the offline queueing is dropped, 2026-10-15) | DOC-008 | ER | P2 | | none |
 
 ### 3.12 Safeguarding, discipline and pastoral (ER-SAF)
 
@@ -216,9 +217,9 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 | PL-SAF-1 | **LATER, parked (Femi 2026-10-13: safeguarding deprioritised; not required in Nigeria or Sierra Leone): built on branch `feature/safeguarding-admin-deny`, not reviewed or released.** **Safeguarding access** (D13 decided by Femi 2026-10-13): **the school admin alone loses it** as an add-a-deny now, by removing SCHOOL_ADMIN from `canAccessSafeguarding` (SAFEGUARDING_LEAD and PASTORAL_LEAD only; an admin who also holds a lead role keeps it); the head teacher does **not** have it today and gaining it is the separate decision D13b; **break-glass** (logged, time-limited, alerting the group) is a later feature behind flag E2 | RBAC-004, 005 | ER | LATER | ⚑ | admin has it today |
 | PL-SAF-2 | Restricted pastoral and discipline notes with visibility levels; a "speak to the safeguarding lead" marker for other staff | SAF-001, 002 | ER | LATER (partly built) | | restricted notes, flag, masking and access log built |
 | PL-SAF-3 | Incident reporting with referral steps and escalation timestamps | SAF-003 | ER | LATER | | none |
-| PL-SAF-4 | Gate and visitor log, offline | SAF-004 | ER | LATER | | none |
+| PL-SAF-4 | Gate and visitor log (online; the offline part is dropped, 2026-10-15) | SAF-004 | ER | LATER | | none |
 | PL-SAF-5 | Pickup verification against authorised persons, optional one-time code by SMS; unauthorised attempts alerted | SAF-005 | ER | LATER | ⚑ | needs PL-CON-4 |
-| PL-SAF-6 | Evacuation and emergency list generated offline | SAF-006 | ER | LATER | | none |
+| PL-SAF-6 | Evacuation and emergency list **generated as a PDF the school downloads or prints ahead of time** (the sanctioned deliberate copy, Decisions_Log 2026-10-15), not an offline cache | SAF-006 | ER | LATER | | none |
 | PL-SAF-7 | Suspensions and expulsions with approvals and guardian notice; missing-student workflow | SAF-008, 009 | ER | LATER | | none |
 
 ### 3.13 Reporting, search and statutory returns (ER-RPT, ER-IMP)
@@ -251,11 +252,11 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 |---|---|---|---|---|---|---|
 | PL-SET-1 | School provisioned by EA (school id, organisation id) and a first admin set by EA, both idempotent | | G:EA, ER | done | | built |
 | PL-SET-2 | School profile and settings (levels, terms, grading, positions on or off, fee line on report cards) as configuration packs per country | CLS-001 | ER | P1 | | none |
-| PL-SET-3 | **A Roles-and-access screen under School Administration** (was "Staff-and-roles screen") so an admin can give roles (today API only); a brand-new school cannot grade or bill until roles are assigned | | ER, WEB | P1 | ⚑ | no screen |
+| PL-SET-3 | **A Roles-and-access screen under School Administration** (was "Staff-and-roles screen") so an admin can give roles (today API only); a brand-new school cannot grade or bill until roles are assigned. Open **D24**: whether granting an ER duty falls under the Business-Owner-approves access rule (Personnel P8); until that flow exists delegates keep acting directly (Femi 2026-10-15) | | ER, WEB | P1 | ⚑ | no screen |
 | PL-SET-4 | MFA for school staff on privileged and finance roles (Live-switch item, C6) | SEC-003 | G:EA | Live | ⚑ | parked |
 | PL-SET-5 | Termly access review report and prompt removal of leavers; the closed role list and the last-admin guard stay | RBAC-006 | ER | P1 | ⚑ | guard built |
 | PL-SET-6 | Multi-school groups: a Tenant view across school Companies (C7); every read stays per Company. **No EA build**: `GET /api/me` already lists them; WEB lists and calls ER per school; a group head holds an assignment in each school (corrected 2026-10-13) | CLS-008 | WEB | P2 | ⚑ | none |
-| PL-SET-7 | Registered devices: register, revoke, wipe offline data remotely | SEC-006 | ER | P1 | | register and revoke built; wipe not |
+| PL-SET-7 | Registered devices: register and revoke (attendance reader device accounts); **the remote wipe of offline data is dropped** (nothing is persisted on a device since 2026-10-15) | SEC-006 | ER | P1 | | register and revoke built |
 | PL-PRV-1 | Lawful basis recorded per data category; children under 18; guardian consent where consent is the basis | PRV-002, 003 | ER | P1 | | none |
 | PL-PRV-2 | Retention schedule by record type per country (defaults TBC); disposal review list | PRV-006 | ER | P1 | | none |
 | PL-PRV-3 | Data-subject requests: access, correction, erasure, restriction, portability, with a log and per-country deadlines | PRV-005 | ER | P2 | | none |
@@ -267,7 +268,7 @@ Priority is the spec's (Must, Should, Could) unless the row says otherwise. Role
 
 ## 4. RBAC matrix (capability model: V view, E enter, A approve, M administer; blank = none)
 
-Decided cells are marked †; others are proposals for D3 and the freeze process.
+Decided cells are marked † (D3 was decided, relayed to the ER session 2026-10-17: head of department, then head teacher); others are proposals for the freeze process.
 
 | Area | ADMIN | HEAD | HOD / HOY | TEACHER | REGISTRAR | ADM. OFFICER | TIMETABLER | BURSAR / FEE OFFICER | SAFEGUARDING / PASTORAL | GUARDIAN |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -278,7 +279,7 @@ Decided cells are marked †; others are proposals for D3 and the freeze process
 | Structure, timetable | V† | V | V | V | | | E M | | | V (timetable of child) |
 | Curriculum | V† | V A | V E | E† | | | | | | |
 | Attendance | V | V | E (+ approve, form master†) | E† | | | | | V | own child |
-| Marks | V | A (D3) | E A (D3) | E† | | | | | | published only |
+| Marks | V | A (D3†) | E A (D3†) | E† | | | | | | published only |
 | Report cards, promotion | V | A | V | V | | | | | | own child, published |
 | Fees | V† | V | | | | | | E† M† | | own invoices |
 | Safeguarding | proposed none by default (C2) ⚑ | V | | marker only | | | | | V E M | none |
@@ -286,9 +287,11 @@ Decided cells are marked †; others are proposals for D3 and the freeze process
 | Reports and exports | V | V | V | own classes | V | V | | finance reports | restricted | |
 | Roles and devices | M | | | | | | | | | |
 
-## 5. Offline and low-bandwidth requirements per entity
+## 5. Connectivity and low-bandwidth requirements (online-only since 2026-10-15; the earlier per-entity offline table is superseded)
 
-Which entities work offline, queue, or need a connection, and the conflict rule (spec NFR-OFF-003 sketch; the final rule per entity is a design pass in part 4):
+**Superseded 2026-10-15** (Decisions_Log: one online-only banking-style app for every role; ER's offline server gaps S1 to S6 and the teachers' offline client are dropped). Every entity below is **online only**; the table is kept for the record of what was planned.
+
+The old plan, for the record (no longer a requirement):
 
 | Entity | Offline | Conflict rule proposed |
 |---|---|---|
@@ -301,7 +304,7 @@ Which entities work offline, queue, or need a connection, and the conflict rule 
 | Raise invoice, record verified payment, publish report cards | **online only** | |
 | Guardian contact edit | works offline | last writer wins, previous value kept |
 
-Requirements: a visible sync queue and status; resumable uploads; the late-sync deadline rule is **D4**; device clock integrity with server time recorded at sync; no loss on a power cut; low-bandwidth mode (paged lists, small payloads, compressed images); SMS fallback for critical alerts. The offline client store is a **WEB and ER joint design** (part 4).
+**Requirements that replace it:** (1) a request that is not acknowledged is shown as failed, and a retry with the same operation id never double-applies (idempotency keys stay); (2) no offline cache, no local database and no queue of unsynced entries: with no signal there is no data entry, and the screen says so plainly; (3) nothing of the school's data persists on the device except the sign-in credential in the phone's secure store (biometric or PIN unlock, access token 15 minutes, refresh 7 days, lock after about 2 minutes idle); (4) authenticated responses carry `Cache-Control: no-store, private` (a pending add-only task for ER, listed in Pending_For_Sessions); (5) a document can be downloaded as a PDF and every download is audited (CM suggestion, not yet decided); (6) notifications carry no figures or names; (7) low-bandwidth mode stays: paged lists, small payloads, compressed images, SMS fallback for critical alerts (see D25). Open: whether the web (PWA) caching in browsers follows the same rule (Decisions_Log 2026-10-15) and what a school does on a no-signal day (D26).
 
 ## 6. Children's-data requirements
 
@@ -309,7 +312,7 @@ Requirements: a visible sync queue and status; resumable uploads; the late-sync 
 |---|---|---|---|---|
 | Identity and bio-data | name, date of birth, class | staff by role; guardian own child | academic: long-term; leavers by schedule | logged ⚑ |
 | Sensitive identifiers | national ID, religion, exam numbers | masked by default | by schedule | never in bulk exports unless asked, logged ⚑ |
-| Health | allergies, conditions, medication | head teacher, admin, named staff; evacuation list offline | by schedule | restricted |
+| Health | allergies, conditions, medication | head teacher, admin, named staff; the evacuation list is a PDF the school prints ahead of time | by schedule | restricted |
 | Safeguarding and pastoral | notes, flags, referrals | safeguarding group only (C2) | longest, by law | restricted, never in SMS |
 | Photographs | student photo | staff by role | with the record; consent recorded | on request |
 | Contacts and custody | phones, court orders | by role; restricted flags | with the record | logged |
@@ -332,15 +335,15 @@ Contract rules (part 2 of the design note, R-1 to R-5): EA decides which Company
 
 ## 8. Non-functional requirements selected for the Playbook
 
-Taken from the spec and tied to what the platform decided: security (TLS, encryption at rest, device management, annual penetration test, 24-hour breach notice to the school), RBAC deny by default with field-level restriction, audit append-only, backup (RPO 24 hours and RTO 8 hours proposed, restores tested six-monthly), availability (99.5 percent in school hours proposed), performance (95 percent of online loads in 3 seconds on 3G; offline operations within 1 second; report cards for 1,000 students in 10 minutes), scalability sized in part 4 against a pilot (O5), usability and localisation (English first, French packs later), maintainability (one runtime, configuration-driven country packs), interoperability (open exports, fixtures). **Proposed targets are the spec's and are not validated.**
+Taken from the spec and tied to what the platform decided: security (TLS, encryption at rest, device management, annual penetration test, 24-hour breach notice to the school), RBAC deny by default with field-level restriction, audit append-only, backup (RPO 24 hours and RTO 8 hours proposed, restores tested six-monthly), availability (99.5 percent in school hours proposed), performance (95 percent of online loads in 3 seconds on 3G; report cards for 1,000 students in 10 minutes; the offline-operation target is dropped with the offline client), scalability sized in part 4 against a pilot (O5), usability and localisation (English first, French packs later), maintainability (one runtime, configuration-driven country packs), interoperability (open exports, fixtures). **Proposed targets are the spec's and are not validated.**
 
 ## 9. Acceptance criteria (tailored from spec section 10.2)
 
-1. P1 pilot floor: every P1 requirement demonstrated in UAT using the use-case scripts (part 3), on a low-cost Android device, offline for attendance and marks.
+1. P1 pilot floor: every P1 requirement demonstrated in UAT using the use-case scripts (part 3), on a low-cost Android device over a throttled 3G connection (online only).
 2. A full term simulated end to end: admission, attendance, scores, approval, report card, promotion; and billing, verified payment, receipt, statement, with the SOP and GL balances agreeing.
-3. Three days offline on a device, then sync with no loss and correct flagging of conflicts.
+3. A connection dropped mid-entry (register, marks, a payment record) loses nothing that was acknowledged and duplicates nothing on retry; with no signal the app says so plainly and stores no school data on the device. (Replaces the earlier three-days-offline test.)
 4. Contract tests pass for every ER-SOP and EA-ER call; no unexplained discrepancy over a two-week pilot between ER mappings and SOP.
-5. A DPIA completed and a processing agreement signed; counsel's review of the children's-data rules for the pilot country.
+5. A DPIA completed and a processing agreement signed; the children's-data rules for the pilot country reviewed by whoever Femi names (Femi decides whether and from whom; ER adds no outside-adviser gate, Decisions_Log 2026-10-16).
 6. A penetration test with no unresolved critical or high finding.
 7. Migrated students, contacts and opening balances reconcile with the source.
 8. Every gate in section 1 has CM's recorded review before its build.
@@ -349,13 +352,13 @@ Taken from the spec and tied to what the platform decided: security (TLS, encryp
 
 | Contributor | Asked |
 |---|---|
-| **SOP** | the sale and collection routes' opt-in per route; the cash-account choice; "raised by"; receipt numbering and the offline number range (PL-FEE-11); whether a payment-provider channel is planned |
+| **SOP** | the sale and collection routes' opt-in per route; the cash-account choice; "raised by"; receipt numbering (the offline number range, PL-FEE-11, is dropped with the offline client); whether a payment-provider channel is planned |
 | **EA** | confirmed 2026-10-13: provisioning and first admin as built; guardian OTP is not EA's; group view needs no EA build; MFA at the Live switch; the HR-to-ER push (PL-STF-5), and which EA Role a teacher holds |
 | **HR** | the employ-once flow and what teaching-record fields HR will not hold |
 | **GL, IM, POP** | confirm ER needs nothing from them in the first two phases |
-| **WEB** | the screen list per area (part 3) and the offline client design |
+| **WEB** | the screen list per area (part 3); the offline client design is dropped (2026-10-15), the online app's no-persist rules apply instead |
 | **CM** | the gate list in section 1, deployment and operations review, the residency position |
 
 ## 11. Next
 
-Part 3 (Use cases): the scripts that prove each P1 requirement (admission to enrolment, a day's register offline, a term's marks to a report card, a term's billing to payment, guardian view, a safeguarding note), with actors, main flow, alternates and error flows. Part 4 (Tasks and Order): dependency-ordered tasks with sizes, the safety foundations first, and the single consolidated decision list for Femi.
+Part 3 (Use cases): the scripts that prove each P1 requirement (admission to enrolment, a day's register, a term's marks to a report card, a term's billing to payment, guardian view, a safeguarding note), with actors, main flow, alternates and error flows. Part 4 (Tasks and Order): dependency-ordered tasks with sizes, the safety foundations first, and the single consolidated decision list for Femi.

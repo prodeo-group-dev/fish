@@ -1,6 +1,6 @@
 # School vocabulary: the words a school Business Owner sees
 
-**Status:** 2026-10-13, draft from the Education Runtime (+ER) session, for the WEB session to build as one label map. Docs only; nothing is built. **Words only.** Femi (Decisions_Log, 2026-10-12): "Schools should use the industry terminology such as admissions, enrollment, tuition". Hiding a module was **not** decided, so no row below removes anything; it only renames. This is the "ER supplies the vocabulary and OKs the labels" step from that entry and from the earlier navigation decision (2026-10-10: school labels stay untouched until ER OKs; this file is that OK).
+**Status:** 2026-10-13, draft from the Education Runtime (+ER) session, for the WEB session to build as one label map. **Extended 2026-10-17 with section 8: the words for every leftover business word the tester found on Sitting School (TR-8b, 15 Oct; CM triage item 5, 17 Oct), plus a list of words that are deliberately NOT changed so they stop being reported as leftovers.** Docs only; nothing is built. **Words only.** Femi (Decisions_Log, 2026-10-12): "Schools should use the industry terminology such as admissions, enrollment, tuition". Hiding a module was **not** decided, so no row below removes anything; it only renames. This is the "ER supplies the vocabulary and OKs the labels" step from that entry and from the earlier navigation decision (2026-10-10: school labels stay untouched until ER OKs; this file is that OK).
 
 ## How to read it
 
@@ -88,7 +88,7 @@ Already school words and unchanged: **The Registry** (Administration), **Admissi
 
 ## 6. Still open for Femi
 
-Nothing in this vocabulary. Answered 2026-10-13 and applied above: Enrolment (British); Buy = Purchasing (list "Purchases"); Stock = Stores; Ledger = Accounts; Profitability = Surplus; Profit and loss = Income and Expenditure; Revenue = Income; Team = **Staff**, by kind (Teaching, Administrative, Supporting, etc.). The guiding principle he gave: a school is not a hard-nosed business, so where a business word and a gentler school word both fit, use the school word.
+One small question remains (section 8, W1: whether the HR area is called Personnel or Staff in a school). Everything else is answered. Answered 2026-10-13 and applied above: Enrolment (British); Buy = Purchasing (list "Purchases"); Stock = Stores; Ledger = Accounts; Profitability = Surplus; Profit and loss = Income and Expenditure; Revenue = Income; Team = **Staff**, by kind (Teaching, Administrative, Supporting, etc.). The guiding principle he gave: a school is not a hard-nosed business, so where a business word and a gentler school word both fit, use the school word.
 
 ## 7. Staff follow the three divisions (rewrite, 2026-10-13, after Femi's correction)
 
@@ -125,3 +125,52 @@ Nothing in this vocabulary. Answered 2026-10-13 and applied above: Enrolment (Br
 - **HR sends EA a `division`** (closed value OPERATIONS, ADMINISTRATIVE or FINANCE) in place of the earlier `position` staff/teacher/non-teaching; EA declares the field before HR sends it (strict decoding). **EA pushes to the Education Runtime** `PUT /schools/{schoolId}/staff/{email}/employment` carrying employmentId, `division`, default `duties`, validFrom, validUntil, version; the division tells the Education Runtime which group the person sits in; **ER never receives HR's raw position**. `GET /me` does not change and carries no division.
 - **Default duties (decision D22, awaiting Femi):** OPERATIONS maps to the duty TEACHER (v1); ADMINISTRATIVE and FINANCE map to **no default duty**, because a registrar, bursar or fee officer is a deliberate grant by the school admin, never implied by a push. A newly employed administrative or finance person gets their invite and the Education Runtime module at read access, sits in their division, and has no duty until the admin grants one.
 - **An EA role for a person who works only in the Education Runtime (decision D23, awaiting Femi):** EA's Role enum has nothing for them; EA recommends one generic role `STAFF` (division-neutral, only the modules granted), added consumer-first (only GL decodes roles strictly). A finance person who also needs the ledger is given ACCOUNTANT in addition by the Owner Admin, not by the push. This replaces my earlier D18 (a per-duty mapping to EA modules).
+
+## 8. The remaining words, for WEB's next label increment (2026-10-17)
+
+**Who approves a word.** Femi decided (2026-10-12) that the Education Runtime supplies the school vocabulary and OKs the labels, and gave the principle: "We must use school terminology and not present schools as hard nosed businesses". The **Source** column says which kind of OK each word has: **Femi** = his own answer (quoted in the Decisions_Log); **ER, under Femi's principle** = ER's OK, which Femi can overrule at any time; **ASK FEMI** = not to be built until he answers. WEB builds every row that is not ASK FEMI. Words only; nothing is hidden or renamed in an API.
+
+### 8.1 Words to change (Sitting School showed the generic word)
+
+| Where (tester's wording) | Generic text | School text | Source |
+|---|---|---|---|
+| Header, shared by every screen | "3 companies", "Switch company", "Start your own company" | **"3 organisations", "Switch organisation", "Start your own organisation"**. Reason: the header lists *all* the person's Companies, and one person can hold a school and a business at once (the tester's login does), so "schools" would be wrong; "organisation" is Femi's own word for the thing that carries the Education flag | ER, under Femi's principle (Femi: "Any Organisation with the Education Industry flag is a school") |
+| Header | "You're the Business Owner" | **unchanged** (Femi's own address for the owner; section 3) | Femi |
+| Registrar dashboard, section heading | "Business health" | **School health** | ER (already in section 2) |
+| Dashboard intro paragraph | "...converting that spend into sales" | "...converting that spend into **fee income**" | ER, under Femi's principle (Revenue = Income, Sale = Fee) |
+| Dashboard, section heading and footnote | "Profitability"; "Profit figures are for the current open period and are not annualised" | **"Surplus"**; "**Surplus** figures are for the current open period and are not annualised" | Femi (Profitability = Surplus) |
+| Dashboard tile | "Net income" | **"Net surplus"** | ER, under Femi's principle (Surplus) |
+| Dashboard tile | "Net profit margin" | **"Surplus margin"** | ER, under Femi's principle |
+| Dashboard tile | "Shareholders' ratios" | **"Proprietor's ratios"** (a school has a Proprietor, not shareholders; section 7) | ER, under Femi's principle |
+| Needs your attention | "Finish verifying: your business details, your identity and your phone number" | "Finish verifying: **your school details**, your identity and your phone number" (matches "School (KYB)") | ER (section 3) |
+| Registrar > Personnel, heading and list | "Employees"; "Every employee's contract details - click one to edit, or use "Run payroll" to pay them." | **"Staff members"**; "Every **staff member's** contract details - click one to edit, or use "Run payroll" to pay them." | ER (section 3: Employees = Staff members) |
+| Registrar > Schools, heading | "Company profile" | **"School profile"** | ER (section 3) |
+| Registrar > Schools, field label and help | "Contact email for customers"; "The address your customers can reply to on invoices..." | "Contact email for **guardians**"; "The address **guardians** can reply to on **fee invoices**..." | ER (Customers = Guardians, Invoices = Fee invoices) |
+| Tax screen | "...applied to net profit" | "...applied to the **net surplus**" | ER, under Femi's principle (Surplus) |
+| Stores > Items description | "Every item you've set up - click one to receive, issue, transfer, or adjust stock against it." (and any "IM" wording) | "Every **store item** you've set up - click one to receive, issue, transfer or adjust it." (WEB's own note: drop the internal "IM" and "UC-SM03" references for every business) | Femi (Stock = Stores) and ER |
+| Stores, approval banner | "Stock adjustments awaiting Store Manager approval" | "**Store adjustments** awaiting Store Manager approval" | ER (section 3: Adjustments = Store adjustments) |
+| Personnel > Team tab (module codes shown) | "GL, HR, SOP, POP, IM, TAX, EDUCATION_RUNTIME" | the module words: **Accounts, Staff or Personnel (see W1), Fees & Billing, Purchasing, Stores, Tax, Education Operations** | Femi and ER (section 1) |
+
+### 8.2 Words that stay the same on purpose (please stop reporting these as leftovers)
+
+| Word | Why it stays | Source |
+|---|---|---|
+| **Business Owner** | Femi's own address for the owner | Femi |
+| **Pay runs, Salary advances, Run payroll, Payroll** | a school pays salaries exactly as a business does; they are payroll words, not industry words, and Payroll (PAY) is now a named module | Femi (module name), ER |
+| **Suppliers, Purchases, Purchase Orders, Purchasing** | Femi chose Purchasing with its list called Purchases; a school buys from suppliers | Femi |
+| **Cash flow, Money velocity, Expense velocity, Cash last 30 days, Money owed, You owe suppliers, Debt and gearing, Liquidity** | money and accounting words, not industry words | ER |
+| **Journals, Trial balance, Balance sheet, Chart of accounts, Bank reconciliation, Fixed assets, Corporate income tax** | accountants' and statutory words: a bursar or an external accountant expects them | Femi's rule (section 0) |
+
+### 8.3 Names inside the ledger: not a relabel
+
+The tester also reports "1300 Inventory", "4000 Sales Revenue", "5010 Cost of Sales", "Accounts Receivable", "Share Capital", "Dividends" on the chart of accounts and balance sheet. These are **account names stored in the Company's own chart**, owned by GL and editable by the Company; a display-only relabel in WEB would be fragile and could disagree with the books. **Recommendation (ASK FEMI, with GL):** do not relabel on display; offer a school chart template that GL seeds when a Company with the Education flag is created (for example "Stores", "Fee income", "Cost of supplies", "Fees owed", "Proprietor's capital", "Distributions"), leaving existing test Companies alone. Until Femi answers, the chart keeps the generic names. Accounting treatment is Femi's call (Decisions_Log 2026-10-16).
+
+### 8.4 One small question
+
+| # | Question | Recommendation | Status |
+|---|---|---|---|
+| **W1** | In a school, is the HR area called **Personnel** or **Staff**? Femi named it Personnel generically (2026-10-15) and Staff for school people (2026-10-13, then the three-division rule) | **Personnel** for the area under School Administration (his own, more professional word), **Staff members** for the rows and "Add staff member" for the button; "Staff" survives only as the module word in permission pickers | **ASK FEMI** (WEB keeps "Personnel" meanwhile, since that is what the generic app already shows) |
+
+### 8.5 Not a word question, listed so it is not lost
+
+The "Team" label is removed inside Personnel and replaced by per-employee "Give access" / "Remove access" plus one "Invite someone who isn't an employee" button (Femi, P1b, 2026-10-15); this is WEB's work with the Personnel rename and is not part of the school vocabulary.

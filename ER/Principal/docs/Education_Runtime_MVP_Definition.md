@@ -1,5 +1,7 @@
 # Education Runtime — MVP Definition
 
+> **Section 3 and the "offline-first vs smallest viable" tension below are SUPERSEDED 2026-10-15** (Decisions_Log: one online-only banking-style app for every role; no offline cache, database or outbox). The Floor now assumes an online client, so offline rows (attendance offline, local-first architecture, BK-NFR-8) are no longer Floor and no longer open; the choice offered at the end of that tension is settled in the direction of online-only (residual risk: Playbook D26). The test plans take their Floor from this document, so CM should re-map those rows. See `docs/ER_Playbook_Review_2026-10-17.md`.
+
 **Date:** 2026-10-01
 **Source:** `docs/FiSH-ER-Education-Runtime-Technical-Req-Spec-and-Use-Cases-v0.1.md` (v0.1, 1 Oct 2026) — 230 requirements, 14 use cases, Nigeria-reference with Mano River/Ghana/Gambia country packs. Section 10.1 proposes its own MVP scope (Nigeria pilot, private schools + one school group); this doc cross-tabs that proposed scope against the real, current state of `fish-education-runtime`, confirmed by reading the code directly, not assumed.
 

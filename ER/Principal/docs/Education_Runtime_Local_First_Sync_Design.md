@@ -1,5 +1,7 @@
 # Education Runtime — Local-First Sync Architecture Design
 
+> **SUPERSEDED 2026-10-15** (Decisions_Log: one online-only banking-style app for every role; no offline cache, database or outbox). Kept for the record and for the server pieces already built (registered devices, change feed, the claim-first idempotency ledger that makes retries safe). Do **not** build the offline client, the server gaps S1 to S6 or the late-sync rule from this document. See `docs/ER_Playbook_Review_2026-10-17.md`.
+
 **Date:** 2026-10-02
 **Status:** Design, not yet built.
 **Supersedes:** the "scope to 1-2 workflows, defer the rest" framing originally in `docs/Education_Runtime_MVP_Definition.md` §3, corrected 2026-10-01 — see that doc for the decision record.

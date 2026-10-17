@@ -1,6 +1,6 @@
 # Education Runtime Playbook, part 4 of 4: Tasks (T) and Order (O), with the consolidated decision list
 
-**Status:** DRAFT, 2026-10-13, planning only; **nothing is built until Femi approves the whole Playbook (parts 1 to 4 together).** Parts 1 to 3: `docs/ER_Playbook_1_Scope.md`, `docs/ER_Playbook_2_SRS.md`, `docs/ER_Playbook_3_Use_Cases.md`. Written by the Education Runtime (+ER) session. Evidence tags as before: **[code]**, **[decided]**, **[TBC]**. Sizes are **my estimates in builder-days of one session, unproven**: **S** up to 1 day, **M** 2 to 4, **L** 5 to 10, **XL** more than 10. They include tests, review and hand-off, and exclude waiting for other sessions or for Femi.
+**Status:** DRAFT, 2026-10-13, planning only; **nothing is built until Femi approves the whole Playbook (parts 1 to 4 together).** Parts 1 to 3: `docs/ER_Playbook_1_Scope.md`, `docs/ER_Playbook_2_SRS.md`, `docs/ER_Playbook_3_Use_Cases.md`. Written by the Education Runtime (+ER) session. **Revised 2026-10-17** (see `docs/ER_Playbook_Review_2026-10-17.md`): F11 and F12 and X5 are superseded by the online-only banking-style app (Decisions_Log 2026-10-15), D3 and D11 are decided, the F2 data fix is retired as a gate, M1 shrinks to an interim that defers to IM's effective-dated VAT category, and A1 no longer waits on the form master. Evidence tags as before: **[code]**, **[decided]**, **[TBC]**. Sizes are **my estimates in builder-days of one session, unproven**: **S** up to 1 day, **M** 2 to 4, **L** 5 to 10, **XL** more than 10. They include tests, review and hand-off, and exclude waiting for other sessions or for Femi.
 
 ## 0. Rules every task follows
 
@@ -21,18 +21,18 @@ Owner: **ER** the Education Runtime, **WEB**, **SOP**, **EA**, **HR**, **CM**. "
 
 | Id | Task | Delivers | Owner | Size | Gate | Dep |
 |---|---|---|---|---|---|---|
-| F1 | SOP idempotent customer create (key stored with request hash in the same transaction; replay returns the same Customer; a refused request spends no key); ER sends `ER-guardian-{id}`, tolerant retry on an unreadable 2xx, request and connect timeouts | PL-FEE-5, R-5 | SOP, ER | M | | design note Part 1 (cleared) |
-| F2 | EA industry route; SOP's school rule replaces `SOP_ER_COMPANY_IDS`; **data fix**: list real school Companies and correct their industry; switched on only when CM says | PL-FEE-2 prerequisite, R-1 | EA, SOP, CM | M | ⚑ | design note Part 1 (cleared) |
+| F1 | SOP idempotent customer create (key stored with request hash in the same transaction; replay returns the same Customer; a refused request spends no key); ER sends `ER-guardian-{id}`, tolerant retry on an unreadable 2xx, request and connect timeouts | PL-FEE-5, R-5 (**status 2026-10-17: ER sends the `ER-guardian-{id}` idempotency key, live in ER :100**) | SOP, ER | M | | design note Part 1 (cleared) |
+| F2 | EA industry route; SOP's school rule replaces `SOP_ER_COMPANY_IDS`; switched on only when CM says. **The pre-switch data fix is retired as a gate** (Femi 2026-10-13: "Any Organisation with the Education Industry flag is a school"; a Company lacking the flag is corrected case by case, not a blocker) | PL-FEE-2 prerequisite, R-1 | EA, SOP, CM | M | ⚑ | design note Part 1 (cleared) |
 | F3 | ER error body to `{error, detail}` (WEB briefed first), consistent across routes | spec inconsistency (EA SPUTO 2.7) | ER, WEB | S | | |
-| F4 | Contract fixtures for the two routes EA reads (`POST /schools`, `PUT /schools/{id}/first-admin`) and ER's strict decode of SOP's customer fixtures | contracts | ER, EA, SOP | S | | fish-contracts exists |
+| F4 | Contract fixtures for the two routes EA reads (`POST /schools`, `PUT /schools/{id}/first-admin`) and ER's strict decode of SOP's customer fixtures | contracts (**status 2026-10-17: ER's response fixtures and the strict decode of SOP's customer-create fixtures are live in ER :100**) | ER, EA, SOP | S | | fish-contracts exists |
 | F5 | **Audit every state-changing ER route for retry-safety** (admissions steps, enrolment, fee-schedule save, staff and device changes, class transfers); list gaps; fix the ones that can double-apply | foundations rule | ER | S to M | | |
-| F6 | **Roles-and-access screen under School Administration** plus a **capabilities read** `GET /schools/{id}/me` (what this person may do here) so WEB hides what would 403; the "no teacher or bursar yet" hint | PL-SET-3, UC-E1, UC-E11 | ER, WEB | M | ⚑ | |
+| F6 | **Roles-and-access screen under School Administration** plus a **capabilities read** `GET /schools/{id}/me` (what this person may do here, **T-ER7, cleared by CM as an additive read**) so WEB hides what would 403; the "no teacher or bursar yet" hint | PL-SET-3, UC-E1, UC-E11 | ER, WEB | M | ⚑ | open D24 on whether duties later follow the Business-Owner-approves rule |
 | F7 | **Form master** as a teacher assigned to an arm (an arm-scoped assignment, not a new global role) | PL-CLS-3, C3 | ER | S to M | ⚑ | F6 |
 | F8 | **LATER, parked (built, not released; D13 and D13b off the open list).** **Safeguarding access**: remove SCHOOL_ADMIN from `canAccessSafeguarding` (add-a-deny now, CM review, no flag; see `ER_Safeguarding_Admin_Deny_Note.md`); break-glass later behind flag E2 | PL-SAF-1, C2 | ER | S | ⚑ | D13 decided |
 | F9 | Audit extension: log exports, permission changes, score changes after locking, payment actions, views of restricted records; kept six years (proposed) | PL-AUD-1, PL-RPT-4 | ER | M | | |
 | F10 | **Privacy model**: lawful basis per data category, consent records (what, when, how, who), retention schedule per record type, field switches per school and country | PL-PRV-1, 2, PL-CON-5, PL-ENR-3 | ER | M | | |
-| F11 | **Offline mobile app design pass: DONE and approved by Femi 2026-10-13** (`ER_Offline_Mobile_App_Design.md`: v1 scope accepted, the six server gaps accepted, prefetch first, technology B decided) | PL-ATT-2, Part 2 section 5 | ER, WEB | S | | done |
-| F12 | **Offline mobile app**, scope as approved: the server side in the order of design note section 3.1 (S2 prefetch, S4 handshake, S3 JSON push, S1 change feed, S5 limits; S6 shared phones deferred; about 9 to 10 days) and WEB's client (a native shell around the same React app with encrypted local storage), attendance register first, then mark entry, then roster and timetable lookups; the build, signing and distribution plan is CM's | PL-ATT-2, PL-ASM-3, UC-E4, UC-E5 | WEB, ER, CM | L | | F11 done; D4 |
+| F11 | ~~Offline mobile app design pass~~ **SUPERSEDED 2026-10-15.** Approved 2026-10-13 (`ER_Offline_Mobile_App_Design.md`), then replaced by Femi's decision of one online-only banking-style app for every role (no offline cache, database or outbox); the document is kept for the record only | PL-ATT-2, Part 2 section 5 | ER, WEB | S | | superseded |
+| F12 | ~~**Offline mobile app**~~ **DROPPED 2026-10-15** (server gaps S1 to S6 parked, no teachers' offline client; WEB re-plans the one online app per its own SPUTO). Scope as it stood before the change: the server side in the order of design note section 3.1 (S2 prefetch, S4 handshake, S3 JSON push, S1 change feed, S5 limits; S6 shared phones deferred; about 9 to 10 days) and WEB's client (a native shell around the same React app with encrypted local storage), attendance register first, then mark entry, then roster and timetable lookups; the build, signing and distribution plan is CM's | PL-ATT-2, PL-ASM-3, UC-E4, UC-E5 | WEB, ER, CM | L | | dropped |
 
 ### Core student and family (C)
 
@@ -51,11 +51,11 @@ Owner: **ER** the Education Runtime, **WEB**, **SOP**, **EA**, **HR**, **CM**. "
 
 | Id | Task | Delivers | Owner | Size | Gate | Dep |
 |---|---|---|---|---|---|---|
-| A1 | **Approval chain and locking** (configurable; changes after locking need approval and are audited) | PL-ASM-4 | ER | M | ⚑ | F7, F9, **D3** |
-| A2 | Totals, averages, subject and class positions (switchable off), highest, lowest, average per subject | PL-ASM-5 | ER | M | | A1 |
+| A1 | **Approval chain and locking** (configurable, **default head of department then head teacher, D3 decided**; changes after locking need approval and are audited). Build spec: `ER_Assessment_Cycle_Build_Spec_A1_A5.md` (sizes A1.1 to A1.5). Fixes two code findings first: nothing can leave SUBMITTED (APPROVED and RETURNED are unreachable), and the lock text says "form master" | PL-ASM-4 | ER | M | ⚑ | F9 (the generic audit surface; A1's own trail is append-only and does not need it). **F7 is no longer a dependency**: the form master is not an approver (it is needed by A3, T3 and E4). D3 is decided. **Waits only on Femi's approval of the Playbook** |
+| A2 | Totals, averages, subject and class positions (**on by default, D11; switchable off**), highest, lowest, average per subject | PL-ASM-5 | ER | M | | A1 |
 | A3 | Affective and psychomotor ratings; comments | PL-ASM-6 | ER | S | | A1 |
 | A4 | Report-card templates and PDF; broadsheets; batch generation in the background | PL-ASM-7, 8 | ER, WEB | L | | A2, A3 |
-| A5 | Promotion, repeat, probation by configurable criteria; head-teacher approval; preview and reversal | PL-ASM-9, PL-IMP-1 | ER | M | ⚑ | A2, **D11** |
+| A5 | Promotion, repeat, probation by configurable criteria (**default overall average plus compulsory subjects, D11 decided**); head-teacher approval; preview and reversal | PL-ASM-9, PL-IMP-1 | ER | M | ⚑ | A2 |
 | A6 | SPI and TPI (formulae blocked, O1) | PL-ASM-10 | ER | M | | Femi's formulae |
 
 ### Attendance completion (T)
@@ -70,7 +70,7 @@ Owner: **ER** the Education Runtime, **WEB**, **SOP**, **EA**, **HR**, **CM**. "
 
 | Id | Task | Delivers | Owner | Size | Gate | Dep |
 |---|---|---|---|---|---|---|
-| M1 | **Tax treatment on each fee-schedule item, per country and per period** (Femi 2026-10-13: "Tax rules depend on countries and on periods"): the item carries a **tax class** (tuition, boarding, exam fee) and a short list of **effective-dated category entries** (from, to, category), and the invoice **resolves the category from the supply date** (the Irish VAT effective-dating `asOf` lookup is the precedent); a date with no entry **refuses the invoice**, never a default; Finance sets the entries, with audit; an interim that is removed when IM's service item carries the same effective-dated category (IM asked; no category logic of our own that must be unpicked later) | PL-FEE-1 | ER | S to M | | D6 decided; IM and GL to confirm the shape |
+| M1 | **Tax treatment on each fee-schedule item, per country and per period** (Femi 2026-10-13: "Tax rules depend on countries and on periods"). **Narrowed 2026-10-17 after Femi's 2026-10-15 ruling** that IM owns the VAT category and resolves it by tax jurisdiction and transaction date (IM Playbook v5, effective-dated, a covering entry or the request is refused, never defaulted): ER does **not** build its own effective-dated category list (it would be unpicked later, the very thing this row said to avoid). ER's part is only an **interim explicit category on the fee-schedule item, set by a person (never by machine), refused at save and at invoice time when absent**, replaced by an IM service-item id as soon as IM serves the jurisdiction-and-date lookup; the invoice freezes the category it used | PL-FEE-1 | ER | S | | D6 decided; **IM v5 shape confirmed by IM** |
 | M2 | **T-ER3**: a parent's "paid" is a claim that triggers verification; the fee desk verifies; held until after the sitting | PL-FEE-3, UC-E8 | ER | M | | F5 |
 | M3 | SOP opts in `POST /api/sales`; ER **raises the credit sale** with key `ER-invoice-{id}`, **issuer = the school (organisation) through its finance department**, term dates and student reference (the person who acted stays in the internal audit trail only, never on the invoice); ER stores only the mapping | PL-FEE-2, 4 | SOP, ER | L | ⚑ | F1, F2, M1, SOP issuer field |
 | M4 | SOP opts in the collection route; ER **records a verified payment** with key `ER-payment-{id}`; the payment goes to **the school's settlement accounts** (the Company's, per the cash-book design: cash book for cash, a settlement account for bank transfer and the like); SOP and GL confirm how a collection names the account | PL-FEE-3 | SOP, ER | M | ⚑ | M2, M3, SOP and GL settlement-account answer |
@@ -90,7 +90,7 @@ Owner: **ER** the Education Runtime, **WEB**, **SOP**, **EA**, **HR**, **CM**. "
 | S1 | **Teaching record** (subjects, arms, registration with expiry, vetting, training) with restricted vetting view | PL-STF-1 to 3 | ER | M | ⚑ | F6, **D12** |
 | S2 | **Employ once through HR** (the push now carries `division` and a default duty, see D22; the EA role is D23), as already drafted by EA and ER (`EA_Teaching_Staff_Onboarding_EA_Half_Draft.md`): the Owner Admin employs in HR; HR pushes one command to EA; EA creates the invite and **pushes to ER** `PUT /schools/{schoolId}/staff/{email}/employment` (employmentId, TEACHER duty only, dates, version) and an end route on dismissal. **ER never calls HR**; it holds the teaching record plus the employmentId. New inbound service-account route. Open blocker: which EA Role a teacher holds (EA's Role enum has no teacher value; adding one is consumer-first and only GL decodes it strictly) | PL-STF-5 | ER, EA, HR | M | ⚑ | S1, EA Role answer |
 | S3 | **Staff by division**: HR adds a **division** (Operations, Administrative, Finance) to the employment; EA's push to ER carries it; WEB shows each division's staff inside the existing three tabs from a read-model joining HR, EA and ER on email (a person appears in every division where they hold a role, payroll in the primary one; the Proprietor above the divisions); ER gives a teaching record to Operations staff only | PL-STF-8 | HR, EA, ER, WEB | M | | S2, F6, HR reply, **D20, D21** |
-| S4 | **Payroll split by permission**: HR holds the **pay basis** on the employment record (time, piece, contract or salary); permissions set pay basis (Administrative), run payroll and approve a pay run (Finance), separate, the preparer not the approver; the Payroll screen under School Finance, the basis field under School Administration; HR and EA confirm today's record and run/approve split | PL-STF-9 | HR, EA, WEB | M | ⚑ | S3, HR reply |
+| S4 | **Payroll split by permission**: **owned by HR and EA since the approval of 2026-10-15 and the GO of 2026-10-16** (Payroll (PAY) and Human Resources (HR); the HR area is named Personnel; pay-basis, rate, frequency and bank changes Owner Admin only; PAYROLL held at the switch by Owner Admins and Accountants only; Move 1 in progress). ER has no work here beyond showing the division and not re-modelling it; the original description (pay basis Administrative, pay run Finance, preparer not approver) stands as the requirement | PL-STF-9 | HR, EA, WEB | M | ⚑ | HR Move 1, S3 |
 | P1 | Guardian per-child read API completed (results, attendance, timetable, fees via SOP); custody and restriction enforced | PL-PRT-2, 3 | ER | M | | C3, C4, A4, M5 |
 | P2 | Guardian sign-in with phone and one-time code. **Not an EA build** (guardians are not EA Users). Three parts: the user pool and SMS sending for the code (CM; general SMS is parked, only the Cognito verification path was used), the sign-in screen (WEB), and **ER maps a token to a guardian by phone claim instead of email** | PL-PRT-1 | CM, WEB, ER | M | ⚑ | N1 or Cognito SMS, D15 |
 | P3 | Guardian portal screens (login, children, results, attendance, fees, claim a payment) | PL-PRT-2 to 3 | WEB | L | | P1, P2 |
@@ -107,7 +107,7 @@ Owner: **ER** the Education Runtime, **WEB**, **SOP**, **EA**, **HR**, **CM**. "
 | X2 | Boarding: hostels, exeat, visiting days, sick bay (restricted), roll call | ER | XL | ⚑ |
 | X3 | **LATER, country-triggered.** Gate and visitor log, pickup verification, evacuation lists, incident workflow, suspensions | ER | XL | ⚑ |
 | X4 | WhatsApp adapter and SMS fallback; bulk approval thresholds | ER | L | |
-| X5 | Offline cash receipting from pre-allocated number ranges (needs a SOP design) | ER, SOP | L | ⚑ |
+| X5 | ~~Offline cash receipting from pre-allocated number ranges~~ **DROPPED 2026-10-15** (no offline entry; cash is recorded online, see PL-FEE-11 and D26) | ER, SOP | - | - |
 | X6 | Statutory returns per country (Nigeria first, then Sierra Leone, Liberia): **each starts as a research task** obtaining the format with a local partner | ER | L per country | ⚑ |
 | X7 | Group view across a Tenant's schools: **no EA build** (`GET /api/me` already lists the Tenant's school Companies); WEB lists them and calls ER per school with the caller's token, each read per Company; a group head must hold an assignment in every school; no cross-school aggregate until the pseudonymised export (P3) | WEB | M | ⚑ |
 | X8 | Online and mobile-money payment channel (a platform integration SOP does not yet have) | SOP | XL | ⚑ |
@@ -136,7 +136,7 @@ GL offers to write its half of Q1 and Q2 first, once an accountant has answered 
 
 **Stage 0, foundations that unblock everything** (parallel where noted): F1, F2 (SOP and EA; ER's part is S), F3, F4, F5, F9, F10; then F6 and F7. F8 follows Femi's D13. F11 (design pass) runs alongside.
 
-**Stage 1, the core student record and the product's core**: C1, C2, C3, C8 and C6 (WEB) first; then A1, A2, A3 (approval, totals, ratings), then A4, A5. F12 (offline client) runs in parallel from F11; attendance first, then marks. T1 to T3 land with F7 and F9.
+**Stage 1, the core student record and the product's core**: C1, C2, C3, C8 and C6 (WEB) first; then A1, A2, A3 (approval, totals, ratings), then A4, A5. (F12, the offline client, is dropped.) T1 to T3 land with F7 and F9; A1 does not wait for F7.
 
 **Stage 2, money**: M1 (needs D6), then M3 and M4 once F1 and F2 are switched on and SOP has opted the routes in; M2 (T-ER3) before M4; then M5, M6; M7 and M8 wait for D8.
 
@@ -144,21 +144,21 @@ GL offers to write its half of Q1 and Q2 first, once an accountant has answered 
 
 **Stage 4, phase 2**: X1 to X8 in the order Femi sets (D5, D7), starting with the country pack the first pilot needs.
 
-**Critical path to a pilot floor** (spec 10.1 and Part 1 section 9): F1, F2, F5, F6, F7, F10, then C1, C3, A1 to A5, M1 to M6, N1 to N2, T1 to T3, P1 to P3, R1, F12. The longest single chain is **offline client (F11, F12) and the SMS account**, which is why D1 matters.
+**Critical path to a pilot floor** (spec 10.1 and Part 1 section 9): F1, F2, F5, F6, F7, F10, then C1, C3, A1 to A5, M1 to M6, N1 to N2, T1 to T3, P1 to P3, R1. With the offline client dropped, the longest external chain is **the guardian-message channel (the SMS account, or email first, D25) and the assessment cycle A1 to A5**; the residual connectivity risk is D26.
 
 ## 3. Rollout, rollback and risk
 
 - **Rollout:** each task is its own branch, consumer-first for additive changes; CM sequences and deploys; WEB is briefed before any response-shape or wording change that reaches a screen. Production data is test data until the Live switch, so breaking clean-ups (error body, mapping tables) are cheapest now.
 - **Rollback:** code reverts by redeploying the previous image; migrations are additive and forward-only (a rollback is a new migration). The SOP-through-ER switch (F2, M3) is an off-switch: unset the service audience and every ER token is refused.
-- **Risks:** (1) the offline client is the largest unknown and is WEB-heavy; (2) SMS is blocked on an external account; (3) statutory formats are unobtained; (4) revenue timing for tuition is an accounting decision that can force a change to M3; (5) the children's-data rules need counsel before a real school; (6) sizes are estimates and unproven; (7) one engineer-session per service, so stage 1 and stage 2 compete for the ER session: sequence rather than parallelise.
+- **Risks:** (1) ~~the offline client is the largest unknown~~ gone with the offline client; the new connectivity risk is a school with power and signal cuts and no offline entry (D26); (2) SMS is blocked on an external account; (3) statutory formats are unobtained; (4) revenue timing for tuition is an accounting decision that can force a change to M3; (5) the children's-data rules need counsel before a real school; (6) sizes are estimates and unproven; (7) one engineer-session per service, so stage 1 and stage 2 compete for the ER session: sequence rather than parallelise.
 
 ## 4. Tests and acceptance per stage
 
-Stage 0: contract fixtures decode through strict clients; a replayed customer create returns one Customer; a refused call spends no key. Stage 1: the UAT scripts UC-E2 to UC-E6 pass on a low-cost Android device, offline for the register and marks, with a three-day offline run and a sync that loses nothing. Stage 2: UC-E7 and UC-E8 end to end on a test school, SOP and GL balances agree with ER's statement, a retried invoice or payment creates one. Stage 3: UC-E8 to UC-E14. Every ⚑ has CM's recorded review before its build.
+Stage 0: contract fixtures decode through strict clients; a replayed customer create returns one Customer; a refused call spends no key. Stage 1: the UAT scripts UC-E2 to UC-E6 pass on a low-cost Android device over throttled 3G, online only, with a dropped-connection test that loses nothing acknowledged and double-applies nothing on retry. Stage 2: UC-E7 and UC-E8 end to end on a test school, SOP and GL balances agree with ER's statement, a retried invoice or payment creates one. Stage 3: UC-E8 to UC-E14. Every ⚑ has CM's recorded review before its build.
 
 ## 5. What can start the moment Femi approves
 
-F1, F3, F4, F5, F9, F10, F11 (design only), C1, C6 (WEB). Nothing that touches an RBAC, service-account, cross-Tenant, export or authentication gate starts until CM has reviewed it.
+F1, F3, F4, F5, F9, F10, C1, C6 (WEB) and A1 (the build spec is written; A1 waits only on Femi's approval). Nothing that touches an RBAC, service-account, cross-Tenant, export or authentication gate starts until CM has reviewed it.
 
 ## 6. Consolidated decisions for Femi (one batch, asked once, each with a recommendation)
 
@@ -166,23 +166,23 @@ Items **already put to Femi through CM** are marked **(with CM)**; they are list
 
 | # | Decision | Recommendation | Blocks |
 |---|---|---|---|
-| **D1** | **Pilot shape** | **Decided 2026-10-13 (Femi): "Both. Offline is an App on a mobile device."** Plan for **online** use and an **offline mobile app** together; WEB's separate-app SPUTO decides the technology | F11, F12 |
+| **D1** | **Pilot shape** | **Decided 2026-10-13 ("Both. Offline is an App"), SUPERSEDED 2026-10-15**: one online-only banking-style app for every role; see D26 for the residual risk | (F11, F12 dropped) |
 | **D2** | **Notifications and documents**: generic platform services (other runtimes need them) or built inside ER first | generic ports, first implementation in ER | N1, K1, C5, C7 |
-| **D3** | **Who approves test marks** (form master is not the default) | head of department, then head teacher; configurable per school **(with CM)** | A1 |
-| **D4** | **Late-sync deadline** for offline marks and attendance | a per-school setting, conservative default **(with CM)** | F11 |
+| **D3** | **Who approves test marks** (form master is not the default) | **DECIDED (Femi; relayed to the ER session 2026-10-17; Decisions_Log line owed): head of department, then head teacher, configurable per school** | A1 (unblocked on this point) |
+| **D4** | **Late-sync deadline** for offline marks and attendance | **moot** since 2026-10-15 (no offline sync) | - |
 | **D5** | **First country pack**: Nigeria (the spec's reference) or Sierra Leone (the Mano River arrowhead) | choose one for the first pilot; the exam and census packs differ | C8, X6 |
 | **D6** | **Tuition VAT, income recognition, issuer, settlement** | **Decided 2026-10-13 (Femi)**: VAT follows the **country and the period** (effective-dated, never a default, see M1); income is recognised on the **invoice day for now and spread over the term before Live**; the invoice **issuer is the school (organisation)** through its finance department, the person only in the internal audit trail; payments go to **the school's settlement accounts** | M1, M3, M4 |
 | **D7** | **Boarding in the first phases?** | no, phase 2, unless the pilot school boards | X2 |
-| **D8** | **Clearance policy**: may a school withhold report cards or transcripts for unpaid fees | no default; needs counsel and a per-country rule; never blocks attendance, safeguarding or medical | M7, M8 |
-| **D9** | **Contracting entity and processor role** for children's data (UK or Irish company), DPO and regulator registration | needs counsel before the first paying school | V1, go-live |
+| **D8** | **Clearance policy**: may a school withhold report cards or transcripts for unpaid fees | no default; a per-country rule that Femi decides (counsel if he chooses); never blocks attendance, safeguarding or medical | M7, M8 |
+| **D9** | **Contracting entity and processor role** for children's data (UK or Irish company), DPO and regulator registration | Femi decides, and chooses whether to take counsel; needed before the first paying school (a legal fact, not an ER gate) | V1, go-live |
 | **D10** | **Statutory returns**: who obtains the formats from local partners, per country | a named country lead; ER specifies and builds | X6 |
-| **D11** | **Rankings and promotion defaults** | positions off by default and school-configurable | A2, A5 |
+| **D11** | **Rankings and promotion defaults** | **DECIDED (Femi; relayed to the ER session 2026-10-17; Decisions_Log line owed): positions ON by default and school-configurable; promotion defaults to the overall average plus the compulsory subjects** (this reverses ER's earlier recommendation of off) | A2, A5 (unblocked) |
 | **D12** | **Staff: employ once through HR**, ER keeps only the teaching record | yes | S1, S2 |
 | **D13** (parked, off the open list) | **Safeguarding access: the school admin alone loses it** | **Decided 2026-10-13: yes**, as an add-a-deny now; break-glass later behind flag E2 | F8 |
 | **D13b** (parked, off the open list) | **Should the head teacher be added to safeguarding access?** (they do not have it today; adding is a widening) | no: designate the safeguarding lead role instead; the person responsible for child protection should be a deliberate appointment | F8 |
-| **D14** | **Student writes: when does the admin lose them?** (decided: they stay until a registrar exists) | at the dev-to-Live switch, after the Staff-and-roles screen ships | F6 |
+| **D14** | **Student writes: when does the admin lose them?** (decided: they stay until a registrar exists) | at the dev-to-Live switch, after the Roles-and-access screen ships | F6 |
 | **D15** | **Guardian sign-in in P1**: phone and one-time code (the user pool and SMS are CM's, the screen WEB's, the token-to-guardian mapping ER's; **not EA**: guardians are not EA Users and EA advises against making them so) or a simpler first channel | P1 if SMS or Cognito's phone path is available; otherwise keep email sign-in for the pilot | P2, P3 |
-| **D17** | **Accounting rules for a school** (an accountant's, Femi to name who): how tuition income is released over a term (Q1), principal or agent for exam fees (Q2), (a waiver is **decided**: Discounts Given, see Q3 and Q4) | take the first term at term start; get the rules before exam fees and waivers (P2) | Q1, Q2, X1 |
+| **D17** | **Accounting rules for a school** (Femi decides: "I am your tax professional and your accountant", 2026-10-16; ER does not wait for an outside accountant): how tuition income is released over a term (Q1), principal or agent for exam fees (Q2), (a waiver is **decided**: Discounts Given, see Q3 and Q4) | take the first term at term start; get the rules before exam fees and waivers (P2) | Q1, Q2, X1 |
 | **D19** | **Is a sponsor's pledge before payment its own receivable?** (a sponsor promises to pay a pupil's fees; until the money arrives, is that a receivable from the sponsor, a note, or nothing at all, the guardian staying liable for the invoice) | nothing in the ledger until paid: the guardian stays the debtor, and the pledge is a record in ER that can later be applied as a payer on a collection; revisit if schools want sponsor aging | Q8, M7 |
 | **D18** | *Superseded by D22 and D23 below (EA's answer after the division decision).* | | |
 | **D20** | **Where do supporting staff sit** | **Decided 2026-10-13: Operations** | S3 |
@@ -190,7 +190,9 @@ Items **already put to Femi through CM** are marked **(with CM)**; they are list
 | **D22** | **Default duty from the division** pushed by EA | OPERATIONS maps to TEACHER; ADMINISTRATIVE and FINANCE map to no duty (a registrar, bursar or fee officer is a deliberate grant, never implied) | S2, S3 |
 | **D23** | **An EA role for a person who works only in the Education Runtime** | one generic role STAFF, added consumer-first; Owner Admin adds ACCOUNTANT where ledger access is needed | S2 |
 
-Already decided and not asked again: Enrolment (British), Purchasing, Stores, Accounts, Surplus, Income and Expenditure, Income; no duplication of SOP; per-Company RBAC; admin read-only on student records and finance; one school per Company; PARENT as an alias of GUARDIAN.
+**Opened 2026-10-17 by the review (full text in Part 1 section 10):** D24 do ER duties fall under the Business-Owner-approves access rule (P8); D25 does "email first" also govern guardian messages; D26 the no-signal day under online-only (paper fallback, any outbox). Each carries a recommendation and waits for CM to confirm the reading before it goes to Femi.
+
+Already decided and not asked again: Enrolment (British), Purchasing, Stores, Accounts, Surplus, Income and Expenditure, Income; no duplication of SOP; per-Company RBAC; admin read-only on student records and finance; one school per Company; PARENT as an alias of GUARDIAN; **the online-only banking-style app (2026-10-15); Prodeo is a landlord with no role in a school's data (2026-10-15); preparation is not audit (2026-10-16); D3 and D11 as above**.
 
 ## 7. Contributors' replies (filled as they arrive, before CM presents the batch)
 
