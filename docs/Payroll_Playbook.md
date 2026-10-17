@@ -75,7 +75,7 @@ Per-act checks (the one screen must show this; decision as stated):
 
 Switch-day acceptance (EA and CM, no phone needed):
 - SW-1 The switch-day report ran on production and its counts were given to each affected Tenant's Owner Admin before the switch.
-- SW-2 After the switch every Owner Admin and every Accountant (not revoked) holds PAYROLL; nobody else does; the count equals the report's complement.
+- SW-2 After the switch every Owner Admin and every Accountant (not revoked) holds PAYROLL; nobody else does; the dry-run count matched the executed count.
 - SW-3 An Owner Admin who prepared and approved a run sees it flagged selfApproved.
 - SW-4 Turning HR's enforcement flag on changes nothing for an Owner Admin (property from the module design, section 5).
 

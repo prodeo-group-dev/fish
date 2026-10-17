@@ -106,3 +106,16 @@ GL decodes every module string from `GET /me` with `ManagedModule.valueOf` (`kto
 4. **Access level for an approver:** accept constraint C1 (an approver's level applies to all modules in that Company's assignment) for Move 1? (Recommended: yes.) **Answered: accepted for now.**
 
 The self-approval rule is **not** asked: it is already decided (Owner may approve their own run, recorded and flagged; a non-Owner may not, preparer is not approver).
+
+## 10. The prepared switch (built inert 2026-10-17; NOTHING is enabled)
+
+EA branch `feat/ea-payroll-enable-inert` (tests first; 519 unit tests and 11 persistence classes green). Everything below is dark until Femi announces the switch.
+
+| Piece | What it is | How it stays inert |
+|---|---|---|
+| Accountant default | `Membership.defaultModulesFor(ACCOUNTANT)` now includes PAYROLL; the Owner Admin default already derived from the module list. | Both subtract `ManagedModule.withheld`; PAYROLL is still in it, so nobody gets it. |
+| The enable step | Remove `PAYROLL` from `ManagedModule.withheld` (one line, its own release, after GL, SOP, POP, IM, HR and WEB have decoded the value). That one act turns on the defaults for new registrations and invites and un-refuses an explicit grant. | Not done. |
+| Backfill | `BackfillPayrollModuleUseCase`: adds PAYROLL to existing Owner Admin and Accountant assignments (non-revoked), keeps role, level and other modules, idempotent, per-Tenant lock, dry run by default. Started at EA start-up by `EA_PAYROLL_BACKFILL=dry-run` or `execute` (unset = nothing). | Refuses (`NotEnabled`, logs "still withheld") while PAYROLL is withheld; env unset by default. |
+| Switch-day warning | `GET /api/tenants/{tenantId}/payroll-switch-notice`, Owner Admin only: the switch date, who holds PAYROLL, and the people who can prepare a pay run today but will not (same rule as the switch-day SQL report, with names). WEB shows it as a "needs your attention" item. | 404 `not_scheduled` until `EA_PAYROLL_SWITCH_DATE` (yyyy-MM-dd) is set. |
+
+**Switch-day order (CM runs, Femi announces):** (1) Femi runs the read-only SQL report for the counts. (2) CM sets `EA_PAYROLL_SWITCH_DATE`; Owner Admins see the warning; WEB shows it. (3) On the day: release with PAYROLL out of `withheld`; wait until stable (C3: no rollback once PAYROLL rows exist). (4) Run the backfill: first `EA_PAYROLL_BACKFILL=dry-run`, read the log counts (assignments it would change: one per Owner Admin and Accountant assignment that lacks PAYROLL), then `execute`, then unset it. (5) HR's enforcement flag later, per section 6. Nothing else EA does changes who can do what today.
