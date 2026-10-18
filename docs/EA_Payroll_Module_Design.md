@@ -40,7 +40,7 @@ PAYROLL grants nothing in the Education Runtime; it never interacts with EDUCATI
 | Role | PAYROLL by default | Level by default | Reason |
 |---|---|---|---|
 | OWNER_ADMIN | **Yes** | ADMIN (already) | The Owner is the final authority. Both `defaultModulesFor(OWNER_ADMIN)` and `assignOwnerAdminsAt` derive "all but EDUCATION_RUNTIME" from `ManagedModule.entries`, so they would grant PAYROLL **automatically**; this is the intended result but it must be pinned by a test, not left to a side effect. |
-| ACCOUNTANT | **Yes (proposed)** | WRITE: prepares runs; APPROVE is an explicit grant | D21 says the run is Financial; this puts it with the money role. |
+| ACCOUNTANT | **Yes (proposed)** | WRITE: prepares runs; APPROVE is an explicit grant | D21 says the run is Financial; this puts it with the money role. (Femi, 2026-10-18: the Accountant default also includes IM, so an accountant can set product VAT categories and record opening stock; add-only, built in EA branch feat/ea-accountant-im-default, with its own dry-run-first backfill.) |
 | HR_OFFICER | **No** | n/a | An HR officer owns people records and pay basis; also holding the run and the approval is exactly the single-person risk the split exists to remove. |
 | SALES_OFFICER, PURCHASING_OFFICER, INVENTORY_MANAGER | No | n/a | Nothing to do with pay. |
 
