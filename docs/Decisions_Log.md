@@ -122,5 +122,7 @@ Format: `date | decision | source session | acts`
 
 - 2026-10-18 | IM NAME (Femi): IM = "Inventory and Services Management": it manages everything about inventory and services being bought and sold (a school sells Tuition). Overpayments on Invoice (customer excess) may later need reversal or distribution to staff, so the account must support both. Name is a label; repo, service and package identifiers stay IM.
 
+- 2026-10-18 | CBB IS ITS OWN SERVICE (Femi): Cash and Bank Books (CBB) is a service in its own right, not a part of GL. It is built inside GL today; extraction to be assessed like Fixed Assets and Payroll. EA is a consumer of POP, IM, SOP, Payroll, Personnel (HR), GL and CBB.
+
 ## Earlier, still in force
 - Only CM pushes, merges and deploys. Coordination is the prime directive. Everything in production is test data until Femi announces the Live switch. RBAC freeze: only add-a-deny changes without CM. Unknown keys are never tolerated in auth payloads (strict decoding). SLE is the only onboarded currency across the Mano River operation.
