@@ -45,7 +45,7 @@
 | E9 | School vocabulary: People/Employees (today's words) maps to "Staff" for a school; the label for Team was set to "Staff" grouped by kind (D16), and the collision with "Staff and roles" was left for ER and WEB to reconcile. | [decided] Decisions_Log 2026-10-12, 2026-10-13 |
 | E10 | The Team move (WEB G16 and G27) is waiting on this SPUTO. | [decided] Decisions_Log 2026-10-15 |
 
-**What the law expects a small employer to keep and issue** (a floor for the depth question; check with counsel per Company before relying on it):
+**What the law expects a small employer to keep and issue** (a floor for the depth question; Femi confirms each jurisdiction's duties before they are relied on):
 
 - **UK:** a written statement of the main terms on or before the first day of work; the wider statement within two months; any change in writing within a month. Right-to-work checks before work starts, with a copy of the documents and the check date kept for the employment and two years after. [Acas: when an employee must get their written statement](https://www.acas.org.uk/what-must-be-written-in-an-employment-contract/when-an-employee-must-get-their-written-statement); [GOV.UK employer's guide to right to work checks](https://www.gov.uk/government/publications/right-to-work-checks-employers-guide/employers-guide-to-right-to-work-checks-26-june-2025-accessible). [web]
 - **Ireland:** the core terms in writing within five days of starting, the rest within a month (an older WRC page says two months; the current date-specific rule needs checking); the employer keeps the statement through the employment and a year after; working-time records (hours, leave, rest) kept for three years. [WRC terms of employment](https://www.workplacerelations.ie/en/what_you_should_know/employer-obligations/terms-of-employment/); [Citizens Information: working-time records](https://www.citizensinformation.ie/en/employment/employment-rights-and-conditions/hours-of-work/employment-working-time-records/). [web]
@@ -100,7 +100,7 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 | ID | Requirement |
 |---|---|
 | NFR-PEO-01 | Personal data is minimised, role-restricted (an HR Officer sees people records, never bank details; the Owner Admin sees bank details), and audited; no personal figures or names in notifications or logs. |
-| NFR-PEO-02 | Retention periods are per jurisdiction and stored as data; the periods are **not set here** and come from counsel. |
+| NFR-PEO-02 | Retention periods are per jurisdiction and stored as data; the periods are **not set here** and are confirmed by Femi. |
 | NFR-PEO-03 | Statutory timers (statement due dates, right-to-work expiry, probation end) are computed and shown, never relied on a person remembering. |
 | NFR-PEO-04 | Contract fixtures for every cross-service payload (Personnel to EA access leg, Personnel to Payroll flows), strict decode, consumer first. |
 | NFR-PEO-05 | Hire and leave execution is crash-safe and retryable (the approval-lease and per-leg status machinery already designed for payroll approval). |
@@ -189,7 +189,7 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 |---|---|---|---|
 | **Wave 0: decisions (Femi, via CM)** | | | |
 | 0.1 | P3 to P7 (section 8); P1, P1b and P2 are answered | Femi | none |
-| 0.2 | Statutory duties sourcing per jurisdiction (statement due dates, right-to-work, working-time, retention), with Sierra Leone from the primary Act and counsel | HR with Femi; counsel | none |
+| 0.2 | Statutory duties sourcing per jurisdiction (statement due dates, right-to-work, working-time, retention), with Sierra Leone from the primary Act, confirmed by Femi | HR with Femi | none |
 | 0.3 | Confirm or assign an HR owner session | CM, Femi | none |
 | **Wave 1: no code, wording and boundaries** | | | |
 | 1.1 | Rename People to Personnel on screen; per-row Give, Change and Remove access and the button "Invite someone who isn't an employee" instead of the Team section; Payroll sections to Finance (with the payroll split). No Access section and no new label | WEB | none |
@@ -226,7 +226,7 @@ The test applied: **what must a business of 3 to 50 people be able to do in FiSH
 1. ~~**P1, the name**~~ **Answered 2026-10-15:** Personnel; the feature formerly called Team is named Personnel (no "Access"). ~~**P1b**~~ **Answered:** no separate section and no new label; per-row "Give access" / "Remove access" and a button "Invite someone who isn't an employee".
 2. ~~**P2, the home**~~ **Answered 2026-10-15:** option A: it stays in HR/Personnel under Administration; EA stays the system of record and authority.
 3. **P3, the depth:** approve section 4's Must, Should, Could and Won't lists for an SME. Particular calls: documents store in the first release (Should), disciplinary and grievance record (Should), staff working-time record (Must only where the law requires it), 360 appraisal parked (Won't now).
-4. **P4, jurisdictions first** for statutory timers: UK and Ireland (sourced); Sierra Leone after the primary Act and counsel confirm.
+4. **P4, jurisdictions first** for statutory timers: UK and Ireland (sourced); Sierra Leone after Femi confirms it from the primary Act.
 5. **P5, the leave policy:** configurable per Company and jurisdiction (recommended), or keep one fixed policy for now?
 6. **P6, self-service:** employee self-service waits on the generic `STAFF` role decision; asking again so it is not forgotten.
 7. ~~**P7, the interim for access changes**~~ **Answered 2026-10-15:** no interim refusal; delegates keep acting directly until the request flow (3.1) exists.
