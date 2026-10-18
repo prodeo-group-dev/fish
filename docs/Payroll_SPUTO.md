@@ -75,7 +75,7 @@ SPUTO formalises decisions already made; it does not re-make them. Already decid
 | NFR-PAY-04 | Pay data is the most sensitive data held: least privilege between Personnel and Payroll (own service identity and database role after Move 2), bank details and tax IDs encrypted, no figures in notifications or logs. |
 | NFR-PAY-05 | Strict decoding on every cross-service payload (consumer-first, contract fixtures in `fish-contracts` from day one, never `ignoreUnknownKeys`). |
 | NFR-PAY-06 | Rule data is reproducible: a past run can be recomputed from its recorded rule-set version and inputs. |
-| NFR-PAY-07 | Retention of payroll and statutory records at least the legal minimum per jurisdiction. The periods are **not sourced here**; they are a question for Femi and counsel, not a number I will supply. |
+| NFR-PAY-07 | Retention of payroll and statutory records at least the legal minimum per jurisdiction. The periods are **not sourced here**; they are a question for Femi, not a number I will supply. |
 | NFR-PAY-08 | Strangler discipline for the split: each step is a separately revertible release; never a half-split (one employee id across both sides, no copies). |
 | NFR-PAY-09 | **Phone check:** every act the Business Owner performs passes the phone check in section 5 (one screen, two-step decision, no wide tables, no figures in notices, online only, confirmed and audited). |
 
