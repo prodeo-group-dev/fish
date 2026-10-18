@@ -23,14 +23,14 @@ The platform is a set of independently deployable services, each organised aroun
 2. Business-capability boundaries: met (table above).
 3. Data owned by the service: separate database per service; GL's is still named `fish_production`. Met at database level. *verify* the grants.
 4. Lightweight communication: HTTP and JSON, per-service credentials, contract fixtures in fish-contracts, strict decoding of auth payloads. Met.
-5. Not a distributed monolith: releases are ordered (consumer first, producer before consumer), never simultaneous. Met, watched.
+5. Not a distributed monolith: releases are ordered consumer first (the services that read a producer declare its new fields before the producer ships them: EA, POP, SOP and WEB are consumers of IM; EA is a consumer of POP, IM and SOP), never simultaneous. Met, watched.
 
 ## Watch items (what would make this wrong)
 
 1. **Shared failure domain**: one database server and one Terraform state serve every service. Independence is in code and data, not infrastructure. *verify* current layout before relying on it.
 2. **Synchronous chains**: core services call each other over HTTP; there is no event bus or outbox between them. Protection today: idempotency keys, claim-then-post. Revisit if a call chain is on a user's request path more than one deep.
 3. **Shared pieces**: `common` is shared as source; WEB is one front end for every service and is the main place one release touches several services (by decision, Femi 2026-10-03).
-4. **Ordered releases**: acceptable while each service can still ship alone. Trigger to act: any change that must go live in two services in the same window. That is a distributed monolith.
+4. **Ordered releases** (consumer first, then the producer): acceptable while each service can still ship alone. Trigger to act: any change that must go live in two services in the same window. That is a distributed monolith.
 
 ## Rules that follow
 
