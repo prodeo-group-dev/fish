@@ -1,4 +1,6 @@
-# IM slice B: service items, and "save a purchase line as an item" (design note, for POP, WEB, EA and CM)
+# IM slice B: service items, and "save a purchase line as an item" (design note, for POP, WEB, EA, SOP and CM)
+
+**Status 2026-10-18 (later): APPROVED by Femi on all three questions and BUILT** on IM branch `feat/im-service-items`, tip `396569a`, handed to CM (not yet deployed). 380 unit and 51 Postgres tests. Two changes since this note was first sent, both from Femi: (1) a service item carries an **optional default expense account** from the first slice (section 8); (2) **no account = Suspense**. A revenue account for sales (section 9) follows as its own small branch.
 
 From the IM session, 2026-10-18. DESIGN ONLY, nothing built. Extends `IM_Product_VAT_Category_SPUTO.md` v4 (slice B, R17 to R21, D8). **Source (Femi, relayed by CM, 2026-10-18):** a purchase line for something not in the item list (rent, utilities, a supplier's one-off service) keeps an explicit VAT category chosen at purchase, and must carry an official description and that category, **saved at purchase as a reusable line item** so a repeat can pick it. VAT recoverable where charged (UK and IE). And the relayed rule: **line VAT always comes from the item's category.**
 
@@ -42,7 +44,7 @@ Implementation note: `VerifiedIdentity` today knows only `isServiceAccount`; it 
 
 POP also needs to settle one thing IM cannot: **which ledger account a purchase of a service item debits.** IM holds none for a SERVICE (the account fields are null). POP's existing handling of a line with no stock item stays as it is; if Femi wants a default expense account per service item, that is a further optional field on the item, not part of this slice.
 
-## 6. Questions for Femi
+## 6. Questions for Femi (ALL ANSWERED YES, 2026-10-18)
 
 1. **May the purchasing side set the category the first time**, with only the Owner Admin or an accountant able to change it afterwards (section 4)? Recommendation: yes. Otherwise a Purchasing Officer cannot save a rent or utility line at all, and the user is back to typing a category on every line.
 2. **One item per description?** A repeat of "Office rent, Unit 4" at a different category (rate change, a different landlord's VAT status) would be refused with the existing item named, and the accountant changes the category deliberately. Recommendation: yes. The alternative is one item per supplier and description, which makes the list grow with every supplier.
@@ -51,3 +53,18 @@ POP also needs to settle one thing IM cannot: **which ledger account a purchase 
 ## 7. Size
 
 About 2.5 IM days (migration for `kind`, `origin` and nullable accounts; the domain factory; the new route and filters; the stock-route guard with a table-driven test over every route; reports and EA tile exclusion; tests including a Postgres migration test on a database that already holds Items). The migration is additive: `kind` defaults to `STOCK` for every existing row, which is a fact, not a guess.
+
+## 8. The default expense account (added 2026-10-18, Femi: "the primary function of a General Ledger. Sacrosanct.")
+
+- **Field:** `expenseAccountId` (nullable string, an account id of the Company's own chart) on **every item response**; always `null` for a STOCK item (its accounts are the three stock fields). `null` on a service means **unclassified: a purchase posts to GL's Suspense account (3910), never to a default expense account**. POP and WEB show "Unclassified (Suspense)" when it is null.
+- **Set at creation:** optional `expenseAccountId` on `POST /items/from-purchase-line` and on the master `POST /items` with `kind: SERVICE`.
+- **Changed or cleared afterwards:** `POST /items/{id}/expense-account` with `{ "expenseAccountId": "..." }` (or `null` to clear). **Owner Admin or accountant only**, the same gate as the VAT category. `409 item_is_stock` for a stock item. History: `GET /items/{id}/expense-account-history` (who, when, from, to).
+- **Validated against GL's chart before it is stored:** IM reads GL's `GET /companies/{companyId}/accounts` with its own service login; the account must be an **active** account of **this Company** of type **EXPENSE** (receivables, payables, VAT and inventory are assets and liabilities, so an expense type is never a control account). Otherwise `400 invalid_expense_account`; if GL cannot be asked the answer is GL's status as `gl_engine_call_failed` and nothing is stored.
+- **A repeat of the same description and category with a different account returns the existing item (200) and never changes its account silently.** The 409 `item_exists_with_different_category` stays for the category only.
+- The account is audited in its own table (`item_expense_account_changes`), written in the same transaction as the item.
+
+## 9. The response shape as built (a SERVICE read, `GET /items/{id}`)
+
+`kind: "SERVICE"` (values `STOCK` | `SERVICE`, always present), `origin: "PURCHASE_LINE"` (`MASTER` | `PURCHASE_LINE`, always present), `vatCategory`, `expenseAccountId`, `currency`, `unitOfMeasure`, `description`, `sellingPriceAmount` (a service MAY carry a price; null until set). The three stock accounts and `facilityId` are `null`. Every stock figure reads zero: `quantityOnHand "0"`, `unitCost`/`totalValue`/`nrvWriteDownPerUnit`/`carryingValuePerUnit`/`totalCarryingValue` `"0.00"`, `batchesOnHand []`, `isBatchTracked false`; `valuationMethod` reads `WEIGHTED_AVERAGE` and `stage` `FINISHED_GOODS` as meaningless placeholders (a service has neither). Every stock action on it answers `409 item_is_service`.
+
+**Next, its own small branch (Femi approved D2, relayed by CM):** an optional nullable `revenueAccountId` on **every item (stock and service)**, the sales revenue account chosen from the Company's chart, set by the Owner Admin or an accountant (the VAT-category gate), validated against GL (type REVENUE, active, this Company) with the same lookup. Additive, in every item response. Labels (Femi): Sales, Purchases, Inventory.
