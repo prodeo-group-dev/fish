@@ -1,20 +1,20 @@
 ENTERPRISE ADMINISTRATION (EA) PLAYBOOK (draft for Omniview's Playbooks tab, service EA)
 
-Written by the EA session, 2026-10-07, from the code on fish-enterprise-administration master (commit 9b46901, running as task definition fish-enterprise-administration:76). EA is the Owner Admin's toolkit; the Owner Admin is the business owner, a person. Where this sheet says what is NOT built or not yet exercised, believe that over any older document.
+Written by the EA session, 2026-10-07; refreshed 2026-10-18 from the code on fish-enterprise-administration master (e21b825, PR 61). I have not checked which task definition is running now: CM reported EA :103 live on 2026-10-15; the later releases (PAYROLL enable prepared inert, Accountant IM default) are on master and I have not confirmed they are deployed, so verify before telling anyone they are live. EA is the Owner Admin's toolkit; the Owner Admin is the business owner, a person. Where this sheet says what is NOT built or not yet exercised, believe that over any older document.
 
 PLAYBOOK CONTENTS (see docs/Playbook_Definition.md; a playbook is this sheet PLUS the SPUTO set)
 1. Operator sheet: this document.
-2. Scope: EA/docs/EA_MVP_Definition.md and EA/docs/Business_Owner_ERP_Model_DDD_Design.md (in the EA repo; the broader charter is EA/docs/Business_Owner_Mobile_ERP_Requirements_Use_Cases.md). Not written: a single short EA scope statement; the three documents above overlap.
-3. Plan / SRS: docs/Staff_Onboarding_Offboarding_SRS.md (staff onboarding and offboarding), docs/Omniview_v2_EA_Route_Contracts.md (the support relay's routes), docs/EA_Communication_Centre_Contract.md and docs/Unified_Communication_SRS.md (messaging), docs/Tenancy_Administration_Extraction_DDD_Design.md (tenants, users, memberships, roles). Not written: an SRS for the dashboard and ratios, the approvals queue, and verification/KYC reminders (each has only its code and its tests).
+2. Scope: the EA SCOPE section at the end of this sheet (written 2026-10-18). Longer material: EA/docs/EA_MVP_Definition.md, EA/docs/Business_Owner_ERP_Model_DDD_Design.md (in the EA repo) and the broader charter in EA/docs/Business_Owner_Mobile_ERP_Requirements_Use_Cases.md.
+3. Plan / SRS: docs/Staff_Onboarding_Offboarding_SRS.md (staff onboarding and offboarding), docs/Omniview_v2_EA_Route_Contracts.md (the support relay's routes), docs/EA_Communication_Centre_Contract.md and docs/Unified_Communication_SRS.md (messaging), docs/Tenancy_Administration_Extraction_DDD_Design.md (tenants, users, memberships, roles), docs/Platform_Contract_Generic_Services_And_Runtimes_SPUTO.md (the cross-service contract), docs/Cross_Service_Contract_Fixtures_SPUTO.md (the golden contract files EA decodes and provides), docs/EA_Payroll_Module_Design.md (EA's part of the payroll split), docs/EA_Company_Tenant_Lookup_Design.md, docs/EA_Concurrent_Writes_Playbook.md and docs/EA_Dashboard_At_A_Glance_Playbook.md. The audit record shape (T17) is in docs/reports/Playbooks/EA/EA_Audit_Record_Shape_T17.md. Not written: an SRS for the dashboard ratios, the approvals queue, and verification/KYC reminders (each has only its code and its tests).
 4. Use cases: docs/Staff_Onboarding_Offboarding_Use_Cases.md, docs/Unified_Communication_Use_Cases.md, EA/docs/Business_Owner_Mobile_ERP_Requirements_Use_Cases.md.
-5. Tasks: docs/Staff_Onboarding_Offboarding_Backlog.md (with its coordination register), plus rows in docs/GL_POP_IM_SOP_Backlog.md where EA is named.
-6. Order: the dependency order is inside docs/Staff_Onboarding_Offboarding_Backlog.md (Waves 0 to 6). Not written: an order across EA's other work (verification reminders, support card, diagnostic grant).
+5. Tasks: docs/Staff_Onboarding_Offboarding_Backlog.md (with its coordination register), plus rows in docs/GL_POP_IM_SOP_Backlog.md where EA is named; the contract-fixture tasks (T8, T9) in docs/Cross_Service_Contract_Fixtures_SPUTO.md.
+6. Order: the EA ORDER section at the end of this sheet (written 2026-10-18); the staff onboarding order inside docs/Staff_Onboarding_Offboarding_Backlog.md (Waves 0 to 6) is one input to it.
 
 OWNING SERVICE
 Enterprise Administration (repo fish-enterprise-administration, live at ea-api.theprodeogroup.com). EA owns tenants, users, memberships, roles and per-Company access, the Owner Admin's dashboard and approvals queue, the staff communication centre, and the relay between a tenant's Owner Admin and Omniview's support tickets. Every other FiSH service asks EA "who is this person and what may they do at this Company" through GET /me.
 
 ESCALATE TO
-Owner: the EA session. Deploys, environment variables and secrets: CM. Ledger or VAT questions: GL. Payroll and employment records: HR. Support ticket content: Omniview.
+Owner: the EA session. Deploys, environment variables and secrets: CM. Ledger or VAT questions: GL. Employment records (Personnel) and payroll: the HR and Payroll sessions, who write their own playbooks and report to EA when they are running in the organisation (Femi, 2026-10-18). Support ticket content: Omniview.
 
 HELP ARTICLES
 None written. Do not invent links; say so if asked.
@@ -72,16 +72,55 @@ INVOICE REPLY-TO (for Sales)
 Q: "Where does the invoice's Reply-To come from?"
 A: Sales Order Processing asks EA for the Owner Admin's verified email and name through a service-only route (since 2026-10-07). If EA cannot answer, SOP sends nothing (its 503 email_not_configured). EA logs the Company id of each call, never the email.
 
+PAYROLL MODULE, ACCOUNTANT DEFAULTS AND THE SWITCH (EA's part of the payroll split)
+Q: "Why can't I give someone the Payroll module?"
+A: PAYROLL exists as a module value but is WITHHELD from every grant until Femi announces the switch. An invite or a modules change that asks for it is refused with 422 module_not_yet_available and nothing changes. At the switch only Owner Admins and Accountants get it (existing HR WRITE holders do not; Femi, 2026-10-15). HR's own checks (HR_ENFORCE_PAY_SPLIT) are HR's, default off, and do not exist yet as far as I last checked.
+Q: "How will a business be warned about who loses Pay runs?"
+A: GET /api/tenants/{tenantId}/payroll-switch-notice (Owner Admin only) lists who holds PAYROLL from the switch date and which people can prepare a pay run today but will not be able to unless the Owner Admin grants them PAYROLL. Until CM sets EA_PAYROLL_SWITCH_DATE it answers 404 not_scheduled, so it tells nobody anything. A read-only SQL file, EA/scripts/payroll_switch_day_report.sql (opaque ids and counts only, no names or emails), gives Femi the same counts across every business.
+Q: "What modules does an Accountant get by default?"
+A: GL, TAX and IM (Femi, 2026-10-18, so an accountant can set product VAT categories and record opening stock), plus PAYROLL once it is enabled. This applies to new Accountants (registration, or an invite that names no modules). Existing Accountants are changed only if CM starts EA with EA_ACCOUNTANT_IM_BACKFILL=dry-run or execute (unset = never; add-only, dry run first). The PAYROLL backfill works the same way with EA_PAYROLL_BACKFILL and refuses while PAYROLL is withheld.
+Q: "Who can add or remove staff?"
+A: The Owner Admin, and today also an HR Officer with ADMIN access at that Company, directly. The end state decided by Femi (2026-10-15) is that anyone but the Owner raises the change and only the Owner Admin approves it; that request flow is HR's to build and is not built. Do not promise an approval step exists.
+
+SCHOOLS AND THE EDUCATION RUNTIME
+Q: "Why can't I give a teacher the Education Runtime at my business?"
+A: Only a school has an Education Runtime. EA refuses an invite or a modules change that grants EDUCATION_RUNTIME at a Company it does not record as a school, with 422 module_not_allowed_for_industry, and refuses to change a registered Company's industry afterwards (409 industry_type_immutable). SOP asks EA whether a Company is a school through a service-only route that answers only {"industryType":"SCHOOL"|"GENERIC"}.
+
+WHEN SOMETHING IS BUSY OR CACHED
+Q: "I got 409 tenant_busy."
+A: Another change to the same business's staff is still running; nothing of this one ran. Wait a moment and retry. EA takes a short per-business lock on every staff write.
+Q: "Does the app or the browser keep a copy of EA's answers?"
+A: No. Every EA answer carries Cache-Control: no-store, private, success or error (pinned by a test since 2026-10-15). Femi's mobile decision (2026-10-15) is that nothing of a business's data persists on the phone.
+
+THE DASHBOARD "SALES TODAY"
+Q: "Why is Sales today lower than my invoices total?"
+A: It is NET, labelled (excluding VAT) (Femi, 2026-10-15). A figure with VAT included is not shown unless Femi asks for it, and then it needs a gross amount declared by Sales.
+
 ERROR GLOSSARY (EA's fixed tokens)
-unauthorized (401), forbidden (403), not_found, company_not_found, tenant_not_found, user_not_found, bad_request, validation_failed, expired, already_responded, already_revoked, payload_too_large, message_too_long, message_not_found, invalid_limit, invalid_cursor, role_access_denied, channel_access_denied, company_access_denied, cross_company_not_approved, invalid_company_link, company_not_in_tenant, company_registration_rejected, industry_type_immutable, school_provisioning_failed, support_unavailable, ticket_not_found, ticket_closed, idempotency_key_reused, ambiguous_company_owner, not_owner_admin, not_configured.
+unauthorized (401), forbidden (403), not_found, company_not_found, tenant_not_found, user_not_found, bad_request, validation_failed, expired, already_responded, already_revoked, payload_too_large, message_too_long, message_not_found, invalid_limit, invalid_cursor, role_access_denied, channel_access_denied, company_access_denied, cross_company_not_approved, invalid_company_link, company_not_in_tenant, company_registration_rejected, industry_type_immutable, school_provisioning_failed, support_unavailable, ticket_not_found, ticket_closed, idempotency_key_reused, ambiguous_company_owner, not_owner_admin, not_configured, module_not_yet_available (422), module_not_allowed_for_industry (422), tenant_busy (409), not_scheduled (404).
 
 WHAT TO COLLECT BEFORE ESCALATING
 The person's email, the tenant id and company id, the exact route and the error token, and the time. Never ask for a password or a token.
 
-NOT BUILT, NOT DEPLOYED OR NOT YET EXERCISED (as of 2026-10-07)
-- Staff onboarding and offboarding through HR with the Owner Admin's approval, the employment-window rule, the generic STAFF role, the HR-only internal route and the Education Runtime hand-off: designed (docs listed above), nothing built.
-- Email or in-app delivery of the verification reminders (90, 150, 166, 173, 179 days): not built in EA.
-- The Owner Admin's diagnostic-access grant for Omniview (S7) and the support card: designed or planned only.
-- Real-login checks of the Owner Admin verification route and of SOP's owner-contact call: verified by tests and unauthenticated 401s only until their first real use.
-- The Owner Admin does not yet get module access beyond Sales automatically; other modules still need an explicit grant.
+NOT BUILT, NOT DEPLOYED OR NOT YET EXERCISED (as of 2026-10-18)
+- Staff onboarding and offboarding as an approved REQUEST (HR raises, only the Owner Admin approves, then EA grants or removes access; the hire-to-access leg; the employment-window rule; the generic STAFF role; the Education Runtime hand-off): designed, nothing built. HR owns the request machinery. Until it exists a delegate with ADMIN can invite, change modules and remove staff directly.
+- Enabling the PAYROLL module: prepared inert on master (backfill, Accountant default, switch-day warning route, report) but WITHHELD; enabling is a separate deliberate release after HR's checks are deployed off. None of the enable steps has run in production as far as I know.
+- An audit log in EA (T17b): the shared record shape is designed, EA's own table and writers are not built. EA records no per-act audit rows today beyond what each aggregate stores.
+- Sign-out of all devices, a list of signed-in devices, push notifications and the app's minimum-version file: planned only (see docs/reports/Playbooks/EA/EA_Mobile_App_Items_2026-10-15.md). The decided app settings are an access token of 15 minutes and a refresh token of 7 days (Decisions_Log, 2026-10-15); I have not checked that they are configured live, and a remote sign-out cannot cancel a token already issued.
+- Email or in-app delivery of the verification reminders (90, 150, 166, 173, 179 days): not built in EA; WEB computes an in-app banner.
+- The Owner Admin's diagnostic-access grant for Omniview (S7) and the support card: designed or planned; the support relay's switch-on status was pending Femi and CM at the last check (2026-10-06) and I have not re-verified it.
+- Database-level isolation between businesses (row-level security): deliberately not built; the app layer enforces it (docs/Database_Tenant_Isolation_RLS_Scope.md).
+- Real-login checks of some newer routes (the payroll switch notice, the internal industry route, the HR run mirror's selfApproved field): covered by tests; not exercised with a real sign-in or with HR sending the field yet.
 - Multi-tenant callers: SOP and the ledger are bound to one Tenant per deployment; EA itself is multi-tenant.
+
+EA SCOPE (written 2026-10-18)
+EA is the Business Owner's information and access toolkit. It answers "who is this person and what may they do at this Company" for every FiSH service (GET /me, unchanged in shape), runs the Owner Admin's dashboard, approvals queue, verification status and communication centre, relays the Owner Admin's support tickets to Omniview, and holds the tenant, user, membership, role and module records. It is NOT the owner of any business data (ledger, sales, purchases, stock, people records, pay): those belong to GL, SOP, POP, IM, HR and Payroll, which EA reads only to inform the Owner. Prodeo is a landlord with no role in a business's data (Femi, 2026-10-15): nothing in EA lets an operator read or edit business data. EA does not build legal, consent or agreement features (Femi). The specialised services (HR, Payroll, the Education Runtime) write their own playbooks from their own SPUTOs and tell EA when they run in the organisation; EA adapts its access and dashboard sources then.
+
+EA ORDER (written 2026-10-18; dependencies first, estimates are mine and unproven)
+1. Foundations already in place: per-Tenant write lock (409 tenant_busy), strict decoding of every cross-service payload with golden contract files (consumers declare a new field first), no-store on every answer, fail-closed school check. Keep them first for anything below.
+2. Consumer-first declarations: EA's mirrors declare a producer's new field before the producer ships it (done for HR's selfApproved on a payroll run).
+3. PAYROLL enable (EA): after HR's enforcement is deployed off and Femi announces the switch: remove PAYROLL from the withheld set (about 0.75 day), run the backfill dry then execute (about 1 day with its migration test, only once the EA release is stable), set the switch date so the Owner Admin warning route lights (CM). The approvals queue showing pending runs to PAYROLL APPROVE holders follows HR's confirmed list contract (about 1 day).
+4. Audit log (T17b, about 1.5 days) once Femi approves the audit record shape; then the document-download rows that the mobile app needs.
+5. Access-change approval (hire, change, remove access by request): HR builds the machinery, EA executes the access leg; blocked on HR and on the generic STAFF role decision. Femi's open question whether it must exist before the Live switch (P8).
+6. Mobile items in order: sign out of all devices first (about 1 day plus an IAM permission from CM), then the first push (a verification-days reminder from EA's own data), then a spike on a per-device list.
+7. Dashboard and ratios SRS, approvals queue SRS and verification-reminder SRS: write when each is next changed; today each has only its code and tests.
