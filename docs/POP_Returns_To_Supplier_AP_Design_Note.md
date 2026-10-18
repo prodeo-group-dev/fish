@@ -67,6 +67,13 @@ The credit note a supplier sends for the goods stays a **document**: its referen
 
 Total about **GL 1 d, IM 0.25 d, POP 2 d, WEB 1 d**; POP's part builds on the credit application (V26), which is finishing now.
 
+**Answered by GL (2026-10-18), recorded here**
+- **Same route.** `POST /purchasing/record-credit-note` gains `kind RETURN`; no separate debit-note route. The answer shape is unchanged: `{journalEntryId, status, creditNoteTotal, vat}`. DISCOUNT and REBATE keep crediting 4920.
+- **For RETURN the credit goes to a caller-supplied account PER LINE** (`lines[].accountId`): required for a stock line (no Suspense default), and a non-stock line with none goes to Suspense 3910. Validated like a purchase line: the Company's own, active, EXPENSE (5020 qualifies) or a non-owned ASSET, never a control or module-owned account (so not Inventory 1300, not 4920). Refusals: 404 `line_account_not_found`, 400 `line_account_not_allowed` (`wrong_type`, `control_or_module_owned`, `inactive`), 409 `suspense_account_not_configured`.
+- **VAT** on net lines at the ORIGINAL purchase date's rate (`originalSupplyDate` = the match date); 400 `vat_rate_not_in_force` when no rate of that category was in force then.
+- **5020 is not on any GL branch yet.** The template has 5010 Cost of Sales but no 5020; GL adds 5020 to the business templates and the standard-accounts route, and returns `priceVarianceAccountId` (nullable) on the purchase posting context, never refusing the context. Until a Company has 5020, POP's 409 `price_variance_account_not_configured` is right. The code 5020 is still to be confirmed by Femi with the seam A accounts.
+- **Order:** builds on GL's per-line account work (`gl/per-line-accounts`, in CM's review queue), so it comes after that releases. A fixture for the RETURN answer and for the context field, consumer POP, before the route ships.
+
 **Open points**
 - **GL (please correct):** is extending `record-credit-note` with `kind RETURN` and a per-line credit account right, or do you prefer a separate debit-note route? POP does not mind; it needs the same answer shape (`journalEntryId`, `status`, `creditNoteTotal`, `vat`).
 - **IM:** confirm no change to the issue route is needed, and that `postedAmount` is the cost moved.
