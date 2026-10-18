@@ -14,7 +14,7 @@
 
 ## 3. API (consumer-first: old shape keeps working)
 
-- Customer create/update accept `terms: { code, days, label }` **or** the old `creditTerms` string (mapped by the shared rule); both present and disagreeing is `400`. Responses add `terms` next to `creditTerms`. Strict: `days` null only for END_OF_MONTH, required 0..365 for CUSTOM, fixed for every other code; `label` only for CUSTOM.
+- Customer create/update accept `terms: { code, days, label }` **or** the old `creditTerms` string (mapped by the shared rule); both present and disagreeing is `400`. Responses add `terms` next to `creditTerms`. Strict: `days` null only for END_OF_MONTH, required 0..180 for CUSTOM (Femi), fixed for every other code; `label` only for CUSTOM.
 - Until EA holds the Company default, terms stay required on customer create, as today (creditTerms or terms). When EA ships its two default fields SOP reads the customer default only on a create without terms (retryable `503` if EA is unreachable, never guessed), with a strict DTO and a fixture first.
 - A sale (`POST /api/sales`, credit method) computes `dueDate` from the customer's terms and the sale `date` using the shared function and stores it with the terms. A request may carry an explicit `dueDate` that wins (an invoice with its own agreed date), validated not before the sale date. Responses and the invoice read route add `dueDate` and `terms`; the invoice PDF and email show "Due 9 Nov 2026 (Net 30)". Cash sales: no due date.
 - The Idempotency-Key rules are unchanged: a replay returns the stored sale, due date included; the request fingerprint includes an explicit `dueDate`.
