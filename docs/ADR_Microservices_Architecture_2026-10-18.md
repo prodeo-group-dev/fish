@@ -16,7 +16,6 @@ The platform is a set of independently deployable services, each organised aroun
 | People and pay | HR / Payroll | employees, pay runs |
 | Education | Education Runtime | admissions, attendance, assessment, fees (billing through SOP) |
 | Cash and Bank Books (CBB) | CBB, its own service (Femi, 2026-10-18); built inside GL today, extraction to be assessed | cash book 1000, bank books, reconciliation |
-| Cash and Bank Books (CBB) | named as its own capability; built inside GL today | cash book 1000, bank books, reconciliation |
 | One front end | WEB | no business data |
 
 ## Test applied (Lewis and Fowler; Fowler's Trade-Offs)
