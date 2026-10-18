@@ -47,7 +47,7 @@ Receipts register 1.5 d, credit application 1 d, about 2.5 d together, in one br
 
 ## 8. Decisions
 
-1. Rule 1: **decided** by Femi: overpayment allowed, kept as its own held record; the ledger account is GL's (open).
+1. Rule 1: **decided** by Femi: overpayment allowed, kept as its own held record; the ledger account is GL's (open). **INTERIM (CM, 2026-10-18): until GL's `excess` posting exists, SOP REFUSES a collection larger than what is open (409 `overpayment_posting_not_available`, nothing posted, nothing recorded) behind a default-off switch `SOP_OVERPAYMENT_POSTING_ENABLED`; the Overpayment records, persistence and tests are already built for the day GL ships.**
 2. Rule 2: assumption, **waiting for Femi's answer** (CM is asking again).
 3. Rule 3: assumption, **waiting for Femi's answer**.
 
