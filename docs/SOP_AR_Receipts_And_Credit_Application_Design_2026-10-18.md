@@ -20,7 +20,7 @@
 ## 3. Rules (each is a decision, flagged where it changes today's behaviour)
 
 1. **DECIDED by Femi (2026-10-18): an overpayment IS allowed** (today's behaviour; no 409). The excess of a collection over what was open is kept as its own **Overpayment** record per sale: `id`, `receiptId` (the receipt it came from), `amount`, `recordedOn`, `status` = `HELD` (a credit balance owed to the customer) with `REFUNDED` and `RECLASSIFIED` reserved for the later acts (a refund, or a distribution/reclassification: Femi said it "may need reversal later or may be distribution to staff"). Only `HELD` is written today; the acts that change the status are a later build. **The ledger posting is GL's**: Femi wants the excess in a dedicated "Overpayments on Invoice" account (a liability, a specialised Suspense, not revenue and not Suspense 3910); SOP picks no account and posts nothing different until GL says how it is provisioned. Until then SOP's collection posts exactly as today, so GL's receivables for that customer go negative by the excess, which SOP shows as the credit balance (`openAmount` < 0) and as the Overpayment record.
-2. **ASSUMPTION, awaiting Femi: a credit note may exceed the open amount.** If the customer already paid and the goods come back, `openAmount` goes negative and means "a credit balance owed to the customer". It is not floored; ageing shows it separately and never nets it into a bucket. A credit larger than the invoice's gross is refused.
+2. **DECIDED by Femi (2026-10-18, via CM): a credit note may exceed the open amount.** If the customer already paid and the goods come back, `openAmount` goes negative and means "a credit balance owed to the customer". It is not floored; ageing shows it separately and never nets it into a bucket. A credit larger than the invoice's gross is refused.
 3. **ASSUMPTION, awaiting Femi: status keeps its names, with one precise meaning**: `COLLECTED` = nothing left to collect (`openAmount <= 0`), `PARTIALLY_COLLECTED` = something was received or credited and an amount is still open, `INVOICED` = untouched. A credit that clears the invoice with no money received therefore shows `COLLECTED`; the receipts list and `creditedAmount` say why. (A new status would ripple through every reader; not worth it.)
 4. **The "paid" flag** on the sale response stays "fully settled" (`openAmount <= 0`), always computed from the stored order.
 5. **Cancelled orders** carry no open amount (nothing owed).
@@ -48,7 +48,7 @@ Receipts register 1.5 d, credit application 1 d, about 2.5 d together, in one br
 ## 8. Decisions
 
 1. Rule 1: **decided** by Femi: overpayment allowed, kept as its own held record; the ledger account is GL's (open). **INTERIM (CM, 2026-10-18): until GL's `excess` posting exists, SOP REFUSES a collection larger than what is open (409 `overpayment_posting_not_available`, nothing posted, nothing recorded) behind a default-off switch `SOP_OVERPAYMENT_POSTING_ENABLED`; the Overpayment records, persistence and tests are already built for the day GL ships.**
-2. Rule 2: assumption, **waiting for Femi's answer** (CM is asking again).
+2. Rule 2: **decided** by Femi: yes, a credit balance, negative, not floored, shown separately in ageing.
 3. Rule 3: assumption, **waiting for Femi's answer**.
 
-The branch carries rules 2 and 3 as built assumptions: it must not be released until both are answered.
+Rule 3 is still an assumption (waiting for Femi): the branch must not be released until it is answered.
