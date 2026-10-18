@@ -120,5 +120,7 @@ Format: `date | decision | source session | acts`
 
 - 2026-10-18 | RECEIVABLES AND FEE INVOICES (Femi): (1) Overpayment by a customer is ALLOWED (today's behaviour kept); the excess is posted as "Overpayments on Invoice", a specialised Suspense account (dedicated, named, a liability owed back to the customer). (2) School fee invoices wait for the IM service-item route (Tuition etc. as IM service items); no interim path with the VAT category chosen on the invoice line. SOP builds S1/S3 to the IM service-item contract only. Still open: whether a credit note may exceed the open amount (credit balance), and the meaning of Collected / Partly collected.
 
+- 2026-10-18 | IM NAME (Femi): IM = "Inventory and Services Management": it manages everything about inventory and services being bought and sold (a school sells Tuition). Overpayments on Invoice (customer excess) may later need reversal or distribution to staff, so the account must support both. Name is a label; repo, service and package identifiers stay IM.
+
 ## Earlier, still in force
 - Only CM pushes, merges and deploys. Coordination is the prime directive. Everything in production is test data until Femi announces the Live switch. RBAC freeze: only add-a-deny changes without CM. Unknown keys are never tolerated in auth payloads (strict decoding). SLE is the only onboarded currency across the Mano River operation.
