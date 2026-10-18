@@ -74,6 +74,11 @@ Total about **GL 1 d, IM 0.25 d, POP 2 d, WEB 1 d**; POP's part builds on the cr
 - **5020 is not on any GL branch yet.** The template has 5010 Cost of Sales but no 5020; GL adds 5020 to the business templates and the standard-accounts route, and returns `priceVarianceAccountId` (nullable) on the purchase posting context, never refusing the context. Until a Company has 5020, POP's 409 `price_variance_account_not_configured` is right. The code 5020 is still to be confirmed by Femi with the seam A accounts.
 - **Order:** builds on GL's per-line account work (`gl/per-line-accounts`, in CM's review queue), so it comes after that releases. A fixture for the RETURN answer and for the context field, consumer POP, before the route ships.
 
+**Confirmed by IM (2026-10-18), recorded here**
+- **No change to the issue route.** `POST /items/{id}/issue` takes `contraAccountId` and uses it as the contra; the Item's COGS account is only the default when none is named. A return naming account 5020 posts Dr 5020 / Cr Inventory at IM's cost, with no AP involved. IM's pinning test is on branch `feat/im-posted-amount` (tip `23618d5`, with CM, not deployed).
+- **`postedAmount`** is the cost IM moved out of Inventory for that movement: exactly the amount GL was told to debit to the contra and credit to Inventory, as a plain decimal string plus `currency`, replayed under the same Idempotency-Key. An issue applied before IM's V14 replays without an amount, so POP treats `null` as "unknown, do not apply".
+- **Before the invoice matches:** IM posts alone, Dr the contra POP names, Cr Inventory at cost; IM has no knowledge of match state. Naming GRNI is POP's call, and GRNI itself comes with seam A, not yet built.
+
 **Open points**
 - **GL (please correct):** is extending `record-credit-note` with `kind RETURN` and a per-line credit account right, or do you prefer a separate debit-note route? POP does not mind; it needs the same answer shape (`journalEntryId`, `status`, `creditNoteTotal`, `vat`).
 - **IM:** confirm no change to the issue route is needed, and that `postedAmount` is the cost moved.
