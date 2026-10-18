@@ -19,9 +19,9 @@
 
 ## 3. Rules (each is a decision, flagged where it changes today's behaviour)
 
-1. **A collection larger than the open amount is refused** (`409 collection_exceeds_open_amount`, nothing posted). Today it is accepted and silently overpays. Unapplied cash (a customer paying in advance or twice) is a later, separate concept; until it exists, refusing is the only way to keep the subledger equal to the ledger. **Behaviour change; needs CM's/Femi's yes.**
-2. **A credit note may exceed the open amount**: if the customer already paid and the goods come back, `openAmount` goes negative and means "a credit balance owed to the customer". It is not floored; ageing shows it separately and never nets it into a bucket. A credit larger than the invoice's gross is refused.
-3. **Status keeps its names, with one precise meaning**: `COLLECTED` = nothing left to collect (`openAmount <= 0`), `PARTIALLY_COLLECTED` = something was received or credited and an amount is still open, `INVOICED` = untouched. A credit that clears the invoice with no money received therefore shows `COLLECTED`; the receipts list and `creditedAmount` say why. (A new status would ripple through every reader; not worth it.)
+1. **DECIDED by Femi (2026-10-18): an overpayment IS allowed** (today's behaviour; no 409). The excess of a collection over what was open is kept as its own **Overpayment** record per sale: `id`, `receiptId` (the receipt it came from), `amount`, `recordedOn`, `status` = `HELD` (a credit balance owed to the customer) with `REFUNDED` and `RECLASSIFIED` reserved for the later acts (a refund, or a distribution/reclassification: Femi said it "may need reversal later or may be distribution to staff"). Only `HELD` is written today; the acts that change the status are a later build. **The ledger posting is GL's**: Femi wants the excess in a dedicated "Overpayments on Invoice" account (a liability, a specialised Suspense, not revenue and not Suspense 3910); SOP picks no account and posts nothing different until GL says how it is provisioned. Until then SOP's collection posts exactly as today, so GL's receivables for that customer go negative by the excess, which SOP shows as the credit balance (`openAmount` < 0) and as the Overpayment record.
+2. **ASSUMPTION, awaiting Femi: a credit note may exceed the open amount.** If the customer already paid and the goods come back, `openAmount` goes negative and means "a credit balance owed to the customer". It is not floored; ageing shows it separately and never nets it into a bucket. A credit larger than the invoice's gross is refused.
+3. **ASSUMPTION, awaiting Femi: status keeps its names, with one precise meaning**: `COLLECTED` = nothing left to collect (`openAmount <= 0`), `PARTIALLY_COLLECTED` = something was received or credited and an amount is still open, `INVOICED` = untouched. A credit that clears the invoice with no money received therefore shows `COLLECTED`; the receipts list and `creditedAmount` say why. (A new status would ripple through every reader; not worth it.)
 4. **The "paid" flag** on the sale response stays "fully settled" (`openAmount <= 0`), always computed from the stored order.
 5. **Cancelled orders** carry no open amount (nothing owed).
 
@@ -34,19 +34,21 @@
 ## 5. API (additive; old shapes keep working)
 
 - The invoice read route and the Sales list rows gain `openAmount`, `creditedAmount` (plain decimals, currency as today). The invoice read route also gains `receipts: [{ id, amount, receivedOn, journalEntryId, description }]`.
-- `POST /api/sales-orders/{id}/collections` answers as today; the new refusal is `409 collection_exceeds_open_amount` (rule 1).
+- `POST /api/sales-orders/{id}/collections` answers as today (an overpayment is accepted, rule 1); the invoice read also lists `overpayments[]`.
 - No new route yet; ageing, statements and the reconciliation read the same data later.
 
 ## 6. Tests first
 
-Domain: two part payments are two receipts and the sum equals `collectedAmount`; an over-collection is refused and changes nothing; a credit of 20 on a 100 invoice leaves 80 open; a credit after full payment leaves -20 (credit balance); the status after each mix; a duplicate credit note id is ignored. Use case: a refused GL post stores no receipt (as today). Route: refusal body, replay with the same key returns the stored answer and one receipt. Persistence on real Postgres: receipts and the order commit together; the migration backfills a legacy order with a collected total and one with an issued credit note. Golden: the sales list and invoice read fixtures change additively and the contract fixtures in fish-contracts are updated with the consumers told first.
+Domain: two part payments are two receipts and the sum equals `collectedAmount`; an over-collection is accepted and the excess becomes a held Overpayment linked to its receipt; a credit of 20 on a 100 invoice leaves 80 open; a credit after full payment leaves -20 (credit balance); the status after each mix; a duplicate credit note id is ignored. Use case: a refused GL post stores no receipt (as today). Route: refusal body, replay with the same key returns the stored answer and one receipt. Persistence on real Postgres: receipts and the order commit together; the migration backfills a legacy order with a collected total and one with an issued credit note. Golden: the sales list and invoice read fixtures change additively and the contract fixtures in fish-contracts are updated with the consumers told first.
 
 ## 7. Estimate and order
 
 Receipts register 1.5 d, credit application 1 d, about 2.5 d together, in one branch because both change `openAmount`. Depends on nothing outside SOP. After it: open items and ageing, the ageing summary EA asked for, then the reconciliation to account 1100.
 
-## 8. Needs a yes before the build
+## 8. Decisions
 
-1. Rule 1: refuse an over-collection (recommended).
-2. Rule 2: allow a credit balance, not floored (recommended).
-3. Rule 3: the meaning of `COLLECTED`/`PARTIALLY_COLLECTED` as above (recommended).
+1. Rule 1: **decided** by Femi: overpayment allowed, kept as its own held record; the ledger account is GL's (open).
+2. Rule 2: assumption, **waiting for Femi's answer** (CM is asking again).
+3. Rule 3: assumption, **waiting for Femi's answer**.
+
+The branch carries rules 2 and 3 as built assumptions: it must not be released until both are answered.
