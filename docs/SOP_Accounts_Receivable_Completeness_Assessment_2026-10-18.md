@@ -59,3 +59,11 @@ Currency: one currency per Company for now (the platform is SLE-only in the Mano
 1. **Credit limit: block or warn** a sale that would exceed it (item 12).
 2. **Reminders: manual only at first** (recommended), or automatic from day one (item 13).
 3. Items 14 and 15 (third-party payers, Discounts Given) are already with Femi.
+
+## 7. Addendum: the dashboard summary EA asked for (2026-10-18)
+
+EA's cut-over note asks for `GET /companies/{c}/receivables-ageing-summary` (Company-scoped, the caller's own token) returning `{ currency, asOf, totalOutstanding, overdueTotal, overdueCount, overdueBasis: "INVOICE_DATE_30" | "DUE_DATE", undatedAmount }`, decimals as strings, `409 multiple_currencies`. This **is** item 8 above (the name and shape are aligned to EA's; `/receivables-summary` is dropped). SOP states the basis:
+- **Available first, before the terms build, with `overdueBasis: "INVOICE_DATE_30"`** (an invoice is overdue 30 days after its invoice date) and `undatedAmount: "0.00"`. It is only honest once SOP knows each invoice's open amount, so it comes **after the receipts register and the credit-note application (items 2 and 3, about 2.5 d), plus 0.5 d for the endpoint: about 3 d**. SOP will not ship it earlier: today `collectedAmount` ignores credit notes, so an earlier figure would overstate what is owed.
+- **After the terms build (item 1) the basis becomes `DUE_DATE`** when every open invoice has a due date. If any open invoice is undated (legacy), the whole figure stays `INVOICE_DATE_30` so one response never mixes bases; the legacy invoices are not given invented due dates.
+- Totals always from GL 1100 on EA's side, SOP's overdue replaces GL's only when SOP's open-item total reconciles (item 6); EA labels the source.
+- A contract fixture (the response, and the `multiple_currencies` refusal) ships with the endpoint, per the T2/T9 mechanism.
