@@ -2,11 +2,13 @@
 
 From the IM session, 2026-10-17. Also answers `POP_Test_Results_2026-10-13.md` flag "stock vs GL" (same figures) and CM's triage finding 1. Read from IM's code and the tester's own numbers; nothing was run against production.
 
-## Verdict: rounding, not a mis-posting. A real flaw in IM's costing, small today and growing with quantity. Needs Femi's decision.
+## Update 2026-10-18: DECIDED and BUILT. Femi chose option A (IM holds the total value to the penny and derives the unit cost). Built on IM branch `feat/im-total-value-costing`, tip `9458a21`, handed to CM for HIGH review; not yet deployed. The legacy 0.48 on Business One is not rewritten (it clears with an ordinary adjustment journal if Femi wants it cleared); new stock movements can no longer create such a difference. Re-test after CM says it is live: a receipt of 1 at 5.00 into 108 at 410.00 must show stock value 44,285.00 equal to TB 1300.
+
+## Verdict: rounding, not a mis-posting. A real flaw in IM's costing, small today and growing with quantity.
 
 | Finding | Status | Detail |
 |---|---|---|
-| 0.48 between the Inventory tile (44,284.52) and TB 1300 (44,285.00) | **Not a mis-posting. A rounding flaw in IM's weighted-average cost. Needs a decision (recommendation below).** | The ledger is right; IM's valuation is the figure that is off. |
+| 0.48 between the Inventory tile (44,284.52) and TB 1300 (44,285.00) | **Not a mis-posting. A rounding flaw in IM's weighted-average cost. Fixed by option A (decided 2026-10-17, built, awaiting release).** | The ledger is right; IM's valuation is the figure that is off. |
 | The 5.00 receipt posted 1300 Dr 5.00 / 2000 Cr 5.00 | **Not a defect** | The posting is exact: GL records the cost received (5.00). 1300 went from 44,280.00 to 44,285.00, which is the true cost of the stock. |
 | Where the 44,284.52 comes from | **Explained** | EA's tile sums IM's `totalValue` per stock item (`ComputeDashboardUseCase`, `toInventorySummary`). IM computes `totalValue` as `weightedAverageUnitCost x quantityOnHand` (`Item.totalValue`). |
 

@@ -16,7 +16,11 @@ Request: `{ "quantity": "108", "unitCostAmount": "410.00", "date": "2026-10-01",
 
 Behaviour, checked in tests: posts to the Company's Suspense account (3910) and not to AP; tags the journal IMPORT; creates **no** goods receipt confirmation (nothing was received); runs under the per-Item lock; the stored Item is untouched when GL refuses.
 
-## 3. Decisions for Femi (each has a recommendation)
+## 3. Decisions for Femi: ANSWERED 2026-10-17 (via CM)
+
+1. Gate: stays Owner Admin or accountant only. 2. Quantity and TOTAL value: yes, built on `feat/im-total-value-costing` (`9458a21`): the route takes `totalValueAmount`; `unitCostAmount` is still accepted until WEB moves. 3. (Suspense reclassification) still a go-live checklist item. The original text follows for the record.
+
+## 3a. Decisions for Femi (original, each had a recommendation)
 
 1. **Who may record opening stock.** Built as the Owner Admin or an accountant (the same rule Femi set for the VAT category), because it puts a figure into the ledger. An inventory manager with WRITE is refused. Recommendation: keep. Relaxing it to every writer is a one-line change. (Fixed assets were treated the same way: inflated assets mean false profit.)
 2. **Unit cost or total value.** The route takes a unit cost, and IM holds unit costs to the penny. Real opening figures arrive as quantity and a **total value** (for example 108 units worth 44,285.00, a unit cost of 410.0463...), which a penny-rounded unit cost cannot hold, so the Item would start with the same rounding drift described in `TestResultsResponses/IM_Response_to_RT-5_Supplier_Tile_2026-10-15.md`. Recommendation: decide that note's option A (IM holds the total value) **before the CSV importer is built**, then the route and the CSV take quantity plus total value. Until then, a cost that is a whole number of pence per unit is exact.
