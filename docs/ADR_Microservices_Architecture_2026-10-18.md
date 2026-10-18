@@ -15,6 +15,7 @@ The platform is a set of independently deployable services, each organised aroun
 | Inventory and Services | IM | items, stock, service items, VAT category |
 | People and pay | HR / Payroll | employees, pay runs |
 | Education | Education Runtime | admissions, attendance, assessment, fees (billing through SOP) |
+| Cash and Bank Books (CBB) | CBB, its own service (Femi, 2026-10-18); built inside GL today, extraction to be assessed | cash book 1000, bank books, reconciliation |
 | Cash and Bank Books (CBB) | named as its own capability; built inside GL today | cash book 1000, bank books, reconciliation |
 | One front end | WEB | no business data |
 
@@ -24,6 +25,7 @@ The platform is a set of independently deployable services, each organised aroun
 2. Business-capability boundaries: met (table above).
 3. Data owned by the service: separate database per service; GL's is still named `fish_production`. Met at database level. *verify* the grants.
 4. Lightweight communication: HTTP and JSON, per-service credentials, contract fixtures in fish-contracts, strict decoding of auth payloads. Met.
+5. Not a distributed monolith: releases are ordered consumer first (the services that read a producer declare its new fields before the producer ships them: EA, POP, SOP and WEB are consumers of IM; EA is also a consumer of POP, SOP, Payroll, Personnel (HR), GL and CBB), never simultaneous. Met, watched.
 5. Not a distributed monolith: releases are ordered consumer first (the services that read a producer declare its new fields before the producer ships them: EA, POP, SOP and WEB are consumers of IM; EA is also a consumer of POP, SOP, Payroll, Personnel (HR), GL and Cash and Bank Books), never simultaneous. Met, watched.
 
 ## Watch items (what would make this wrong)
