@@ -2,6 +2,17 @@
 
 From the Inventory Management (IM) session. One place to look for the IM-owned decisions in the two Playbooks. Nothing is built until these are answered. Each has a recommendation. Checked against `docs/Decisions_Log.md` on 2026-10-13: none of these is answered there yet. When Femi answers, the session he tells appends a line to the Decisions Log.
 
+## Update 2026-10-17 (IM): what Femi has answered since this was written
+
+Source: `docs/Decisions_Log.md`, 2026-10-14 and 2026-10-15. Do not ask these again.
+
+- **D2 answered (2026-10-14):** only the Owner Admin or an accountant may change a product's VAT category, audited. Built in slice A. The recommendation in row 2 below is superseded.
+- **D11 answered (2026-10-14):** keep the six values; EXEMPT also covers out of scope.
+- **"No answer yet" is refused at sale and purchase time (2026-10-14):** `409 item_has_no_vat_category`, never defaulted.
+- **Order answered (2026-10-14):** slice A, then receipt retry-safety (A0), then slice B (service items).
+- **D10 answered YES (2026-10-15), in a larger form:** the category depends on the Tax Jurisdiction and the date, so entries are effective-dated. Row 8 below ("not for now") is superseded. Design in `IM_Product_VAT_Category_v5_Extension_Note.md`, four small questions in it for Femi.
+- **Still open, IM asks Femi in plain words:** D1 (required at creation), D6 to D9, and seam A D-I1 to D-I3. New: the Inventory valuation rounding (option A, B or C) in `TestResultsResponses/IM_Response_to_RT-5_Supplier_Tile_2026-10-15.md`.
+
 ## A. Product VAT category (`docs/IM_Product_VAT_Category_SPUTO.md`, v3)
 
 Already decided and **not** asked again (Decisions Log, 2026-10-11): IM owns the category for every product and service, services are IM items, the line holds a frozen copy, nobody types it, SOP reads it, GL computes the figure.
