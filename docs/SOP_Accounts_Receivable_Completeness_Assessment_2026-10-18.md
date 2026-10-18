@@ -59,3 +59,27 @@ Currency: one currency per Company for now (the platform is SLE-only in the Mano
 1. **Credit limit: block or warn** a sale that would exceed it (item 12).
 2. **Reminders: manual only at first** (recommended), or automatic from day one (item 13).
 3. Items 14 and 15 (third-party payers, Discounts Given) are already with Femi.
+
+## 7. Addendum: the dashboard summary EA asked for (2026-10-18)
+
+EA's cut-over note asks for `GET /companies/{c}/receivables-ageing-summary` (Company-scoped, the caller's own token) returning `{ currency, asOf, totalOutstanding, overdueTotal, overdueCount, overdueBasis: "INVOICE_DATE_30" | "DUE_DATE", undatedAmount }`, decimals as strings, `409 multiple_currencies`. This **is** item 8 above (the name and shape are aligned to EA's; `/receivables-summary` is dropped). SOP states the basis:
+- **Available first, before the terms build, with `overdueBasis: "INVOICE_DATE_30"`** (an invoice is overdue 30 days after its invoice date) and `undatedAmount: "0.00"`. It is only honest once SOP knows each invoice's open amount, so it comes **after the receipts register and the credit-note application (items 2 and 3, about 2.5 d), plus 0.5 d for the endpoint: about 3 d**. SOP will not ship it earlier: today `collectedAmount` ignores credit notes, so an earlier figure would overstate what is owed.
+- **After the terms build (item 1) the basis becomes `DUE_DATE`** when every open invoice has a due date. If any open invoice is undated (legacy), the whole figure stays `INVOICE_DATE_30` so one response never mixes bases; the legacy invoices are not given invented due dates.
+- Totals always from GL 1100 on EA's side, SOP's overdue replaces GL's only when SOP's open-item total reconciles (item 6); EA labels the source.
+- A contract fixture (the response, and the `multiple_currencies` refusal) ships with the endpoint, per the T2/T9 mechanism.
+
+## 8. The one-table version CM asked for (Femi: SOP owns Accounts Receivable end to end)
+
+| AR capability | State | Where it is (BUILT / PARTLY) or size and dependencies (the rest) |
+|---|---|---|
+| Invoice register | **BUILT** (due date and open amount columns missing, 0.25 d) | `GET /api/sales` (`OrdinarySaleRoutes`, per-Company list), `GET /api/companies/{c}/sales-invoices/{invoiceNumber}` (`InvoiceLookup`), PDF and `POST /api/sales-invoices/{n}/email` with audit (`InvoiceEmailRoutes`) |
+| Due dates from payment terms | **MISSING** | 1.5 d. Needs POP's shared fixture and function (T-PT1) first; EA's Company default is not on the critical path. See `SOP_Payment_Terms_Section_2026-10-18.md` |
+| Ageing (by due date, by customer) | **MISSING in SOP** (GL's tag-derived ageing exists, to be retired as a screen source) | 1.5 d, plus 0.5 d for EA's `receivables-ageing-summary`. Needs due dates, the receipts register and credit application |
+| Partial collections | **PARTLY BUILT** | `POST /api/sales-orders/{id}/collections` (`RecordOrdinaryCollectionUseCase`): part payments accepted, `PARTIALLY_COLLECTED`, "paid in full" against the gross. Only one running total is kept, no receipt records. Receipts register 1.5 d |
+| Credit notes | **PARTLY BUILT** | `POST /api/return-requests/{id}/issue-credit-note` (`IssueCreditNoteUseCase`, posts a sales return to GL). The invoice's open amount ignores it, and there is no free-standing "credit part of this invoice". Application to the invoice 1 d; the free-standing form waits on Femi's approval of the returns/credit-note design |
+| Discounts (Discounts Given) | **MISSING** | Waiting on Femi; settlement-discount VAT needs a full SPUTO first. Depends on the receipts register |
+| Customer statements | **MISSING** | 1.5 d JSON, +1 d PDF and email. Needs the receipts register and credit application |
+| Follow-ups (reminders, manual first) | **MISSING** | 2 d. Needs the overdue list from ageing; reuses the invoice-email machinery (SES, rate limit, audit). Manual send only; Femi has the decision on automatic |
+| Reconciliation to account 1100 | **MISSING** | 1 d. Needs open items (so ageing's inputs) and GL's 1100 balance (readable now); opening receivables must be itemised in SOP to reconcile |
+
+Order (accepted by CM): due date from terms, then receipts register with credit application, then ageing and the summary, then reconciliation, then statements, then follow-ups. Credit limits, opening AR upload and write-off sit after these.

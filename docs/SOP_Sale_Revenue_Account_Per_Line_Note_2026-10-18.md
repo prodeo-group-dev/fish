@@ -43,3 +43,13 @@ SOP waits for GL's wire contract (1) and, for goods, IM's field (2). The S1 scho
 2. **Goods item's sales account from IM** (the item wins, the caller is ignored), parallel to the VAT rule. Recommended.
 3. **A sale line with an account that is not a REVENUE account of the Company is refused** (GL), never re-routed. Recommended.
 4. Whether one entry credits several revenue accounts, or one entry per account. Recommended: one entry, several credit lines (one atomic fact).
+
+## 5. Approved (CM, 2026-10-18): GL's per-line design, section 5 of `GL_Per_Line_Account_Routing_Audit_And_Design.md`
+
+The proposal above is superseded where it differs, folded as follows:
+
+- **At order time SOP copies the item's revenue account onto the sale line** (frozen, like the VAT category); IM adds `revenueAccountId` to items (Femi approved).
+- **At record-sale SOP sends a per-line `accountId`**: goods lines carry the copied item account; service and fee lines carry the account the caller named (ER's fee item holds it) or **omit it, and GL posts Suspense 3910**.
+- **Sales returns copy the original line's account** onto the credit/return posting, so a return reverses the same account the sale credited.
+- **Sequence:** GL's step 1 is additive; step 2 (the contexts return Suspense instead of a default revenue account) releases together with SOP's sender. **SOP sends no `accountId` until GL's step-1 contract fixture exists**, then declares GL's new answer fields strictly before GL ships them.
+- The AR plan's item 18 and the S1 fee route follow this: the fee route accepts a per-line account for service lines once the above lands.
