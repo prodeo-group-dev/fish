@@ -13,6 +13,7 @@ PLAYBOOK CONTENTS (see docs/Playbook_Definition.md; a playbook is this sheet PLU
 4. Use cases: SOP/docs/Sales_Order_Processing_Requirements_Use_Cases.md (UC-SO1 to 7), SOP/docs/Trade_Finance_Collection_Use_Cases.md.
 5. Tasks: SOP/docs/Trade_Finance_Collection_Backlog.md, docs/GL_POP_IM_SOP_Backlog.md, docs/IM_Goods_Issue_Idempotency_SPUTO.md.
 6. Order: docs/GL_POP_IM_SOP_Backlog.md (dependency-ordered waves), docs/Fee_Billing_Epic13_SPUTO_Scope.md (school billing, SOP half in progress).
+TRACEABLE IDS (2026-10-22, DRAFT awaiting Femi; GL reviewed the GL-impacting rows and approved from its side): docs/SOP_Requirements_And_Use_Cases_For_Approval_2026-10-22.md holds the stable requirement and use-case IDs for the work done since 2026-10-11, and is parts 3 and 4 of this Playbook for that work: FR-SOP-CUR-nn / UC-SOP-CUR-n (Company currency, serves UC-TJ-15, TJ-CUR-10, T-TJ-27), FR-SOP-FEE-nn / UC-SOP-FEE-n (interim school fee invoice path), FR-SOP-AR-nn / UC-SOP-AR-n (receivables: receipts, credits, overpayment, invoice date, ageing, locks, idempotency). It adds to, and does not replace, FR-SO / UC-SO, FR-TF / UC-TF, UC-SRS and FR-SOPFEE / UC-F. Every SOP branch, commit, fix, migration and test case cites these IDs (Femi's traceability gate, 2026-10-22).
 Not written yet: a single SOP SRS that merges the order-to-cash and invoice-email/cash-sale/idempotency requirements; invoice emailing and cash sales were built from a contract agreed with the screen owner, not from an SRS (a gap Femi has called out: foundations must be ordered first).
 
 OWNING SERVICE
