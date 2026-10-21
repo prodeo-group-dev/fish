@@ -20,7 +20,7 @@ SOP already has three ID families. This file does not replace them; it adds the 
 
 Status words (CM's list): **Built** (in master, tested), **Not built**, **Not in MVP** (deliberately parked, with the reason), **Unclear** (needs a decision or a fact I do not have). "Tip" means the commit that delivers it.
 
-## 1. Company currency: `FR-SOP-CUR` (serves `TJ-CUR-10`, `T-TJ-27`, `UC-TJ-4`; Femi's decision, Decisions Log 2026-10-22: "It cannot be hard coded")
+## 1. Company currency: `FR-SOP-CUR` (serves `UC-TJ-15`, `TJ-CUR-10`, `TJ-CUR-6`, `T-TJ-27`, with `UC-TJ-4` as the screen counterpart; Femi's decision, Decisions Log 2026-10-22: "It cannot be hard coded")
 
 | ID | Requirement | Status | Evidence |
 |---|---|---|---|
@@ -30,9 +30,9 @@ Status words (CM's list): **Built** (in master, tested), **Not built**, **Not in
 | FR-SOP-CUR-04 | The refusal body is a stable contract with a fixture, declared by every consumer before release. | **Built** | fish-contracts `sop/currency-mismatch-error.json` (`aa579a6`); WEB, EA, ER declared or answered 2026-10-22 |
 | FR-SOP-CUR-05 | SOP's service account may call GL's Company read (`GET /companies/{id}`); without it every guarded call fails closed. | **Unclear**: the entry on GL's service-endpoint allow-list was requested by CM; confirm with one real call from SOP's account after GL's deploy. | |
 | FR-SOP-CUR-06 | A return line's estimated value and a facility's headroom capacity are also checked against the Company currency. | **Not in MVP**: neither posts to the ledger. Revisit if either starts to. | |
-| FR-SOP-CUR-07 | **The status code.** `TJ-CUR-10` says the refusal is `409`; SOP answers `400`, as its sale route always did for a line currency (`currency_mismatch`), and WEB has declared `400`. | **Unclear**: **needs Femi/Tax session: amend TJ-CUR-10 to 400 (recommended, one status for one code across every SOP route), or change SOP and WEB to 409.** | |
+| FR-SOP-CUR-07 | **The status code.** The stable contract is the code `currency_mismatch` plus a plain message (Tax playbook, `TJ-CUR-10` as amended). SOP answers `400`, as its sale route always did, and WEB has declared `400`; Payroll shipped `409` (`d4f0fe0`). | **Built as 400; the status itself is parked as `PQ-22`** in the Tax playbook (Tax session's recommendation: leave as built, WEB maps both; CM can settle it without Femi). SOP stays at 400 unless PQ-22 says otherwise. | Tax playbook branch `docs/tax-playbook-id-index` (`c60ee65`, draft) |
 
-**UC-SOP-CUR-1 Sell in a currency other than the Company's.** Main: a person (or the Education Runtime) submits a sale or order whose line is in GBP for a Company that books in USD. SOP reads the Company's currency, refuses 400 `currency_mismatch` "lines[0] is in GBP but this Company books in USD"; no order is saved, no stock issued, nothing posted. Alt: every line is in the Company's currency: proceeds as before. (Screen side: `UC-TJ-4`.)
+**UC-SOP-CUR-1 Sell in a currency other than the Company's** (realises `UC-TJ-15` for SOP).** Main: a person (or the Education Runtime) submits a sale or order whose line is in GBP for a Company that books in USD. SOP reads the Company's currency, refuses 400 `currency_mismatch` "lines[0] is in GBP but this Company books in USD"; no order is saved, no stock issued, nothing posted. Alt: every line is in the Company's currency: proceeds as before. (Screen side: `UC-TJ-4`.)
 **UC-SOP-CUR-2 GL cannot say what the Company's currency is.** Main: the read fails (GL down, or SOP's account not allowed). SOP refuses with `company_currency_unavailable` and GL's status; nothing is attempted, so the same request can simply be retried when GL answers.
 **UC-SOP-CUR-3 Collect or credit in the wrong currency.** Main: a collection, a Bill collection or a credit note arrives in a currency other than the Company's. Refused 400 `currency_mismatch` naming `amount` (or `collectedAmount` / `restoreHeadroomAmount`); the sale and the ledger are unchanged.
 
@@ -93,7 +93,7 @@ S1 is deliberately the small path: the Education Runtime raises one CREDIT sale 
 
 | Delivered | Cites |
 |---|---|
-| `64ceaf3` company-currency refusal (+ fixture `aa579a6`) | FR-SOP-CUR-01..04, UC-SOP-CUR-1..3; TJ-CUR-10, T-TJ-27, UC-TJ-4 |
+| `64ceaf3` company-currency refusal (+ fixture `aa579a6`) | FR-SOP-CUR-01..04, UC-SOP-CUR-1..3; UC-TJ-15, TJ-CUR-10, TJ-CUR-6, T-TJ-27 (UC-TJ-4 as screen counterpart) |
 | `ac54dc9` S1 fee invoice | FR-SOP-FEE-01..03, 05..07, UC-SOP-FEE-1..4 (FR-SOPFEE-03/11 in part; RT3-FEE1) |
 | `d084d45` invoice date and true as-of | FR-SOP-AR-08, 09; UC-SOP-AR-5, 6 |
 | PR #42 receipts and credit application | FR-SOP-AR-01..06, 12, 13; UC-SOP-AR-1..3, 7, 8 |
@@ -101,7 +101,7 @@ S1 is deliberately the small path: the Education Runtime raises one CREDIT sale 
 
 ## 5. Decisions needed from Femi
 
-1. **Refusal status for a wrong currency: 400 (built, WEB declared) or 409 (as `TJ-CUR-10` says)?** Recommendation: 400, and amend `TJ-CUR-10`.
+1. *(Not Femi's: parked as `PQ-22` in the Tax playbook; CM can settle it. SOP stays at 400.)*
 2. **Status meaning** (`FR-SOP-AR-07`): confirm `COLLECTED` = nothing left to collect.
 3. **Overpayment posting** (`FR-SOP-AR-02`): approve GL's "Overpayments on Invoice" account so the interim refusal can go.
 4. **MVP line:** confirm `FR-SOP-AR-14..18` (numbered receipts, Bill receipt, detector, issue time, batching) and `FR-SOP-FEE-04` are in the first cohort, or parked.
