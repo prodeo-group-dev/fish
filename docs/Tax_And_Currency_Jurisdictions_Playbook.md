@@ -318,6 +318,7 @@ Main: WEB calls the vat-categories read and shows categories and rates for the C
 - VAT categories: by Company only; same table the posting routes use, so a screen never sees different rates from a posting.
 - Effective dating: `vat_rates` has it; `tax_rules` has none and no plan exists to add it. It needs a decision from Femi (same shape as `vat_rates`: `effective_from` in the key, latest row not after the period end) and is a GL migration plus a `ComputeTaxUseCase` change, not an API-only change (T-TJ-14, PQ-8).
 - What the tax side's API must not do: the five guardrails in TJ-NFR-7.
+- Proposals from this playbook, accepted by GL as fine and to be built test-first once CM says go: (a) owner-readable `detail` on `no_vat_rate_schedule` and `vat_category_not_supported` naming category, date and jurisdiction (T-TJ-26); (b) an additive `baseCurrency` on `vat-categories` (T-TJ-28).
 
 **Payroll (HR/Payroll session)** was not asked; it needs: the Company currency at write time and the rule in TJ-CUR-6. To be put to it before T-TJ-09.
 
@@ -412,7 +413,7 @@ Estimates are rough working days of the owning session, tests first. "Femi" mean
 | T-TJ-29 | Jurisdiction-correction path per PQ-19 (operator, before first posting, audited), if Femi chooses it | GL | 1 | PQ-19; T-TJ-01 |
 | T-TJ-30 | Check that an EA Tenant's `baseCurrency`, if kept, agrees with (or is derived from) the GL Company's at Company creation (CM wants it; TJ-CO-5) | EA with GL | 1 | T-TJ-04 live |
 | T-TJ-31 | Retire the country yaml files once rows carry their sources; until then a GL test that the yaml and the seed rows agree | GL, Tax session | 0.5 | T-TJ-02, T-TJ-03 |
-| T-TJ-32 | `fish-contracts` fixture for `GET /api/jurisdictions` (route exists) and any additive field later | GL, CM merges | 0.5 | none |
+| T-TJ-32 | `fish-contracts` fixture for `GET /api/jurisdictions` (route exists) and any additive field later. **Written by GL 2026-10-22:** `fish-contracts` branch `gl/jurisdictions-fixture` 63303b2 (`contracts/gl/jurisdictions.json`, consumer WEB), GL branch `gl/jurisdictions-fixture` 40dac21, handed to CM to merge. Shape `{jurisdictions:[{code, name, currency or null}]}`, enabled entries only, no `onboarded` field (disabled rows are absent) | GL, CM merges | 0.5 | none |
 
 ## 12. Order (O): foundations before features
 
