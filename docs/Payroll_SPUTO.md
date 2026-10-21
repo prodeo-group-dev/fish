@@ -66,6 +66,7 @@ SPUTO formalises decisions already made; it does not re-make them. Already decid
 | FR-PAY-17 | Hooks for later filing (the pay run and remittance data shaped so an RTI or ROS submission can be built from it), no filing now. | Could |
 | FR-PAY-18 | **Switch-day warning to the Business Owner.** Before PAYROLL applies, each Tenant's Owner Admin can see the switch date, who will hold PAYROLL (Owner Admin and Accountant), and which people who can prepare a pay run today will lose Pay runs unless granted PAYROLL (names shown only to that Owner Admin; nothing outside the Tenant). Dark until a switch date is configured. (Femi, Decisions_Log 2026-10-15 item 3: "the switch-day checklist must warn each Tenant and list who is affected".) | Must (for the switch) |
 | FR-PAY-19 | **Switch-day report.** A read-only count and list, by opaque ids only (no names, no emails), of the people who will lose Pay runs at the switch, so each business can be warned before PAYROLL applies. Run once, by Femi, with the one command in the script's header. | Must (for the switch) |
+| FR-PAY-20 | **The Owner's approvals queue shows pay runs waiting for approval.** EA's approvals queue (Business Owner dashboard, "Needs your attention") lists the pay runs that are pending the Business Owner's decision, read from the service that holds them (HR today, Payroll after Move 2), with a deep link to the preview; salary advances and expense claims join once their Company-wide pending lists exist. EA only reads and links; the decision is made in Payroll. A source that does not answer is listed as unavailable and never blanks the queue. | Must |
 
 **Non-functional (NFR-PAY-n)**
 
@@ -124,6 +125,7 @@ Actor names: **Officer** (prepares: HR WRITE or PAYROLL WRITE), **Business Owner
 | UC-PAY-18 | Maintain statutory rule sets | Platform operator or a named finance role (D-PAY-C) | Add the next tax year's rule set with an effective date and source. | Existing runs keep their recorded version; the new set applies from its date. | FR-PAY-06, NFR-PAY-06 |
 | UC-PAY-19 | See who loses Pay runs at the switch (warning) | Owner Admin, EA | Open the warning: the switch date, who will hold PAYROLL, and the people who can prepare a pay run today but will not unless granted PAYROLL. | Read only; shown only to that Tenant's Owner Admin; 404 `not_scheduled` until a switch date is configured. | FR-PAY-18 |
 | UC-PAY-20 | Run the switch-day report | Femi (platform ops), read-only SQL | Run the one command; read the counts and the opaque-id list. | Nothing is written; no names or emails; used to brief each Tenant before the switch. | FR-PAY-19 |
+| UC-PAY-21 | See pay runs waiting for my approval | Business Owner (Owner Admin), EA | Open "Needs your attention" or the approvals queue; see each pending pay run (period, number of people, who prepared it, whether it is a self-prepared run); open it to the preview (UC-PAY-05) to approve or reject (UC-PAY-07/08). | EA reads the pending list only; nothing is decided or posted in EA; an unavailable source is named, the rest of the queue still shows. | FR-PAY-20 |
 
 ---
 
