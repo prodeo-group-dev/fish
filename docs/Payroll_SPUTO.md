@@ -12,7 +12,7 @@ SPUTO formalises decisions already made; it does not re-make them. Already decid
 
 **In scope**
 1. **Split:** Personnel (HR) and Payroll (PAY): first as two modules in one service (Move 1), then, if the seam is clean, as its own service before the Live switch (Move 2).
-2. **Permissions:** the EA module `PAYROLL`; three separate permissions (set pay basis, run payroll, approve a pay run); preparer is not approver; enforced later behind `HR_ENFORCE_PAY_SPLIT`.
+2. **Permissions:** the EA module `PAYROLL`; separate permissions: set pay basis (HR), prepare a pay run (HR WRITE or PAYROLL WRITE; HR may read, prepare and request), and **approve, reject, retry and resume a pay run: the Business Owner only** (Femi, Decisions_Log 2026-10-20/21); only Payroll runs the payroll, after that approval; enforced later behind `HR_ENFORCE_PAY_SPLIT`.
 3. **PAYE and other statutory deductions, end to end:** compute (PAYE, social insurance such as NI, PRSI, USC, NASSIT; employee and employer sides), **account** (expense and liabilities in the ledger), **manage** (year-to-date records, amounts due, remittance, reconciliation, schedules, payslips, corrections).
 4. Salary advances and expense claims as Payroll's money-out flows.
 
@@ -48,8 +48,8 @@ SPUTO formalises decisions already made; it does not re-make them. Already decid
 | ID | Requirement | MoSCoW |
 |---|---|---|
 | FR-PAY-01 | Payroll is its own module (`PAYROLL`) and screen group (Finance); Personnel stays in Administration. | Must |
-| FR-PAY-02 | Three permissions are separate: set pay basis (HR), run payroll (PAYROLL WRITE), approve a pay run (PAYROLL APPROVE). | Must |
-| FR-PAY-03 | A non-Owner approver may not approve a run they prepared; the Owner may, and it is recorded and flagged `selfApproved`. | Must |
+| FR-PAY-02 | The permissions are separate. **Set pay basis:** HR. **Prepare a pay run, preview it, request a salary advance or expense claim:** HR WRITE or PAYROLL WRITE (HR may also read pay runs). **Approve, reject, retry and resume a pay run: the Business Owner (Owner Admin) ONLY**, never a PAYROLL APPROVE holder. **Run the payroll:** Payroll, after the Business Owner's approval. (Femi, Decisions_Log 2026-10-20/21: "HR MUST not have access to running Payroll. It may request but only Payroll runs the payroll sessions after the approval of the Business Owner.") *Superseded text: an earlier version said a PAYROLL APPROVE holder approves.* | Must |
+| FR-PAY-03 | Only the Business Owner approves a run. The Owner may approve a run they prepared themselves; it is then recorded and flagged `selfApproved`. A preparer who is not the Owner cannot approve (they cannot approve at all). | Must |
 | FR-PAY-04 | Pay terms (rate, frequency, bank details) are Payroll's and Owner-Admin-controlled; the HR side never reads bank details. | Must |
 | FR-PAY-05 | Each employee has a tax profile: jurisdiction, tax ID, and the jurisdiction's PAYE inputs (for example a tax code, credits). The tax ID is encrypted at rest (Epic 12 on Epic 5). | Must (for computed PAYE) |
 | FR-PAY-06 | Statutory rule sets are **effective-dated** per jurisdiction and tax type; a run uses the rule set in force for its pay date, and the run **records which rule-set version it used**. | Must |
@@ -61,9 +61,11 @@ SPUTO formalises decisions already made; it does not re-make them. Already decid
 | FR-PAY-12 | **Statutory schedules** (per employee PAYE and contribution lines per period) are exportable per jurisdiction format (D3: shape varies by jurisdiction). | Should |
 | FR-PAY-13 | **Payslips** show gross, each deduction, net, year-to-date; delivered through a protected channel only (never an open email attachment); every download is audited. | Should (employment-law floor in the UK, per the HR MVP note) |
 | FR-PAY-14 | Corrections and reversals (a mistaken run, a late change) produce visible adjusting entries and an adjusted amount due, never an edit of a posted figure. | Should |
-| FR-PAY-15 | Salary advances: request in Personnel, approve and recover in Payroll through the run; expense claims: request in Personnel, reimburse in Payroll. | Must |
+| FR-PAY-15 | Salary advances: request in Personnel, approve (Business Owner, as for a pay run) and recover in Payroll through the run; expense claims: request in Personnel, approve (Business Owner) and reimburse in Payroll. *Whether advance and claim decisions follow the Owner-only rule exactly is being confirmed with HR; until then they follow it.* | Must |
 | FR-PAY-16 | Reports for the Owner: staff cost, PAYE and contributions owed, amounts remitted, next due, and anything overdue, by Company and period. | Should |
 | FR-PAY-17 | Hooks for later filing (the pay run and remittance data shaped so an RTI or ROS submission can be built from it), no filing now. | Could |
+| FR-PAY-18 | **Switch-day warning to the Business Owner.** Before PAYROLL applies, each Tenant's Owner Admin can see the switch date, who will hold PAYROLL (Owner Admin and Accountant), and which people who can prepare a pay run today will lose Pay runs unless granted PAYROLL (names shown only to that Owner Admin; nothing outside the Tenant). Dark until a switch date is configured. (Femi, Decisions_Log 2026-10-15 item 3: "the switch-day checklist must warn each Tenant and list who is affected".) | Must (for the switch) |
+| FR-PAY-19 | **Switch-day report.** A read-only count and list, by opaque ids only (no names, no emails), of the people who will lose Pay runs at the switch, so each business can be warned before PAYROLL applies. Run once, by Femi, with the one command in the script's header. | Must (for the switch) |
 
 **Non-functional (NFR-PAY-n)**
 
@@ -98,28 +100,30 @@ Other decisions (asked in section 8): D-PAY-B jurisdictions first; D-PAY-C who o
 
 ## 5. Use cases (U)
 
-Actor names: **Officer** (prepares), **Approver**, **Owner Admin**, **Accountant**, **HR Officer**, **System**. Each use case is one capability; the preconditions all include "caller holds the module named" and, for ledger acts, an open period and configured accounts.
+Actor names: **Officer** (prepares: HR WRITE or PAYROLL WRITE), **Business Owner** (the Owner Admin: the only approver), **Owner Admin**, **Accountant**, **HR Officer**, **System**. (There is no separate "Approver" role any more: Decisions_Log 2026-10-20/21.) Each use case is one capability; the preconditions all include "caller holds the module named" and, for ledger acts, an open period and configured accounts.
 
 | UC | Name | Actor and module | Main flow (short) | Postconditions and alternates | Traces |
 |---|---|---|---|---|---|
 | UC-PAY-01 | Set a pay basis | HR Officer, HR | Choose time, salaried, piece, contract for an employee. | Basis stored in Personnel; Payroll sees it via the crossing read. Pay rate, frequency and bank details are separate (UC-PAY-02). | FR-PAY-02, 04 |
 | UC-PAY-02 | Set pay terms and bank details | Owner Admin, PAYROLL | Enter rate, frequency, bank details. | Encrypted at rest; only the Owner Admin sees bank details; audited. | FR-PAY-04, NFR-PAY-04 |
 | UC-PAY-03 | Maintain an employee's tax profile | Owner Admin or Officer, PAYROLL | Record jurisdiction, tax ID, PAYE inputs. | Refused if the jurisdiction's currency is not onboarded or inputs are missing (names what is missing). | FR-PAY-05 |
-| UC-PAY-04 | Prepare a pay run | Officer, PAYROLL WRITE | Choose Company, period, date; System reads employment records and unpaid-leave days; computes each line (FR-PAY-07). | Run is PENDING with its rule-set version; duplicate period refused; unpaid employees excluded. | FR-PAY-06, 07, 08, 15 |
-| UC-PAY-05 | Preview a run | Officer, PAYROLL READ | See gross, each deduction, employer cost, net, per employee and total, and the ledger effect. | Nothing is posted. | FR-PAY-07, 09 |
+| UC-PAY-04 | Prepare a pay run | Officer, HR WRITE or PAYROLL WRITE | Choose Company, period, date; System reads employment records and unpaid-leave days; computes each line (FR-PAY-07). | Run is PENDING with its rule-set version; duplicate period refused; unpaid employees excluded. | FR-PAY-06, 07, 08, 15 |
+| UC-PAY-05 | Preview a run | Officer, HR READ or PAYROLL READ | See gross, each deduction, employer cost, net, per employee and total, and the ledger effect. | Nothing is posted. | FR-PAY-07, 09 |
 | UC-PAY-06 | Override a computed figure | Officer, PAYROLL WRITE | Change a line with a required reason. | Override and reason audited and shown to the approver. | FR-PAY-07, NFR-PAY-01 |
-| UC-PAY-07 | Approve a pay run | Approver, PAYROLL APPROVE | Review preview; approve; System takes the approval lease and posts (FR-PAY-09). | Run APPROVED when every posting succeeded; a crash leaves APPROVING and resumable; preparer is refused unless Owner (flagged). | FR-PAY-02, 03, 09, NFR-PAY-02 |
-| UC-PAY-08 | Reject a pay run | Approver, PAYROLL APPROVE | Reject with reason. | Nothing posted; preparer notified; run closed. | FR-PAY-02 |
-| UC-PAY-09 | Retry or resume stuck postings | Officer or Approver, PAYROLL | Retry the run's failed postings. | Same keys, same bodies; no duplicates. | NFR-PAY-02 |
+| UC-PAY-07 | Approve a pay run | Business Owner (Owner Admin) ONLY | Review preview; approve; System takes the approval lease and posts (FR-PAY-09). | Run APPROVED when every posting succeeded; a crash leaves APPROVING and resumable; preparer is refused unless Owner (flagged). | FR-PAY-02, 03, 09, NFR-PAY-02 |
+| UC-PAY-08 | Reject a pay run | Business Owner (Owner Admin) ONLY | Reject with reason. | Nothing posted; preparer notified; run closed. | FR-PAY-02 |
+| UC-PAY-09 | Retry or resume stuck postings | Business Owner (Owner Admin) ONLY | Retry the run's failed postings. | Same keys, same bodies; no duplicates. | NFR-PAY-02 |
 | UC-PAY-10 | View what is owed to authorities | Owner Admin or Accountant, PAYROLL READ | Per body and period: due, remitted, outstanding, overdue. | Figures equal the ledger (FR-PAY-11). | FR-PAY-10, 11, 16 |
 | UC-PAY-11 | Record a remittance | Accountant, PAYROLL WRITE (APPROVE above a limit, D-PAY-E) | Enter body, period, amount, date, reference. | Payable cleared against cash in the ledger; short or over payment shown. | FR-PAY-10 |
 | UC-PAY-12 | Reconcile payables to the ledger | Accountant, PAYROLL READ | System compares each payable account to un-remitted dues. | Mismatch reported with the difference; nothing adjusted automatically. | FR-PAY-11 |
 | UC-PAY-13 | Export a statutory schedule | Officer, PAYROLL READ | Choose jurisdiction, period, format. | File shaped per jurisdiction; audited as a download. | FR-PAY-12 |
 | UC-PAY-14 | Issue a payslip | System, delivered to the employee | After approval, produce a payslip; deliver through the protected channel. | Download audited; none by open email attachment. | FR-PAY-13 |
-| UC-PAY-15 | Correct a posted run | Approver, PAYROLL APPROVE | Create an adjusting run for the difference. | Visible adjustment; amounts due updated; original untouched. | FR-PAY-14 |
-| UC-PAY-16 | Request and recover a salary advance | Employee requests (Personnel); Approver approves; Payroll recovers in later runs | Advance approved; recovery appears as a deduction line. | Balance reaches zero; ledger effect per D-PAY-A. | FR-PAY-15 |
-| UC-PAY-17 | Reimburse an expense claim | Approver, PAYROLL APPROVE | Approve; reimburse through a run or a payment. | Posting and audit. | FR-PAY-15 |
+| UC-PAY-15 | Correct a posted run | Business Owner (Owner Admin) approves; Officer prepares the adjusting run | Create an adjusting run for the difference. | Visible adjustment; amounts due updated; original untouched. | FR-PAY-14 |
+| UC-PAY-16 | Request and recover a salary advance | Employee requests (Personnel); the Business Owner approves; Payroll recovers in later runs | Advance approved; recovery appears as a deduction line. | Balance reaches zero; ledger effect per D-PAY-A. | FR-PAY-15 |
+| UC-PAY-17 | Reimburse an expense claim | Business Owner (Owner Admin) approves; Payroll reimburses | Approve; reimburse through a run or a payment. | Posting and audit. | FR-PAY-15 |
 | UC-PAY-18 | Maintain statutory rule sets | Platform operator or a named finance role (D-PAY-C) | Add the next tax year's rule set with an effective date and source. | Existing runs keep their recorded version; the new set applies from its date. | FR-PAY-06, NFR-PAY-06 |
+| UC-PAY-19 | See who loses Pay runs at the switch (warning) | Owner Admin, EA | Open the warning: the switch date, who will hold PAYROLL, and the people who can prepare a pay run today but will not unless granted PAYROLL. | Read only; shown only to that Tenant's Owner Admin; 404 `not_scheduled` until a switch date is configured. | FR-PAY-18 |
+| UC-PAY-20 | Run the switch-day report | Femi (platform ops), read-only SQL | Run the one command; read the counts and the opaque-id list. | Nothing is written; no names or emails; used to brief each Tenant before the switch. | FR-PAY-19 |
 
 ---
 
@@ -177,7 +181,8 @@ Owner column: **EA, GL, HR, WEB, CM, Femi**. HR tasks need an owner session (E12
 | 2.1 | Split HR's code into Personnel and Payroll packages with a narrow interface and architecture tests that fail on a direct cross-package call | HR | 0.2 |
 | 2.2 | EA defaults and backfill for `PAYROLL` per Femi's answers (Owner Admin, ACCOUNTANT; backfill for existing HR WRITE holders per Q2) | EA, CM | 1.3 stable, 0.1 |
 | 2.3 | Tabs: Personnel under Administration, Payroll under Finance | WEB | 2.1 |
-| 2.4 | `HR_ENFORCE_PAY_SPLIT` flag and the PAYROLL checks on payroll routes, default off (design: `EA_Payroll_Module_Design.md` §6) | HR | 2.1, 2.2 |
+| 2.4 | `HR_ENFORCE_PAY_SPLIT` flag and the checks on payroll routes, default off: prepare = HR WRITE or PAYROLL WRITE; approve, reject, retry, resume = Owner Admin only (design: `EA_Payroll_Module_Design.md` §6) | HR | 2.1, 2.2 |
+| 2.6 | Switch-day warning route (FR-PAY-18, UC-PAY-19) and switch-day report (FR-PAY-19, UC-PAY-20): built inert, not enabled | EA | 2.2 |
 | 2.5 | Move 1 check: is the interface narrow and stable? Written result | HR, CM | 2.1 to 2.4 |
 
 ### Wave 3: PAYE computed and accounted (inside the Payroll package)

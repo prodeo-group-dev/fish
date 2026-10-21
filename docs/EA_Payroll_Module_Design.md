@@ -2,6 +2,8 @@
 
 **Status:** 2026-10-15. Design only. Written by the EA session for the payroll split Femi approved on 2026-10-15 (Decisions_Log; research `docs/Payroll_Service_Split_Research_And_Recommendation.md`). **Enforcement is built later, behind `HR_ENFORCE_PAY_SPLIT`; the RBAC freeze is respected: nothing in this note changes who can do what today.** Facts below were read on `origin/master` of EA, HR, GL and WEB on 2026-10-15; anything I did not read is marked *unverified*. Decisions asked of Femi (through CM) are in section 9.
 
+**Superseded in part, 2026-10-21 (Femi, Decisions_Log 2026-10-20/21):** HR may read, prepare and request; **approve, reject, retry and resume of a pay run are the Business Owner (Owner Admin) ONLY, not PAYROLL APPROVE holders**; only Payroll runs the payroll, after that approval. Where this note says a PAYROLL APPROVE holder approves, read "the Owner Admin". Sections 2, 5 and 6 below are corrected; the PAYROLL module and its defaults are unchanged.
+
 **Answered 2026-10-15 (Femi, via CM; Decisions_Log):** Q1 and Q2: **only Owner Admins and Accountants get PAYROLL at the switch; existing HR WRITE holders do NOT** (so the switch-day checklist must warn each Tenant and list who loses Pay runs; EA's read-only report `EA/scripts/payroll_switch_day_report.sql` produces the counts). Q3: pay basis, rate, frequency and bank-detail changes are **Owner Admin only, unchanged**. Q4: **one access level per assignment is accepted for now** (constraint C1 stands). ACCOUNTANT is treated as holding PAYROLL at **WRITE** unless Femi corrects it. D-PAY-A (liability-first ledger accounting) is answered yes in the Payroll SPUTO. Self-approval stays as decided (Owner may, flagged; non-Owner may not).
 
 ## 1. Facts that shape the design
@@ -24,14 +26,14 @@
 | Capability | Module and level (after the flag is on) | Today (flag off) |
 |---|---|---|
 | **Set a pay basis** (time, piece, salary, contract; D21) | **HR** at WRITE (propose) and at ADMIN or the Owner Admin to change an existing employee's basis (see Q3) | HR WRITE for employee records; the Owner Admin only for pay rate, frequency, bank details |
-| **Run payroll** (prepare a pay run, preview it, retry a stuck posting) | **PAYROLL at WRITE** | HR at WRITE |
-| **Approve a pay run** (approve, reject; this posts to the ledger) | **PAYROLL at APPROVE** or above, and **not the preparer** unless the Owner Admin (flagged) | Owner Admin only |
-| Salary advances and expense claims: record and view | PAYROLL at WRITE (the request forms stay in People, per the decision) | HR WRITE |
-| Salary advances and expense claims: approve or reject | PAYROLL at APPROVE, same rule as a pay run | Owner Admin only |
+| **Prepare a pay run** (and preview it) | **HR at WRITE or PAYROLL at WRITE** (HR may also read pay runs) | HR at WRITE |
+| **Approve a pay run** (approve, reject, retry, resume; this posts to the ledger) | **Owner Admin ONLY** (a PAYROLL APPROVE grant does not confer it); the Owner may approve a run they prepared, flagged `selfApproved` | Owner Admin only |
+| Salary advances and expense claims: record and view | HR WRITE or PAYROLL WRITE (the request forms stay in Personnel, per the decision) | HR WRITE |
+| Salary advances and expense claims: approve or reject | Owner Admin only, same rule as a pay run (HR confirming the doors) | Owner Admin only |
 | See or change bank details | **Owner Admin only**, not a module permission (unchanged) | same |
 | Employee records, leave, division, `employeeId` | HR (unchanged) | same |
 
-So the three decided permissions map to: set pay basis = HR; run payroll = PAYROLL WRITE; approve a pay run = PAYROLL APPROVE. No new permission concept or `/me` field is needed. Capability lists on `/me` (RBAC plan T5a) are not required for this.
+So the decided permissions map to (corrected 2026-10-21): set pay basis = HR; prepare a pay run = HR WRITE or PAYROLL WRITE; approve, reject, retry or resume a pay run = the Owner Admin only (no PAYROLL APPROVE needed). No new permission concept or `/me` field is needed. Capability lists on `/me` (RBAC plan T5a) are not required for this.
 
 PAYROLL grants nothing in the Education Runtime; it never interacts with EDUCATION_RUNTIME, and a school Company's Owner Admin holds it exactly as any Company's does.
 
@@ -48,7 +50,7 @@ An explicit grant (the access controls in Personnel, or the module-change route)
 
 ## 4. Constraints I found (not solved here)
 
-- **C1. One access level per assignment.** An ACCOUNTANT holding GL, TAX and PAYROLL at APPROVE would also be at APPROVE for GL and TAX. That is probably acceptable for a trusted approver, but it is not "approve payroll only". A per-module level is a larger change to the access model (RBAC freeze, Femi and CM decide). Recommendation: accept C1 for Move 1; revisit if a customer needs "approves payroll but not ledger entries".
+- **C1. One access level per assignment** (matters less since 2026-10-21: no one but the Owner Admin approves a pay run, so "approves payroll only" is no longer a need). An ACCOUNTANT holding GL, TAX and PAYROLL at APPROVE would also be at APPROVE for GL and TAX. That is probably acceptable for a trusted approver, but it is not "approve payroll only". A per-module level is a larger change to the access model (RBAC freeze, Femi and CM decide). Recommendation: accept C1 for Move 1; revisit if a customer needs "approves payroll but not ledger entries".
 - **KIV (kept in view, not scheduled, not built) - per-module access levels** (Femi, 2026-10-15: "Per module must be a KIV"). One level per assignment is accepted for now; a level per module within an assignment is kept in view. **What would trigger it:** (a) a real customer needs someone to approve payroll who must NOT hold APPROVE on GL or TAX at the same Company, or the reverse; (b) an auditor or security review of the live platform names the shared level as a finding; (c) a second module (Personnel, a future one) needs a level different from its neighbours in the same assignment. **What it would cost** (mine, unproven): EA's `CompanyRoleAssignment` and its table, a migration, an additive field on `GET /me` (consumer first: GL, SOP, POP, IM, HR strict mirrors, plus `fish-contracts` fixtures), the access controls in Personnel (WEB), and CM review under the RBAC freeze; roughly 4 to 6 days in EA and half a day to a day in each consumer.
 - **C2. One assignment per Company per Membership** appears to hold (`assignAt` replaces; *unverified*), so a person cannot be "WRITE for HR and APPROVE for PAYROLL" in two rows. Same answer as C1.
 - **C3. Rollback hazard.** EA decodes stored module rows with `ManagedModule.valueOf`; once a `PAYROLL` row exists in `membership_assignment_modules`, an older EA build that does not know it would fail to read that Membership. **Do not backfill PAYROLL rows until the EA release carrying the enum is stable**, and treat a backfill as a point of no easy return (rollback would need the rows deleted first).
@@ -56,10 +58,10 @@ An explicit grant (the access controls in Personnel, or the module-change route)
 ## 5. How today's Owner-only approve is handled
 
 1. **Now (flag off): nothing changes.** HR keeps `requireOwnerCaller` for approve, reject, retry, advances, claims. PAYROLL exists in EA's vocabulary but gates nothing.
-2. **When the flag is on:** the approve, reject and retry routes stop calling `requireOwnerCaller` and instead require (a) module PAYROLL at level APPROVE or above at the run's Company, through the same `/me` block lookup HR already uses, and (b) the preparer rule below. The Owner Admin passes (a) by default (ADMIN is above APPROVE and holds the module), so **the flip changes behaviour for nobody until someone else is deliberately given PAYROLL APPROVE.** That is the property that makes the flag safe to turn on.
-3. **Preparer is not approver:** the approver's email must differ from the run's `submittedBy`. The one exception is the Owner Admin, who may approve their own run; it is then recorded with `selfApproved = true` in the audit record (the shape in `EA_Audit_Record_Shape_T17.md`) and shown to the Owner as flagged, matching the 2026-10-13 rule ("self-approval is allowed and is recorded and flagged"). A non-Owner approver who is also the preparer gets 403 with a machine-readable reason (suggested `preparer_cannot_approve`).
+2. **When the flag is on (corrected 2026-10-21):** the approve, reject, retry and resume routes **stay Owner Admin only**; the prepare door accepts HR WRITE or PAYROLL WRITE. *(The earlier text here made them require PAYROLL at APPROVE; that is superseded.)* The rest of this item, kept for the record: ~~(a) module PAYROLL at level APPROVE or above at the run's Company, through the same `/me` block lookup HR already uses, and (b) the preparer rule below.~~ The flip therefore changes who may PREPARE (HR and PAYROLL holders) and changes nothing about who may approve. That is the property that makes the flag safe to turn on.
+3. **Only the Owner approves; self-approval is flagged:** the Owner Admin may approve a run they prepared themselves; it is then recorded with `selfApproved = true` in the audit record (the shape in `EA_Audit_Record_Shape_T17.md`) and shown to the Owner as flagged, matching the 2026-10-13 rule ("self-approval is allowed and is recorded and flagged"). Anyone else who tries to approve, reject, retry or resume gets 403 with a machine-readable reason (HR's `insufficient_access` / `preparer_cannot_approve`).
 4. **Bank details and "pay rate, frequency, bank details" changes stay Owner Admin only** until Femi says otherwise (Q3).
-5. EA's own approvals queue (`ComposeApprovalsQueueUseCase`) currently lists HR payroll runs for the Owner. Showing them to a PAYROLL approver is a later change to that route's visibility rule, not part of this design.
+5. EA's own approvals queue (`ComposeApprovalsQueueUseCase`) lists HR payroll runs for the Owner, who is the only approver. **Showing them to a PAYROLL APPROVE holder is withdrawn** (queue item 4 is now only about what the Owner sees).
 
 ## 6. Enforcement behind `HR_ENFORCE_PAY_SPLIT` (build later)
 
@@ -67,9 +69,12 @@ The flag is HR's (an environment value CM sets; default off). It switches **only
 
 | HR routes | Off (today) | On |
 |---|---|---|
-| `POST /payroll/run`, `GET /payroll/run-submissions/...`, `.../preview`, `.../postings/retry`, `GET /payroll/last-run`, `GET /companies/{c}/payroll-run-submissions` | HR module, WRITE (reads READ) | PAYROLL module, WRITE (reads READ) |
-| `POST /payroll/run-submissions/{id}/approve` and `/reject` | `requireOwnerCaller` | PAYROLL module at APPROVE + preparer rule |
-| `POST /employees/{id}/salary-advances`, `/expense-claims` and their approve/reject | HR WRITE / Owner-only | PAYROLL WRITE / PAYROLL APPROVE + preparer rule |
+| `POST /payroll/run`, `.../preview` | HR module, WRITE | HR WRITE **or** PAYROLL WRITE |
+| `GET /payroll/run-submissions/...`, `GET /payroll/last-run`, `GET /companies/{c}/payroll-run-submissions` | HR module, READ | HR READ or PAYROLL READ |
+| `.../postings/retry` (and resume) | Owner Admin only | Owner Admin only (corrected 2026-10-21) |
+| `POST /payroll/run-submissions/{id}/approve` and `/reject` | `requireOwnerCaller` | **Owner Admin only** (corrected 2026-10-21; was PAYROLL APPROVE + preparer rule) |
+| `POST /employees/{id}/salary-advances`, `/expense-claims` (request) | HR WRITE | HR WRITE or PAYROLL WRITE |
+| their approve/reject | Owner-only | Owner Admin only (HR confirming the doors) |
 | `PUT /companies/{c}/expense-claim-policy` | Owner-only | unchanged (Owner-only) |
 | Employees, leave, team, module responsibilities | HR | HR (unchanged) |
 
