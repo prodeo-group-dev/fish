@@ -344,7 +344,7 @@ Each answer can be one line. A numbered question is only a question.
 |---|---|---|
 | D-1 | Payroll must check the pay-rate and pay-run currency against the Company's GL currency: "It should." | TJ-CUR-6 confirmed Must. |
 | D-2 | Which currency a person is paid in (was PQ-20): "Paid in local currency ie the tax jurisdiction over his pay (PAYE)." | TJ-CUR-6 and UC-TJ-11; only the divergence case remains open (PQ-21). |
-| D-3 | The Payroll check (when pay terms are set, and at run creation): "OK and by Owner Admin." Read as: pay terms, including the pay currency, are set by the Owner Admin only, as already decided on 2026-10-15. | T-TJ-09. The reading is mine; Femi to correct if he meant more (the 2026-10-20 rule that HR may prepare a run and only the Business Owner approves is unchanged). |
+| D-3 | The Payroll check (when pay terms are set, and at run creation): "OK and by Owner Admin." Read as: pay terms, including the pay currency, are set by the Owner Admin only, as already decided on 2026-10-15. | T-TJ-09. **Confirmed by Femi, 2026-10-22:** my reading (pay terms including currency are Owner Admin only; HR can still prepare a pay run and only the Business Owner approves it, the 2026-10-20 rule unchanged) is "exactly what I meant". |
 | D-4 | Where a currency default comes from: "The Organisation's Tax Jurisdiction should." The default is pre-filled from the Organisation's tax jurisdiction, not left blank and not a literal. | TJ-CUR-5, WEB need 1. |
 | D-5 | "NO!!! It cannot be hard coded... Not in any way shape or form. It depends on the tax jurisdiction of the organisation." No currency literal in any screen or service, anywhere. | TJ-CUR-5, T-TJ-07, T-TJ-08; section 1 hard-defaults row. |
 
