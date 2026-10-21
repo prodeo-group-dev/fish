@@ -4,7 +4,7 @@
 
 **Owner:** Tax Jurisdiction session (Tx). **Evidence file:** `docs/Tax_And_Currency_Policy_Resolution_Research_Digest.md` (sections 1 to 4). **Related playbooks:** `docs/Tax_And_Currency_Jurisdictions_Playbook.md` (TJ-*, UC-TJ-*, PQ-1 to PQ-22, T-TJ-*) and `docs/Multi_Entity_Accounting_Playbook.md` (ME-*, UC-ME-*, PQ-M1 to PQ-M14, T-ME-*). Femi's direction (2026-10-22): the open policy questions in those two playbooks are to be answered by research, with a way to build the answer, not handed back to him.
 
-**Why this playbook exists.** The two playbooks above ended with about forty open policy questions for Femi, many of which he had already answered or which research can answer. This playbook resolves each one with evidence, turns each resolution into a numbered requirement, and gives the build path. It leaves exactly one fact for Femi (Purse's group structure) and his approval.
+**Why this playbook exists.** The two playbooks above ended with about forty open policy questions for Femi, many of which he had already answered or which research can answer. This playbook resolves each one with evidence, turns each resolution into a numbered requirement, and gives the build path. It needs nothing further from Femi except his approval: Purse is a Tenant, parked, and will get its own specialised runtime (section 9).
 
 ## Contents (the six parts of a Playbook, `docs/Playbook_Definition.md`)
 
@@ -200,7 +200,7 @@ Every former question, with the route (section 2.2), the answer, and the require
 | PQ-M1 | TECHNICAL | Memo foreign fields on the line, base amount authoritative (GL agrees). | PR-MF-8 | Pending approval |
 | PQ-M2 | RESEARCH | A branch is a dimension inside one Company by default; a separate Company when separately incorporated or a foreign branch with its own currency or tax registration; a distinct BRANCH dimension. | PR-MF-5 | Pending approval |
 | PQ-M3 | COMPOSED | The Owner Admin creates it, in the same Tenant (single Owner Admin per Tenant). | PR-MF-8 | Pending approval |
-| PQ-M4 | RESEARCH + FACT | The platform models a group as an optional layer over legal entities; credit unions have no statutory consolidation requirement found and a GB credit union cannot have a subsidiary. **The one fact needed from Femi is Purse's actual entities (section 9).** | PR-MF-1, -2 | Pending Femi's fact |
+| PQ-M4 | LOG + RESEARCH | **Parked by Femi, 2026-10-22: Purse is a Tenant of FiSH, will need a specialised runtime like Education, and the current focus is the Education Runtime.** Purse's entities are therefore not needed now. The platform models a group generically as an optional layer over legal entities; credit unions have no statutory consolidation requirement found and a GB credit union cannot have a subsidiary (kept as evidence for when Purse's runtime is specified). | PR-MF-1, -2 | **Parked** (Femi) |
 | PQ-M5 | RESEARCH | One platform-wide table; ECB automated, others semi-manual or manual; carried-forward flag. | PR-RT-1, -2 | Pending approval |
 | PQ-M6 | RESEARCH | A frozen run with its inputs (hybrid). | PR-MF-3 | Pending approval |
 | PQ-M6a | RESEARCH | Optional; mandatory rule per account, off by default; unassigned bucket. | PR-MF-6 | Pending approval |
@@ -246,7 +246,7 @@ Every former question, with the route (section 2.2), the answer, and the require
 | UC-PR-12 | **A company's accounting period straddles a corporate rate change.** Main (UK, Ireland): the computation splits the period at the change date, apportions the profit by days and pro-rates thresholds. Alt (other jurisdictions): the computation stops with "straddle - manual determination" and records nothing. | PR-CT-1 |
 | UC-PR-13 | **A Sierra Leone accountant loads the day's rate.** Main: the Bank of Sierra Leone publishes a PDF; the accountant enters the mid-rate with the source; GL stores it as SPOT with the entry time. Alt: no rate published for a holiday: the last rate is carried forward and flagged. | PR-RT-1, -2 |
 | UC-PR-14 | **Euro rates load automatically.** Main: the ECB reference rates are fetched each working day with the source credited; GL stores each pair; weekends carry the last rate forward with the flag. | PR-RT-1, -2 |
-| UC-PR-15 | **A group is set up and a first management consolidation is run.** Main: the owner defines the group (parent, subsidiaries, ownership), the group currency and the mapping; GL runs a consolidation as at a date: translate, combine, eliminate, show the intragroup exchange differences; the run is saved with its inputs. Pre: Purse's structure is known (section 9). | PR-MF-1, -3, -4 |
+| UC-PR-15 | **A group is set up and a first management consolidation is run.** Main: the owner defines the group (parent, subsidiaries, ownership), the group currency and the mapping; GL runs a consolidation as at a date: translate, combine, eliminate, show the intragroup exchange differences; the run is saved with its inputs. Pre: a Tenant that has a real group to consolidate (none is in focus now; Purse is parked, section 9). | PR-MF-1, -3, -4 |
 | UC-PR-16 | **A person needs to be paid under another country's tax.** Main: HR finds the person's work country differs from the Organisation's; the screen explains that payroll is per Organisation and offers: employ them through the Organisation in that country, or record the case as out of scope. | PR-LC-7 |
 
 ---
@@ -280,8 +280,8 @@ Sizes are working days for the owning session. Tasks extend the parent playbooks
 | T-PR-21 | ECB automatic load; manual entry screen for BSL, CBN and Bank of England imports; GBP and NGN redistribution held until the licence is checked. | GL, WEB | 4 | T-PR-20 |
 | T-PR-22 | Per-jurisdiction tax-return rate rule and source recorded with each computation. | GL, Tx | 3 | T-PR-20, T-PR-06 |
 | T-PR-23 | Exchangeability flag per currency pair. | GL | 1 | T-PR-20 |
-| T-PR-24 | Group record, ownership, control; GB credit union rule (no controlled subsidiaries; CUSO as investment record); hierarchy and base-currency validation at setup. | GL, EA | 5 | Purse structure (section 9) |
-| T-PR-25 | Management consolidation: mapping, elimination entity, translation per IFRS for SMEs Section 30, net-investment flag, frozen run. Extends the Multi-entity tasks. | GL | 12 | T-PR-20, T-PR-24, T-ME-04 |
+| T-PR-24 | Group record, ownership, control; GB credit union rule (no controlled subsidiaries; CUSO as investment record); hierarchy and base-currency validation at setup. **Parked** with consolidation: no Tenant in focus has a group; revisit when a Tenant's runtime needs one. | GL, EA | 5 | a Tenant with a real group (Purse is parked) |
+| T-PR-25 | Management consolidation: mapping, elimination entity, translation per IFRS for SMEs Section 30, net-investment flag, frozen run. Extends the Multi-entity tasks. **Parked** with T-PR-24. | GL | 12 | T-PR-20, T-PR-24, T-ME-04 |
 | T-PR-26 | Verification reading of the primary texts listed in section 8, recording each result in the rulebook. | Tx | 6 | none |
 | T-PR-27 | Payroll: confirm the one-Organisation-per-jurisdiction rule on the screens; the refusal message for a person in another country (UC-PR-16). Extends T-TJ-09. | HR, Payroll, WEB | 2 | none |
 | T-PR-28 | Fixtures in `fish-contracts` for every new read, consumer first. | GL and each consumer | per task | each read |
@@ -294,7 +294,7 @@ Sizes are working days for the owning session. Tasks extend the parent playbooks
 - **Wave 2, VAT behaviour:** T-PR-11 to T-PR-16 (tax point, split helper, registration, categories, localisation).
 - **Wave 3, rates and returns:** T-PR-21 to T-PR-23, T-PR-18, T-PR-19, T-PR-22.
 - **Wave 4, notices and corrections:** T-PR-08 to T-PR-10, T-PR-27, T-PR-29.
-- **Wave 5, groups:** T-PR-24, T-PR-25, after Purse's structure is known and the rate table and the IAS 21 text task (T-ME-04) are done.
+- **Wave 5, groups (parked):** T-PR-24, T-PR-25. Not scheduled: Purse is parked and the focus is the Education Runtime. Revisit when a Tenant's runtime needs a group, after the rate table and the IAS 21 text task (T-ME-04) are done.
 - **Always:** T-PR-28 (fixtures) with each read.
 
 Dependencies that cross sessions: GL (most tasks), IM (T-PR-15), SOP and POP (T-PR-11, -13, -14), EA (T-PR-03, -08, -14, -24), HR and Payroll (T-PR-27), WEB (every screen; routed through FiSH+ER WEB). Claim a row in `docs/GL_POP_IM_SOP_Coordination.md` before starting any of them.
@@ -320,14 +320,9 @@ Each is task T-PR-26 unless noted. None is asked of Femi; each ends as a recorde
 
 ## 9. What is still needed from Femi
 
-**One fact (not a policy question):** Purse's actual legal entities. The documents describe it three ways:
-1. **UK, Northern Ireland, Republic of Ireland and Sierra Leone entities** (one per market, as the Purse business plans say);
-2. **Scrip, Purse, Prodeo Capital and a Property SPV** (by function, as the Purse/Scrip/Osusu structure says);
-3. **One Tenant with four Companies** (as the tenancy decision says).
+**No fact is needed now.** The one open fact, Purse's legal entities and parent, is not needed: Femi decided on 2026-10-22 that Purse is a Tenant of FiSH, is **parked**, and will require a specialised runtime just like Education. The current focus is the Education Runtime. The group and consolidation work (PR-MF-1 to PR-MF-4, UC-PR-15, T-PR-24, T-PR-25) therefore stays in the plan as generic capability but is not scheduled; PQ-M4 is parked, not answered. When Purse's runtime is specified, its structure is the first input (the documents describe it three ways: UK, Northern Ireland, Republic of Ireland and Sierra Leone entities; Scrip, Purse, Prodeo Capital and a Property SPV; or one Tenant with four Companies).
 
-Which is right, who is the parent, and what is the group currency decides the first group set-up (UC-PR-15, T-PR-24). Everything else in this playbook is a proposal.
-
-**And his approval.** Approval is recorded in `docs/Decisions_Log.md`. Until then every requirement here is traced to a DRAFT playbook. Three choices are flagged in the text for his eye at approval, because nothing in the evidence prefers one lawful design: the verifier role being his until delegated (PR-GV-1), the IFRS for SMEs basis for management consolidation versus full IAS 21 (PR-MF-4), and the 7-day reminder schedule (PR-GV-6).
+**Femi's approval.** Approval is recorded in `docs/Decisions_Log.md`. Until then every requirement here is traced to a DRAFT playbook. Three choices are flagged in the text for his eye at approval, because nothing in the evidence prefers one lawful design: the verifier role being his until delegated (PR-GV-1), the IFRS for SMEs basis for management consolidation versus full IAS 21 (PR-MF-4, only relevant once a group exists), and the 7-day reminder schedule (PR-GV-6).
 
 ## 10. Identifier index (for traceability)
 
