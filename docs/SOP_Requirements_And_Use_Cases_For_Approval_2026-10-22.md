@@ -38,6 +38,8 @@ Status words (CM's list): **Built** (in master, tested), **Not built**, **Not in
 
 ## 2. The interim fee invoice path: `FR-SOP-FEE` (serves Decisions Log L104(5), L119, L121; test case `RT3-FEE1`; the full Epic 13 model stays `FR-SOPFEE-nn`)
 
+**Scheduling (CM, 2026-10-22, Femi): Education Runtime work is SUSPENDED until FiSH is stable as a GLaaS. S1 stays as built and live; nothing in this section is scheduled, and no new ER-driven SOP work starts. `FR-SOP-FEE-04` and every Not-built row here are parked, not queued. SOP's GLaaS core (section 3 and section 1) is the priority.**
+
 S1 is deliberately the small path: the Education Runtime raises one CREDIT sale of Inventory **service** items through the existing sale route. It realises, in part, `FR-SOPFEE-03` and `FR-SOPFEE-11` (service principal never approves; line-level VAT category) and the individual-invoice flow of `UC-F4`. It does **not** build billing accounts, runs, receipts or the outbox (`FR-SOPFEE-04..23`).
 
 | ID | Requirement | Status | Evidence |
