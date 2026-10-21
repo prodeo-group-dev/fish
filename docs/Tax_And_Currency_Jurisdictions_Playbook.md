@@ -27,6 +27,7 @@
 | Parked, conflicting, unsourced | section 10 |
 | WEB's half (needs only) | section 13 |
 | Evidence and what was not verified | section 14 |
+| Identifier index (traceability) | section 15 |
 
 ## 1. What exists today (verified 2026-10-22)
 
@@ -123,7 +124,7 @@ Status column: **Built** exists and meets the requirement; **Partial** exists in
 | TJ-CUR-7 | WEB's own jurisdiction-to-currency map and `CURRENCIES` list are removed in favour of the registry and the Company read. | M | No |
 | TJ-CUR-8 | Zero-decimal currencies (GNF, XOF) are verified end to end (amounts, rounding, storage precision) before any is ONBOARDED. | S | No (not needed while reference-only) |
 | TJ-CUR-9 | A Company's base currency is fixed once its first entry posts; a different currency means a different Company (PQ-3). | S | Unknown |
-| TJ-CUR-10 | A sales or purchase line, and a request currency, must equal the Company's GL currency; SOP and POP refuse a different one (409, plain message) rather than trusting the caller. Today SOP accepts caller-supplied line currency; its S1 (unreleased) enforces this only for ER fee invoices. WEB derives its defaults from the Company read (TJ-CUR-5), so a mismatch becomes a refusal, not a choice. | M | Partial |
+| TJ-CUR-10 | A sales or purchase line, and a request currency, must equal the Company's GL currency; SOP and POP refuse a different one with the stable code `currency_mismatch` and a plain message (UC-TJ-15) rather than trusting the caller. **Codes and statuses by service, as built or agreed: SOP 400 `currency_mismatch` (its sale route always did; WEB has declared 400 and ER maps it), with `company_currency_unavailable` carrying GL's status; Payroll 409 `currency_mismatch` (d4f0fe0), 503 `company_currency_unavailable`; GL's own posting guard 409 `currency_not_company_currency` (Multi-entity playbook ME-FX-3, GL's proposal). The code names differ between the service guard and GL's guard on purpose: one says the request is wrong, the other says the ledger refused. The status split is PQ-22, not changed here.** Today SOP accepts caller-supplied line currency; its S1 (unreleased) enforces this only for ER fee invoices. WEB derives its defaults from the Company read (TJ-CUR-5), so a mismatch becomes a refusal, not a choice. | M | Partial |
 
 ### 3.3 Tax types and the rulebook (TJ-RUL)
 
@@ -295,6 +296,9 @@ Main: a new row ends support from a date. Existing item answers stay but are fla
 **UC-TJ-14 A new Business Owner asks "what VAT will my company use?"**
 Main: WEB calls the vat-categories read and shows categories and rates for the Company's jurisdiction and date, in the country's own tax word. Alt: none verified: the screen says VAT is not yet available for this country, with a plain next step.
 
+**UC-TJ-15 A service refuses an amount in a currency that is not the Company's.**
+Pre: the Company's GL currency is known to the service (from its GL posting context). Main: a sale, purchase, collection, credit note or pay run arrives with a line or request currency different from the Company's; the service refuses before anything is posted, with the stable code `currency_mismatch` and a plain message naming both currencies (SOP 400, Payroll 409); a request that slips past a service and reaches GL is refused there with 409 `currency_not_company_currency`. Err: the Company's currency cannot be read (`company_currency_unavailable`, 503): nothing is posted and nothing is guessed. Serves TJ-CUR-6 and TJ-CUR-10; the screen side is UC-TJ-4. Added 2026-10-22 at SOP's request, so SOP can cite a use case that is about the refusal itself.
+
 ## 8. Consumer needs received
 
 **IM (c3c92e, code owner, and cbcf0b, author of the Playbook behind it)**, 2026-10-22:
@@ -371,6 +375,7 @@ Each answer can be one line. A numbered question is only a question.
 | PQ-19 | Can a Company's jurisdiction change after it is created? Today it cannot (no route, no method). A Company created in the wrong country, or one that relocates, has no path. | (a) Never; the correct jurisdiction means a new Company. (b) An operator may correct it before the first entry posts, with a reason, audited. (c) Any time with a reason (relocation), which would change the rules applied to history. | (a) with (b) as the correction path; never (c), since it would re-point past postings at a different rulebook. |
 | PQ-20 | *ANSWERED, see D-2:* paid in the currency of the tax jurisdiction over the person's pay (PAYE). | | |
 | PQ-21 | Femi's answer to PQ-20 ties pay to the jurisdiction taxing the pay. Normally that is the Organisation's own, and the pay currency equals the GL currency. What if a person's PAYE jurisdiction is a different one (staff based in another country on the Organisation's payroll)? Today nothing models a per-person jurisdiction. | (a) Not supported: every person on a Company's payroll is taxed under the Company's jurisdiction; a different country means a Company there. (b) Per-person PAYE jurisdiction, pay in its currency, posted to the ledger under the foreign-currency design (`GL_Foreign_Currency_Accounts_IAS21_Design.md`). | (a) for now; (b) only when a real case arises, since it needs that design first. |
+| PQ-22 | *SETTLED by CM 2026-10-22: leave as built (an API consistency call, not tax policy). The stable code is `currency_mismatch` in every service; the status is stated per service in TJ-CUR-10 (SOP 400, Payroll 409, GL's own guard 409 `currency_not_company_currency`). Not for Femi's list.* One HTTP status for `currency_mismatch` across services? Today SOP answers 400 (the sale route always did; WEB declared 400, ER maps it), Payroll answers 409, and GL's own guard answers 409 `currency_not_company_currency`. The service code and plain message are the same. | (a) 400 everywhere: the caller sent a wrong value in the request. (b) 409 everywhere: the request conflicts with the Company's state. (c) Leave as built; WEB maps both. | (c) now: both are declared and mapped, a change costs SOP, WEB, ER and Payroll for no user-visible gain; revisit if a third service adds a third answer. Contract convention, so CM may settle it without Femi. |
 
 ### 9b. Questions for CM and peers (architecture, not tax policy), with CM's answers of 2026-10-22
 
@@ -430,7 +435,7 @@ Estimates are rough working days of the owning session, tests first. "Femi" mean
 | T-TJ-24 | Rate-correction report | GL | n/a | PQ-13 |
 | T-TJ-25 | Amend `Tax_Extraction_DDD_Design.md` (stale on the closed enum, unseeded rules, VAT unplaced) | Tax session | 0.5 | PQ-16 |
 | T-TJ-26 | GL refusal `detail` names the category, the date and the jurisdiction in owner-readable words (no "set the rate schedule"); then SOP, POP and IM map the final `glError` list | GL, then SOP, POP, IM | 0.5 plus mapping | none; agree the code list |
-| T-TJ-27 | SOP and POP refuse a line or request currency different from the Company's GL currency (409, plain); SOP's S1 already does it for ER fee invoices | SOP, POP | 1 each | T-TJ-05 (currency already in contexts) |
+| T-TJ-27 | SOP and POP refuse a line or request currency different from the Company's GL currency (`currency_mismatch`, plain message, UC-TJ-15; SOP 400, Payroll 409, GL guard 409 `currency_not_company_currency`; status per PQ-22); SOP's S1 already does it for ER fee invoices | SOP, POP | 1 each | T-TJ-05 (currency already in contexts) |
 | T-TJ-28 | Optional additive `baseCurrency` on `vat-categories` so one call serves a picker and a currency (SOP's request); fixture first | GL | 0.5 | GL's view; fixture |
 | T-TJ-29 | Jurisdiction-correction path per PQ-19 (operator, before first posting, audited), if Femi chooses it | GL | 1 | PQ-19; T-TJ-01 |
 | T-TJ-30 | Check that an EA Tenant's `baseCurrency`, if kept, agrees with (or is derived from) the GL Company's at Company creation (CM wants it; TJ-CO-5) | EA with GL | 1 | T-TJ-04 live |
@@ -477,3 +482,24 @@ For the `FiSH+ER WEB` session to turn into screens (it owns how and when):
 - That EA never sees the jurisdiction: from a search of EA `src/main` for jurisdiction and company-creation code, not a full trace of the onboarding call chain.
 - Whether `GET /api/jurisdictions` is registered in `fish-contracts`; whether HR enforces pay-rate currency anywhere I did not search.
 - The UK and IE rows in `tax_rules` were seeded by migration; I did not run the computations.
+
+## 15. Identifier index (for traceability)
+
+Femi's traceability rule (UAT): every branch, commit, fix, migration and test cites the requirement ID and the use case ID it serves. **IDs here are stable: never renumbered or reused; a dropped item keeps its ID and is marked withdrawn; new items are appended.** Approval status: **DRAFT** until Femi records approval in the Decisions Log (work citing these IDs is traced to a draft playbook until then).
+
+| Kind | IDs | Where defined |
+|---|---|---|
+| Requirements, jurisdiction registry | TJ-REG-1 to TJ-REG-7 | 3.1 |
+| Requirements, currency | TJ-CUR-1 to TJ-CUR-10 | 3.2 |
+| Requirements, tax types and rulebook | TJ-RUL-1 to TJ-RUL-9 | 3.3 |
+| Requirements, VAT categories and rates | TJ-VAT-1 to TJ-VAT-10 | 3.4 |
+| Requirements, Company jurisdiction and currency read | TJ-CO-1, TJ-CO-1a, TJ-CO-2 to TJ-CO-5 | 3.5 |
+| Requirements, consumers | TJ-CON-1 to TJ-CON-5 | 3.6 |
+| Requirements, governance, maintenance and rollout | TJ-GOV-1 to TJ-GOV-8 | 3.7 |
+| Requirements, non-functional | TJ-NFR-1 to TJ-NFR-7 | 3.8 |
+| Use cases | UC-TJ-1 to UC-TJ-15 | 7 |
+| Policy questions for Femi | PQ-1 to PQ-22 | 9 |
+| Tasks | T-TJ-01 to T-TJ-32 | 11 |
+| WEB needs | W1 (section 5, operator routes); the section 13 needs are unnumbered and cited by section | 5, 13 |
+
+The multi-entity playbook (`docs/Multi_Entity_Accounting_Playbook.md`, section 14) carries the ME-*, UC-ME-*, PQ-M* and T-ME-* IDs.
