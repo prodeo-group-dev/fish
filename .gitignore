@@ -1,2 +1,5 @@
 ~$*.docx
 ~$*.doc
+
+# docs/reports is versioned in the PRIVATE repo prodeo-group-dev/fish-reports (nested working copy), never in this public repo
+/docs/reports/
