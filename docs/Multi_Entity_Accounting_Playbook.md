@@ -39,8 +39,8 @@
 | FX | `FXRate` value object, not stored. `RecordFXRevaluationUseCase` revalues one receivable from a caller-supplied rate and no route reaches it. **No rate table, no rate source, no FX gain/loss account in any chart template, no realised-gain calculation.** |
 | Dimensions | `DimensionType` has COST_CENTER, DEPARTMENT, PROJECT, LOCATION, PRODUCT_LINE and others; **no BRANCH, no LEGAL_ENTITY**. **No code writes** department, cost-centre, location or project tags; no master list; no validation; none mandatory; **no report filters or groups by any of them.** |
 | Groups | A Tenant owns Companies (Purse: four) but **nothing links them financially.** No parent, group currency, intercompany tag, elimination, translation or consolidated report. UC-CFO5 / FR-CFO07 (consolidation as a reporting layer) are documented and unbuilt. UC-HR12 (payroll recharge) is prose only. |
-| Cash and bank | One currency per book today (the Company's). GL's Phase 2a IAS 21 design for foreign-currency books is **design only, with eight open questions for Femi, all unanswered.** It excludes subsidiary translation and foreign customers and suppliers. |
-| Other services | Foreign-currency sales, purchases and payroll are **not possible.** SOP refuses a line currency other than the Company's; POP does not (no such check found); IM does not tie item currency to the Company; HR has no currency check (approved as T-TJ-09, not built). |
+| Cash and bank | One currency per book today (the Company's); WEB-CBB reports that every book carries its own currency from the CBB list, that the Accounts list captions "Amounts in {first book's currency}", that the in/out forms send only an amount (no currency, no rate), that reconciliation runs in the chosen account's own currency, and that **CBB refuses a statement whose currency is not the Company's base (`currency_mismatch`), so a foreign statement cannot start today.** No foreign-currency UI exists or is designed. GL's Phase 2a IAS 21 design for foreign-currency books is **design only, with eight open questions for Femi, all unanswered.** It excludes subsidiary translation and foreign customers and suppliers. |
+| Other services | Foreign-currency sales, purchases and payroll are **not possible.** SOP refuses a line currency other than the Company's; POP does not (no such check found); IM does not tie item currency to the Company; HR/Payroll's currency check (T-TJ-09, D-1) is now built and committed locally in fish-payroll (d4f0fe0; 409 `currency_mismatch`, 503 `company_currency_unavailable`; fixtures on `fish-contracts` branch `payroll-currency-mismatch` 8337bf3), with CM holding the tip, not yet deployed. |
 | Decided already | Company currency from tax jurisdiction; Payroll currency = GL currency; pay in the PAYE jurisdiction's currency; no hard-coded currency; SLE-only onboarding across the Mano River operation; consolidation is a reporting-layer operation that never merges ledgers; per-Company RBAC is frozen until Live. **Nothing is decided on departments, branches, consolidation scope or Purse's structure.** |
 
 **Not built (this area):** foreign amounts on lines; account currency; exchange-rate table and sources; realised and unrealised FX posting; FX accounts; revaluation route; presentation-currency translation and translation reserve; department, cost-centre and location master lists, validation and reports; a BRANCH dimension; inter-branch accounts; parent Company, group currency, group mapping, intercompany tag and reconciliation, eliminations, consolidated reports; foreign-currency cash and bank books; foreign-currency sales, purchases and payroll; every tax rule that depends on currency (section 3.9). Not deployed or not exercised: I did not check production.
@@ -133,7 +133,7 @@ Priority: **M** must, **S** should, **C** could. Today: **Built**, **Partial**, 
 | ME-DEP-4 | Every dimension report shows an explicit **Unassigned** row, and the report's total equals the ledger total (a check, not a hope). | M | No |
 | ME-DEP-5 | Profit and loss by department, cost centre, location or project. **A balance sheet by department is not version one** (it needs a balancing segment; no vendor gives it for free). | M | No |
 | ME-DEP-6 | Shared-cost allocation: an optional allocation run (direct method; bases headcount, floor area, revenue) posts dated journals tagged to departments. Step-down and reciprocal methods are deferred. | C | No |
-| ME-DEP-7 | Services pass department or location tags where their document carries them (Payroll first: the employee's department on pay lines; POP expenses next); defaults come from the item or employee. | S | No (no service sends any) |
+| ME-DEP-7 | Services pass department or location tags where their document carries them (Payroll first: the employee's department on pay lines; POP expenses next); defaults come from the item or employee. HR reports that Payroll's run posting is GL's totals call (wages total, salaries total, three accounts) with no department, branch or cost-centre tag, that the only tag a Payroll line carries is EMPLOYEE (advances, claims), and that **HR's employee record has no department or branch field**: HR must own a department or branch per person first. The split is then a clean fit for GL's agreed per-line pay-run journal (per-line account plus an opaque tag); add the dimensions there, not as a separate posting (see also the Move 2 subledger note). | S | No (no service sends any) |
 | ME-DEP-8 | Renaming or merging a department: version one archives and adds; no restatement of past reports (no source exists for restating; Femi to confirm, PQ-M7). | C | No |
 
 ### 3.4 Branches (ME-BR), owner GL, EA for the Company-as-branch exception
@@ -165,7 +165,7 @@ Priority: **M** must, **S** should, **C** could. Today: **Built**, **Partial**, 
 | ME-IC-1 | An intercompany line carries a counterparty tag naming the partner Company (a new dimension type; the identifier is the partner's Company id). | M | No |
 | ME-IC-2 | Intercompany balances sit in dedicated due-to and due-from accounts per partner, and each Company posts **its own side** (two entries, never one entry across two ledgers). | M | No |
 | ME-IC-3 | An intercompany reconciliation report lists unmatched and mismatched items (amount, currency, date, items in transit) before consolidation. | M | No |
-| ME-IC-4 | A payroll recharge between group entities is a separate, explicit intercompany journal, never embedded in the payroll posting (UC-HR12 as written). | M | No |
+| ME-IC-4 | A payroll recharge between group entities is a separate, explicit intercompany journal, never embedded in the payroll posting (UC-HR12 as written). HR: **designed, not built** (`HR_Payroll_DDD_Design` section 8.1); it needs a counterparty Company tag or an intercompany account pair on both sides' lines and an elimination at consolidation, and an employee mapped to one Company or an apportioned set (UC-HR1; today an employee belongs to exactly one Company). | M | No |
 | ME-IC-5 | Intercompany sales and purchases treat the other Company as a customer or supplier and tag the document as intercompany; VAT applies between separate legal entities (ME-TAX). | S | No |
 | ME-IC-6 | Timing differences in transit (cash, goods) are visible and expire or reverse by a rule, not by a manual fix. | S | No |
 
@@ -177,13 +177,16 @@ Priority: **M** must, **S** should, **C** could. Today: **Built**, **Partial**, 
 | ME-CASH-3 | Reconciling a foreign statement is done in the book's currency; the base-currency carrying value is reconciled by revaluation (ME-FX-6), not by statement matching. | M | No |
 | ME-CASH-4 | In the cash-flow statement, the effect of exchange-rate changes on foreign cash is its own reconciling line, not an operating, investing or financing flow (IAS 7, as Phase 2a states). | M | No |
 | ME-CASH-5 | A cash book can be viewed by branch tag; cross-currency inter-branch transfers use ME-FX. | S | No |
+| ME-CASH-6 | A document's "Paid into" choice shows each book's currency, and a foreign book cannot be picked for a document in the Company's currency unless the conversion is explicit (WEB-CBB: today the picker shows no currency, so a USD book could be picked for a GBP invoice). | M | No |
+| ME-CASH-7 | Money in, money out and move money accept and record the foreign amount, the rate and the base amount; a transfer needs the amount and the rate on both sides; the book table shows a base-currency column, the rate, and a running balance in the book's currency plus per-currency totals; the Accounts list shows no total across currencies; CSV export carries the rate and base columns; the idempotency attempt-key fingerprint includes the rate. | M | No |
+| ME-CASH-8 | Reconciliation decisions that foreign currency changes (WEB-CBB, all waiting on Phase 2a and the SRS 9.7 answers): the statement currency is the account's currency; tie-out is in the account currency; whether to show account and base amounts together; the realised exchange difference on a matched line appears as a separate adjustment (SRS); whether foreign reconciliation is in the MVP is Femi's. | M | No |
 
 ### 3.8 Other services (ME-SVC)
 | ID | Requirement | Pri | Owner | Today |
 |---|---|---|---|---|
 | ME-SVC-1 | SOP and POP refuse a line currency other than the Company's until foreign-currency documents are designed (a later SPUTO reusing this model). POP does not yet check this (T-TJ-27). | M | SOP, POP | Partial |
 | ME-SVC-2 | IM ties item currency to the Company's; stock is a non-monetary item valued at the transaction-date rate. | S | IM | No |
-| ME-SVC-3 | HR/Payroll pay currency equals the Company's (decided). A person taxed under another PAYE jurisdiction is **not** handled by a foreign-currency pay run: by the recommendation in PQ-M10 that person is employed by a Company (branch or subsidiary) in that jurisdiction. | M | HR/Payroll | No |
+| ME-SVC-3 | HR/Payroll pay currency equals the Company's (decided, built locally). A person taxed under another PAYE jurisdiction is **not** handled by a foreign-currency pay run: by the recommendation in PQ-M10 that person is employed by a Company (branch or subsidiary) in that jurisdiction. HR/Payroll today has **no per-person work country or tax jurisdiction**: only the Company's (`employee.companyId`); `PayrollTaxRule` has a jurisdiction string but nothing links an employee to a rule. Allowing a different currency per person would mean relaxing the just-built refusal on purpose (PQ-M10 option b). | M | HR/Payroll | Partial |
 | ME-SVC-4 | Fixed assets are non-monetary: a foreign-currency purchase price is converted once at the transaction date and not retranslated. | S | GL (fixed assets) | n/a |
 | ME-SVC-5 | Services that carry department or location tags (ME-DEP-7) send them in strict, versioned DTOs declared by the receiving side first. | S | all | No |
 
@@ -380,10 +383,11 @@ Each answer can be one line. **GL's Phase 2a questions (Q1 to Q8 in section 10 o
 | PQ-M7 | Translation and treatments: confirm the translation method (closing, average, historical, translation reserve) and the treatment of an intragroup monetary exchange difference against the licensed IAS 21 text; archive-only for renamed or merged departments. | Confirm from the licensed standard before building. | Do not build ME-GRP-5 or -6 until T-ME-04 is done. |
 | PQ-M8 | Version-one cut: confirm the first release is foreign cash and bank, departmental and branch reporting, then group link, intercompany and a management consolidation; non-controlling interest, goodwill, equity method, consolidated cash flow and stock profit deferred. | Confirm or move the line. | As stated. |
 | PQ-M9 | Hyperinflation (IAS 29): out of scope with a watch status. | Out of scope / in scope for NG. | Out, with Nigeria and Sierra Leone watched. |
-| PQ-M10 | PQ-21 resolution: a person taxed under another PAYE jurisdiction. | (a) Employed by a Company (branch or subsidiary) in that jurisdiction; not supported in one payroll. (b) One payroll with a per-person PAYE jurisdiction and a foreign-currency pay run. (c) An employer of record outside FiSH. | (a) for version one. |
+| PQ-M10 | PQ-21 resolution: a person taxed under another PAYE jurisdiction. | (a) Employed by a Company (branch or subsidiary) in that jurisdiction; not supported in one payroll. (b) One payroll with a per-person PAYE jurisdiction and a foreign-currency pay run (this relaxes the just-built D-1 refusal on purpose, per person; the per-person jurisdiction would live with Payroll's pay terms, or with HR as a work-location fact: to decide with you). (c) An employer of record outside FiSH. | (a) for version one. |
 | PQ-M11 | Foreign customers and suppliers: this phase or a later SPUTO (Phase 2a Q7). | Later / now. | Later. |
 | PQ-M12 | Access control by department or branch (an RBAC change). | After Live / now. | After Live. |
 | PQ-M13 | The tax rules the research could not settle (section 3.9 and digest section 6) per jurisdiction: the VAT rate for a foreign-currency invoice, the currency of corporation-tax computation, branch registration, PAYE for a person working abroad. | A table is added when the research is in. | Femi confirms the table row by row. |
+| PQ-M14 | Does Payroll split pay-run cost by department or branch in the ledger? It needs HR to hold a department or branch per person first. HR's view: yes for branch-based Companies. | (a) Yes, per-line pay-run journal with the tags. (b) Not now. | (a), after Wave 1, because it only needs HR's field and GL's agreed per-line journal. |
 
 ## 8. Parked, conflicting or unsourced (never filled in here)
 
@@ -419,7 +423,7 @@ Estimates are rough working days of the owning session, tests first. GL's Phase 
 | T-ME-09 | F7: reconciliation of a foreign statement | CBB (GL) | 2 | T-ME-08 |
 | T-ME-10 | Profit and loss by dimension, Unassigned bucket, total-equals-ledger check, optional scope parameter on report routes | GL | 3 | T-ME-03 |
 | T-ME-11 | Per-account dimension rule REQUIRED, OPTIONAL or FORBIDDEN | GL | 2 | T-ME-03 |
-| T-ME-12 | Payroll sends the employee's department and location tags; strict DTO declared first | HR/Payroll, GL | 1.5 | T-ME-03 |
+| T-ME-12 | HR owns a department or branch per person (a field it does not have today); Payroll sends those tags on the per-line pay-run journal; strict DTO declared first | HR, Payroll, GL | 1.5 plus HR's field | T-ME-03; PQ-M14 |
 | T-ME-13 | F4: transfers and realised gain or loss | GL | 3 | T-ME-08 |
 | T-ME-14 | F5: explicit revaluation action, rounding account | GL | 2.5 | T-ME-13 |
 | T-ME-15 | F6: IAS 7 FX effect line in the cash-flow statement | GL | 2 | T-ME-14 |
@@ -462,7 +466,7 @@ For the FiSH+ER WEB session to place and build (it owns how, where and when). Ea
 | W3 | One compact "Viewing: All departments / All branches" scope control that scopes a report or an entry, with an explicit Unassigned state; details behind a tap | Business Owner | phone first | see a department's or branch's profit and loss |
 | W4 | Department and branch pickers on journal lines and where documents carry them (the master list from GL) | Accountant | desktop second | tag a transaction |
 | W5 | Exchange-rate view and entry (pair, date, rate, type, source, who entered); the first-use "cannot be set" state when no rate exists | Accountant, Operator | desktop second, phone read-only | maintain rates; understand why an amount cannot be shown |
-| W6 | Foreign-currency cash and bank books and their reconciliation (with the CBB playbook, not duplicated here) | Accountant | desktop second | reconcile a USD statement |
+| W6 | Foreign-currency cash and bank books and their reconciliation (the CBB playbook, not duplicated here): a rate field on receipts, payments and transfers; a base-currency column and running balance per currency in the book table; the "Paid into" picker showing currency; CSV with rate and base columns; a `formatMoney` check for zero-decimal currencies; the attempt-key fingerprint including the rate | Accountant | desktop second | reconcile a USD statement; record and move foreign money |
 | W7 | Revaluation run: "revalue as at date", with its result | Accountant | desktop second | close a period |
 | W8 | Group view: a Tenant with its Companies, the parent link, the group currency | Owner Admin | phone read, desktop edit | set up and read a group |
 | W9 | Consolidated report with per-entity columns, an elimination column, drill-back, and the "management consolidation" label | Accountant, Owner | desktop second, phone read-only | read the group |
@@ -477,8 +481,8 @@ WEB reported (2026-10-22) that no FX, exchange-rate, revaluation, department, br
 |---|---|---|
 | GL | confirm or correct the ledger side; claim a row; answer which Phase 2a questions are open | asked; no reply at the time of writing |
 | CBB (GL session for now) | confirm the cash and bank side | via GL; CM confirms no dedicated CBB backend session exists |
-| FiSH+ER WEB | UI needs, existing screens, shell constraints, contact | replied; folded into section 11 |
-| HR/Payroll | department and branch tags on pay lines, UC-HR12, per-person jurisdiction | asked; no reply at the time of writing |
+| FiSH+ER WEB (and WEB-CBB through it) | UI needs, existing screens, shell constraints, contact; foreign-currency cash and bank | replied twice; folded into section 11 and ME-CASH-6 to -8 |
+| HR/Payroll | department and branch tags on pay lines, UC-HR12, per-person jurisdiction | replied (from the code): no tags today; UC-HR12 designed, not built; no per-person jurisdiction; currency check built locally; folded into ME-SVC-3, ME-DEP-7, ME-IC-4, T-ME-12, PQ-M10, PQ-M14 |
 | CM | routing, push, review | informed; digest and claim pushed on request |
 | EA | Tenant and Company groups, `Tenant.baseCurrency` versus the Company's | not yet asked; to ask before T-ME-17 |
 | SOP, POP, IM | foreign-currency documents (later SPUTO); POP's currency check | not yet asked; later |
@@ -492,6 +496,6 @@ WEB reported (2026-10-22) that no FX, exchange-rate, revaluation, department, br
 - Production state: what is deployed, which rows exist.
 - IAS 21 and IFRS 10 text and paragraph numbers (digest caveat).
 - Every "could not verify" item in the digest sections 1.7, 2.8 and 3.8.
-- Whether GL has already drafted its part (the GL session had not replied); GL's cells are Tx's proposal until it does.
+- Whether GL has already drafted its part (the GL session had not replied at the time of writing); GL's cells are Tx's proposal until it does.
 - The tax research (digest section 6, pending at the time of writing): ME-TAX-2 and ME-TAX-3 and matrix rows R15 and R16 state questions, not answers.
-- Whether HR has any per-person jurisdiction field (asked, no reply).
+- HR's statements are from its code read, not run (HR's own caveat).
