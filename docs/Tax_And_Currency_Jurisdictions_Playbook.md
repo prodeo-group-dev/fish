@@ -8,6 +8,8 @@
 
 **Revision 2 (2026-10-22, later the same day):** folds in GL's and SOP's replies, GL's Company read (built on a branch, not deployed), and a trace of how a Company's jurisdiction is set at onboarding (it is set once and cannot change; new PQ-19, TJ-CO-1a, TJ-CUR-10, TJ-NFR-7, tasks T-TJ-26 to T-TJ-29). Revision 1 merged as PR #449.
 
+**Revision 6 (2026-10-22): Femi's direct answers on payroll currency** are recorded as decisions (section 9, "Decided"): Payroll validates currency, pay is in the currency of the tax jurisdiction over the person's pay, pay terms are Owner Admin only, defaults come from the Organisation's tax jurisdiction, and no currency is ever hard-coded. PQ-20 is answered; PQ-21 is the one point his answer leaves open. (Femi writes "Organisation" where this document and the code say "Company"; the two mean the same thing here, and the rename is words only.)
+
 **Rule for this document.** Femi is the tax professional and decides policy. Every policy choice is listed in section 9 with options and a recommendation, and none is decided here. No hold or outside-adviser gate is invented. Where a source is secondary, conflicting or missing, the item is parked (section 10), not filled in.
 
 ## Contents (the six parts of a Playbook, `docs/Playbook_Definition.md`)
@@ -116,8 +118,8 @@ Status column: **Built** exists and meets the requirement; **Partial** exists in
 | TJ-CUR-2 | Each jurisdiction names one currency (its operating currency for Companies created there). | M | Built |
 | TJ-CUR-3 | A new Company's base currency is the jurisdiction's currency. A creator may choose another only when the registry has none, and then only an ONBOARDED currency. | M | Partial (V34 comment; not checked against an onboarded list) |
 | TJ-CUR-4 | The onboarded-versus-reference-only status is a recorded, audited decision (Femi's). The 2026-08-22 decision (SLE is the only currency onboarded across the Mano River operation) limits which currencies are ONBOARDED; it does not decide what a screen shows for a Company (Decisions Log 2026-10-22). | M | Partial |
-| TJ-CUR-5 | Every money screen takes the Company's GL currency from the Company read. No hard default; if unknown, block the action or show nothing. | M | No (WEB hard defaults) |
-| TJ-CUR-6 | Payroll currency equals the Company's GL currency. Payroll refuses a pay rate or pay run in any other currency (409 `currency_mismatch`, plain message) at pay-terms set and at run create; the screen shows the currency read-only. Any exception (contractor, expatriate) is PQ-20 and would need its own design. | M | No (confirmed: no validation today) |
+| TJ-CUR-5 | Every money screen and Payroll takes the currency from the Organisation's tax jurisdiction, via the Company read (the Company's GL currency, which the registry sets from the jurisdiction). It is pre-filled from there (D-4) and is **never a literal in code** (D-5, Femi: "not in any way shape or form"); if the Company read cannot answer, block the action or show nothing. | M | No (WEB literals); decided by Femi 2026-10-22 |
+| TJ-CUR-6 | Payroll currency equals the Company's GL currency (D-1: Payroll "should" check it). Pay is in the currency of the tax jurisdiction over the person's pay, i.e. their PAYE jurisdiction (D-2); for a person taxed in the Organisation's own jurisdiction that is the GL currency. Payroll refuses any other currency (409 `currency_mismatch`, plain message) at pay-terms set and at run create; the screen shows the currency read-only. Pay terms, including currency, are set by the Owner Admin only (D-3). A person whose PAYE jurisdiction differs from the Organisation's is PQ-21. | M | No (confirmed: no validation today); decided by Femi 2026-10-22 |
 | TJ-CUR-7 | WEB's own jurisdiction-to-currency map and `CURRENCIES` list are removed in favour of the registry and the Company read. | M | No |
 | TJ-CUR-8 | Zero-decimal currencies (GNF, XOF) are verified end to end (amounts, rounding, storage precision) before any is ONBOARDED. | S | No (not needed while reference-only) |
 | TJ-CUR-9 | A Company's base currency is fixed once its first entry posts; a different currency means a different Company (PQ-3). | S | Unknown |
@@ -282,7 +284,7 @@ Main: Femi corrects the rulebook with a new row and a reason. FiSH does not edit
 Main: the accountant asks for a computation for a period; GL finds the rule in force on the rule family's date basis; applies the straddle policy if the period crosses a change; computes; persists. Alt: the rule needs an input (IE category; NG turnover and fixed assets): the client read (R4) told it to ask for it. Err: no verified rule: 409.
 
 **UC-TJ-11 Set up payroll currency.**
-Main: when a pay rate or pay run is created, Payroll reads the Company's currency and requires equality. Err: a different currency is refused 409 with a plain message; the screen shows the currency read-only.
+Main: the Owner Admin sets pay terms; the screen pre-fills the currency from the Organisation's tax jurisdiction (the Company read) and shows it read-only; at pay-terms set and again at run creation Payroll reads the Company's currency and requires equality. Err: a different currency is refused 409 `currency_mismatch` with a plain message. Alt: the Company read fails: the screen blocks, it does not fall back to any currency.
 
 **UC-TJ-12 Register a Company for VAT (after PQ-10).**
 Main: the owner or accountant records the registration (number, effective date, cadence); from that date VAT is charged and reclaimed per the rulebook. Alt: not registered: no VAT lines post; the treatment of VAT paid on purchases follows PQ-10. Err: registration dated after an already-posted VAT entry: refused with a plain message.
@@ -328,12 +330,23 @@ Main: WEB calls the vat-categories read and shows categories and rates for the C
 - Exceptions: none in the code (employment types carry no currency exception). Whether a contractor or expatriate may be paid in another currency is a business question (PQ-20). If none, Payroll refuses a mismatch with 409 `currency_mismatch`.
 - Effort: small, Payroll only: one check when pay terms are set, one at run creation, plus the GL lookup, test-first with mutation checks. Depends on GL releasing the Company read; it matters once the new Payroll is live for users.
 - Defaults: nothing in HR or Payroll pre-fills a currency (both require it); the hard-coded `'GBP'` is entirely WEB's.
+- **Femi (2026-10-22), on all of the above:** the check is wanted ("It should"), the pay currency is that of the tax jurisdiction over the pay (PAYE), the terms are set by the Owner Admin, the default comes from the Organisation's tax jurisdiction, and no currency may be hard-coded "in any way shape or form" (D-1 to D-5). Payroll and HR should therefore also pre-fill from the Company read rather than require the caller to type a currency.
 
 **Open with CM** (section 9b).
 
 ## 9. Policy questions for Femi (options and a recommendation; none decided)
 
 Each answer can be one line. A numbered question is only a question.
+
+**Decided (Femi, 2026-10-22, replying to the playbook summary; his words in quotes).** These are no longer questions.
+
+| # | Decision | Effect in this playbook |
+|---|---|---|
+| D-1 | Payroll must check the pay-rate and pay-run currency against the Company's GL currency: "It should." | TJ-CUR-6 confirmed Must. |
+| D-2 | Which currency a person is paid in (was PQ-20): "Paid in local currency ie the tax jurisdiction over his pay (PAYE)." | TJ-CUR-6 and UC-TJ-11; only the divergence case remains open (PQ-21). |
+| D-3 | The Payroll check (when pay terms are set, and at run creation): "OK and by Owner Admin." Read as: pay terms, including the pay currency, are set by the Owner Admin only, as already decided on 2026-10-15. | T-TJ-09. The reading is mine; Femi to correct if he meant more (the 2026-10-20 rule that HR may prepare a run and only the Business Owner approves is unchanged). |
+| D-4 | Where a currency default comes from: "The Organisation's Tax Jurisdiction should." The default is pre-filled from the Organisation's tax jurisdiction, not left blank and not a literal. | TJ-CUR-5, WEB need 1. |
+| D-5 | "NO!!! It cannot be hard coded... Not in any way shape or form. It depends on the tax jurisdiction of the organisation." No currency literal in any screen or service, anywhere. | TJ-CUR-5, T-TJ-07, T-TJ-08; section 1 hard-defaults row. |
 
 | # | Question | Options | Recommendation |
 |---|---|---|---|
@@ -356,7 +369,8 @@ Each answer can be one line. A numbered question is only a question.
 | PQ-17 | Do you want each jurisdiction's rulebook to carry a "last reviewed" date, with overdue ones shown to you? | (a) Yes. (b) No. | (a), as a reminder to you, not a gate. |
 | PQ-18 | Is USD an ONBOARDED currency? WEB lists it; the registry does not. | (a) Yes. (b) No. | Your call; the currency reference needs the answer to seed. |
 | PQ-19 | Can a Company's jurisdiction change after it is created? Today it cannot (no route, no method). A Company created in the wrong country, or one that relocates, has no path. | (a) Never; the correct jurisdiction means a new Company. (b) An operator may correct it before the first entry posts, with a reason, audited. (c) Any time with a reason (relocation), which would change the rules applied to history. | (a) with (b) as the correction path; never (c), since it would re-point past postings at a different rulebook. |
-| PQ-20 | Can anyone be paid in a currency other than the Company's GL currency (a contractor, expatriate staff)? Nothing in the code allows it today, and nothing refuses it either. | (a) No; Payroll refuses any mismatch (your 2026-10-22 rule applied strictly). (b) Yes, as a recorded per-person exception, paid in another currency and converted or posted under the foreign-currency design. | (a). If (b) is ever wanted it needs `GL_Foreign_Currency_Accounts_IAS21_Design.md` first. |
+| PQ-20 | *ANSWERED, see D-2:* paid in the currency of the tax jurisdiction over the person's pay (PAYE). | | |
+| PQ-21 | Femi's answer to PQ-20 ties pay to the jurisdiction taxing the pay. Normally that is the Organisation's own, and the pay currency equals the GL currency. What if a person's PAYE jurisdiction is a different one (staff based in another country on the Organisation's payroll)? Today nothing models a per-person jurisdiction. | (a) Not supported: every person on a Company's payroll is taxed under the Company's jurisdiction; a different country means a Company there. (b) Per-person PAYE jurisdiction, pay in its currency, posted to the ledger under the foreign-currency design (`GL_Foreign_Currency_Accounts_IAS21_Design.md`). | (a) for now; (b) only when a real case arises, since it needs that design first. |
 
 ### 9b. Questions for CM and peers (architecture, not tax policy), with CM's answers of 2026-10-22
 
@@ -398,7 +412,7 @@ Estimates are rough working days of the owning session, tests first. "Femi" mean
 | T-TJ-06 | `currencies` reference table with status; registry returns `currencyStatus` (additive field plus fixture) | GL | 1 | PQ-2, PQ-18 |
 | T-TJ-07 | WEB: remove the jurisdiction-currency map, the hard `CURRENCIES` list and every `'GBP'` default; read the registry and the Company read; block when unknown | WEB | per WEB | T-TJ-04, T-TJ-06 |
 | T-TJ-08 | WEB tests: UK/GBP, Sierra Leone/SLE, unknown currency, per Femi's 2026-10-22 instruction | WEB | with T-TJ-07 | T-TJ-07 |
-| T-TJ-09 | Payroll/HR: pay rate and pay run currency must equal the Company's: one check when pay terms are set, one at run create, the Company currency from `GET /api/companies/{id}`; 409 `currency_mismatch` plain message; test-first with mutation checks; read-only on the screen | HR/Payroll | 1 (HR's estimate: small) | T-TJ-04 released; PQ-20 |
+| T-TJ-09 | Payroll/HR: pay rate and pay run currency must equal the Company's (**approved by Femi, D-1, D-3**): one check when pay terms are set (Owner Admin only), one at run create, the Company currency from `GET /api/companies/{id}`; the pay screen pre-fills the currency from there, read-only (D-4); 409 `currency_mismatch` plain message; test-first with mutation checks | HR/Payroll | 1 (HR's estimate: small) | T-TJ-04 (done); PQ-21 only if a per-person jurisdiction is wanted |
 | T-TJ-10 | Operator write routes for jurisdictions, currency status, `vat_rates`, `tax_rules` (draft, verify, schedule, list pending), each writing the change log; operator-only | GL | 3 | T-TJ-01, T-TJ-02; PQ-4, PQ-5 |
 | T-TJ-11 | Operator screens | Omniview | per Omniview | T-TJ-10; 9b item 1 |
 | T-TJ-12 | Rulebook change runbook and checklist (UC-TJ-6), notice wording template for Femi's approval | Tax session | 1 | PQ-12 |
@@ -429,7 +443,7 @@ Safety foundations come first: nothing that can change a rate or a country goes 
 
 1. **Wave 0, foundations (no behaviour change):** T-TJ-01 audit log, T-TJ-02 provenance columns, T-TJ-03 primary-source pass for the live rows. A write path (Wave 3) is not allowed to start before T-TJ-01 and T-TJ-02 are merged.
 2. **Wave 1, the Company read and the currency fix (unblocks WEB's Pay Terms fix):** T-TJ-04 (and T-TJ-05), then T-TJ-06, T-TJ-07, T-TJ-08, T-TJ-09. Consumer-first: fixtures land first; EA, WEB, IM, SOP, POP and HR mirror the field; only then GL sends it.
-3. **Wave 2, decisions:** Femi answers PQ-2 to PQ-5, PQ-8, PQ-10, PQ-12, PQ-19 and PQ-20; these gate Waves 3 and 4. Wave 1 does not wait for them.
+3. **Wave 2, decisions:** Femi answers PQ-2 to PQ-5, PQ-8, PQ-10, PQ-12 and PQ-19 (PQ-20 is answered, PQ-21 is not blocking); these gate Waves 3 and 4. Wave 1 does not wait for them.
 4. **Wave 3, the write path and the rollout:** T-TJ-10, T-TJ-11, T-TJ-12, T-TJ-13.
 5. **Wave 4, rules:** T-TJ-14, T-TJ-15, then per-country T-TJ-16 and T-TJ-17, T-TJ-18; T-TJ-19; T-TJ-20 when Femi decides PQ-9.
 6. **Later:** T-TJ-21 to T-TJ-25.
@@ -440,7 +454,7 @@ Critical path to the first visible gain: T-TJ-04 then T-TJ-07 (WEB stops guessin
 
 For the `FiSH+ER WEB` session to turn into screens (it owns how and when):
 
-1. Read the Company through the Company read; use `baseCurrency` everywhere money is shown or entered; no `'GBP'` or any currency default; if unknown, block the action or show nothing.
+1. Read the Company through the Company read; use `baseCurrency` everywhere money is shown or entered; no currency literal of any kind (D-5); pre-fill from the Organisation's tax jurisdiction (D-4); if unknown, block the action or show nothing.
 2. Remove `jurisdictionCurrency.ts`, the hard `CURRENCIES` list and the `defaultPoCurrency(...)` derivation (`CreateItemTab`, `CreatePurchaseOrderTab`, `DueDateAgingReport`); take countries and currencies from the registry and the Company read. The add-Company form already uses a registry-fed jurisdiction picker; its currency choice should follow the registry's currency (and show the explicit "currency set by country" state), not a separate WEB map.
 3. Show the currency read-only on payroll screens (pay rate, pay run); never offer a choice.
 4. Offer VAT categories only from `vat-categories`, in the country's own tax word, with the rate as a plain percentage for the date; show the plain-words refusals for the codes in TJ-VAT-6.
