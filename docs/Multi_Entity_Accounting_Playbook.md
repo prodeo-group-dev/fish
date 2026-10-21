@@ -36,8 +36,8 @@
 | Account | **No currency field.** |
 | Journal line | `amount: Money`, side, dimension tags (opaque strings). **No foreign amount, foreign currency or rate column.** Each currency must balance on its own inside an entry. **Nothing stops a line in a currency other than the Company's from being posted**; every report is built in the Company's base currency and would throw on it. |
 | Company | One `baseCurrency`, set from its tax jurisdiction (UK GBP, IE EUR, NG NGN, SL/LR/GN/CI SLE). `fiscalYearStartMonth` stored but unused. **No parent, subsidiary or group field.** |
-| FX | `FXRate` value object, not stored. `RecordFXRevaluationUseCase` revalues one receivable from a caller-supplied rate and no route reaches it. **No rate table, no rate source, no FX gain/loss account in any chart template, no realised-gain calculation.** |
-| Dimensions | `DimensionType` has COST_CENTER, DEPARTMENT, PROJECT, LOCATION, PRODUCT_LINE and others; **no BRANCH, no LEGAL_ENTITY**. **No code writes** department, cost-centre, location or project tags; no master list; no validation; none mandatory; **no report filters or groups by any of them.** |
+| FX | `FXRate` value object, not stored. `RecordFXRevaluationUseCase` revalues ONE receivable from a caller-supplied rate, a caller-supplied "currently recorded home value" and a caller-supplied FX gain/loss account id; no route reaches it. **No rate table, no rate source, no FX or rounding account in any chart template, no realised-gain calculation.** New codes reach existing Companies by adding them to the template and calling `POST /companies/{id}/standard-accounts` (the same path that delivered 5510 and 4930; proven live). (GL review, 2026-10-22.) |
+| Dimensions | `DimensionType` has COST_CENTER, DEPARTMENT, PROJECT, LOCATION, PRODUCT_LINE and others; **no BRANCH, no LEGAL_ENTITY**. GL **does** write some tags today: CUSTOMER and VENDOR (AR/AP ageing), ITEM, VAT_CATEGORY, VAT_DIRECTION, CASH_FLOW_ACTIVITY (settlement lines) and PAYROLL_ELEMENT (payroll journal). **Nothing writes** DEPARTMENT, COST_CENTER, PROJECT, LOCATION or PRODUCT_LINE; values are opaque strings on `JournalLine`, not references to a master; no validation; none mandatory; **only AR/AP ageing reads a dimension, and no report groups the profit and loss by any.** (GL review, 2026-10-22.) |
 | Groups | A Tenant owns Companies (Purse: four) but **nothing links them financially.** No parent, group currency, intercompany tag, elimination, translation or consolidated report. UC-CFO5 / FR-CFO07 (consolidation as a reporting layer) are documented and unbuilt. UC-HR12 (payroll recharge) is prose only. |
 | Cash and bank | One currency per book today (the Company's); WEB-CBB reports that every book carries its own currency from the CBB list, that the Accounts list captions "Amounts in {first book's currency}", that the in/out forms send only an amount (no currency, no rate), that reconciliation runs in the chosen account's own currency, and that **CBB refuses a statement whose currency is not the Company's base (`currency_mismatch`), so a foreign statement cannot start today.** No foreign-currency UI exists or is designed. GL's Phase 2a IAS 21 design for foreign-currency books is **design only, with eight open questions for Femi, all unanswered.** It excludes subsidiary translation and foreign customers and suppliers. |
 | Other services | Foreign-currency sales, purchases and payroll are **not possible.** SOP refuses a line currency other than the Company's; POP does not (no such check found); IM does not tie item currency to the Company; HR/Payroll's currency check (T-TJ-09, D-1) is now built and committed locally in fish-payroll (d4f0fe0; 409 `currency_mismatch`, 503 `company_currency_unavailable`; fixtures on `fish-contracts` branch `payroll-currency-mismatch` 8337bf3), with CM holding the tip, not yet deployed. |
@@ -103,7 +103,7 @@ Priority: **M** must, **S** should, **C** could. Today: **Built**, **Partial**, 
 |---|---|---|---|
 | ME-FX-1 | A journal line can carry a foreign amount, a foreign currency and the rate used, beside the base-currency amount; the base amount stays the amount every report sums (GL Phase 2a option C; the choice between A, B and C is Femi's, PQ-M1). | M | No |
 | ME-FX-2 | A Company reports only in its base currency; foreign amounts appear only beside their currency; no report sums mixed currencies. | M | Partial (base only; foreign cannot exist) |
-| ME-FX-3 | A line whose currency is not the Company's is refused unless it carries the foreign-amount fields and sits on an account allowed to be foreign; otherwise a plain 409. **This closes today's silent gap and can ship before any FX feature.** | M | No |
+| ME-FX-3 | A line whose currency is not the Company's is refused unless it carries the foreign-amount fields and sits on an account allowed to be foreign; otherwise a plain 409. **This closes today's silent gap and can ship before any FX feature.** GL's proposed shape: one shared guard used by `PostJournalEntryUseCase` and every Record* use case (sale, obligation, payment, collection, credit note, receipt and issue, payroll, pay-run journal, cash book), refusing with 409 `currency_not_company_currency` and a plain-words detail naming the line and both currencies; about 1.5 GL days with tests; additive, no migration. **Before it ships, someone runs a read-only production count of journal lines whose currency differs from their Company's base currency**; any that exist are test data to be reviewed, not silently refused later. Today `PostJournalEntryUseCase` has no currency check and the route accepts any ISO currency per line. | M | No |
 | ME-FX-4 | An account may have a currency (nullable). Version one: cash and bank assets (Phase 2a); later receivable and payable control accounts per customer or supplier. | M | No |
 | ME-FX-5 | A foreign-currency transaction is recorded at the spot rate on the transaction date (a documented average-rate shortcut is allowed only where rates barely move); the rate and its source are stored on the line. | M | No |
 | ME-FX-6 | Monetary items (cash, bank, receivables, payables) are retranslated at the closing rate at each reporting date through an explicit "revalue as at date" action; the difference goes to profit or loss. Non-monetary items (stock, fixed assets at cost) keep the transaction-date rate. | M | No |
@@ -122,7 +122,7 @@ Priority: **M** must, **S** should, **C** could. Today: **Built**, **Partial**, 
 | ME-RATE-5 | Rate entry and change is an audited operator or accountant act (the same platform change log as the rulebook, TJ-GOV-2). | M | No |
 | ME-RATE-6 | Rate types average, closing and historical are used for translation (ME-GRP-5) and only needed when translation is built. | S | No |
 | ME-RATE-7 | Automatic feed import (ECB, Bank of England) is optional and deferred; it must keep the source and licence terms. | C | No |
-| ME-RATE-8 | Scope of the rate table (platform-wide, per Tenant, per Company) is a decision; consolidation needs every entity of a group to use the same rates for the same date (PQ-M5). | M | No |
+| ME-RATE-8 | Scope of the rate table (platform-wide, per Tenant, per Company) is a decision; consolidation needs every entity of a group to use the same rates for the same date (PQ-M5). GL's recommendation: one platform-wide table owned by GL (rates are facts, not Tenant data), with Tenant or Company overrides recorded as override rows with a reason, never overwriting. | M | No |
 
 ### 3.3 Departments and other dimensions (ME-DEP), owner GL
 | ID | Requirement | Pri | Today |
@@ -194,11 +194,11 @@ Priority: **M** must, **S** should, **C** could. Today: **Built**, **Partial**, 
 | ID | Requirement | Pri | Today |
 |---|---|---|---|
 | ME-TAX-1 | Every Company has exactly one tax jurisdiction; a branch set up as a Company has its own; a branch that is a dimension is under its Company's. | M | Built (Company) |
-| ME-TAX-2 | VAT on a supply invoiced in a foreign currency is computed and reported in the VAT jurisdiction's currency using the rate that jurisdiction permits at the tax point; the rate and its source are stored with the posting. **The permitted rate rules for UK, Ireland, Nigeria, Sierra Leone and the other jurisdictions come from the tax research (digest section 6).** | M | No |
-| ME-TAX-3 | Corporation tax is computed from the Company's functional-currency ledger; where the jurisdiction requires its own currency or rates, the conversion is a recorded step. **The jurisdiction rules come from the tax research (digest section 6).** | M | No |
+| ME-TAX-2 | VAT on a supply invoiced in a foreign currency is computed and reported in the VAT jurisdiction's currency using the rate that jurisdiction permits at the tax point; the rate and its source are stored with the posting. **Researched so far (digest 6.1 and 6.2; Femi confirms):** UK VAT is computed in sterling using the UK market selling rate at the time of supply, or HMRC's period rate, or a rate agreed with HMRC, and the invoice must show the VAT total in sterling; Ireland requires the euro figures on a foreign-currency invoice at the Central Bank selling rate, with the date described differently by two Revenue sources (invoice due to be issued versus tax becomes due). The rate type and rate date are therefore per-jurisdiction settings, not constants. Nigeria and the Mano River countries: pending (digest 6.4). | M | No |
+| ME-TAX-3 | Corporation tax is computed from the Company's functional-currency ledger; where the jurisdiction requires its own currency or rates, the conversion is a recorded step. **Researched so far (digest 6.1 and 6.2; Femi confirms):** UK corporation tax is computed and returned in sterling, with a functional-currency route (CTA 2010 sections 7 to 11) for companies whose functional currency is not sterling; Ireland returns in euro, with a section 402 functional-currency route for capital allowances and trading losses, and section 79 bringing realised and unrealised trade exchange differences into trading income. So the unrealised-versus-realised treatment is a per-jurisdiction fact. Nigeria and the Mano River countries: pending (digest 6.4). | M | No |
 | ME-TAX-4 | PAYE: pay is in the currency of the tax jurisdiction over the pay (Femi D-2). A person working in a jurisdiction other than the employer Company's may need PAYE registration there; this is a permanent-establishment, branch or subsidiary question (PQ-M10). Version one does not support two PAYE jurisdictions in one payroll. | M | No |
 | ME-TAX-5 | A branch abroad: whether it creates a taxable presence or needs a VAT registration is a question for Femi per jurisdiction; the registry's tax-jurisdiction-per-Company model is what a foreign branch Company uses. | M | No |
-| ME-TAX-6 | Group relief, consolidated tax returns and transfer pricing for recharges are out of version one; the basis of a recharge is stored as a document reference. | C | No |
+| ME-TAX-6 | Group relief (UK and Ireland both at 75%), consolidated tax returns and transfer pricing for recharges are out of version one; the UK branch exemption becomes mandatory from 1 January 2027 only if the draft clauses are enacted (digest 6.1); the basis of a recharge is stored as a document reference. | C | No |
 | ME-TAX-7 | The data side of every FX-related tax rule (rate source per jurisdiction, date basis, currency of computation) lives in the rulebook of the Tax and Currency Jurisdictions playbook, not here. This playbook only names the rows. | M | n/a |
 
 ### 3.10 Reporting (ME-RPT), owner GL, WEB for the screens
@@ -265,8 +265,8 @@ No mixed-currency sums in the type system; additive, nullable migrations only; s
 | R12 | Translation to the group currency | - | - | X | - (same currency) | X |
 | R13 | Elimination at consolidation | - | - | E | E | E |
 | R14 | Tax jurisdiction and registrations | C | C | L | C | L |
-| R15 | VAT on a foreign-currency supply | Rt (permitted rate at the tax point; tax research) | Rt | Rt, L | Rt | Rt, L |
-| R16 | Corporation tax currency of computation | C | C | L (branch profits in the home country; tax research) | C | L (own jurisdiction's rule) |
+| R15 | VAT on a foreign-currency supply | Rt (UK: sterling VAT at the time-of-supply market rate or an agreed rate; IE: euro figures at the Central Bank selling rate) | Rt | Rt, L | Rt | Rt, L |
+| R16 | Corporation tax currency of computation | C (UK sterling, IE euro; functional-currency routes exist) | C | L (branch profits: UK exemption elective, IE credit relief; branch-profit currency not found) | C | L (own jurisdiction's rule) |
 | R17 | Period close and lock | C | C | C (own Company) | C | C |
 | R18 | Reports available | P&L by department (V: balance sheet by department) | P&L by branch; branch cash view | entity report and consolidated | entity report and consolidated | entity report (own currency) and consolidated (group currency) |
 | R19 | Audit trail of rates, runs, mappings | C | C | C | C | C |
@@ -289,8 +289,8 @@ No mixed-currency sums in the type system; additive, nullable migrations only; s
 | R12 | GL | ME-GRP-5, ME-RATE-6 | IAS 21 translation (digest 3.2); NetSuite rate types | No | PQ-M7 |
 | R13 | GL | ME-GRP-3, -4, -6 | IFRS 10; intragroup monetary items (digest 3.1, 3.2, section 5) | No | PQ-M6, PQ-M7 |
 | R14 | Tx | ME-TAX-1, -5 | permanent establishment and VAT fixed establishment differ (digest 2.6) | Built (Company) | per jurisdiction |
-| R15 | Tx | ME-TAX-2 | tax research (digest section 6) | No | tax rules per jurisdiction |
-| R16 | Tx | ME-TAX-3 | tax research (digest section 6) | No | tax rules per jurisdiction |
+| R15 | Tx | ME-TAX-2 | UK and IE researched (digest 6.1, 6.2); NG and Mano River pending | No | PQ-M13 |
+| R16 | Tx | ME-TAX-3 | UK and IE researched (digest 6.1, 6.2); NG and Mano River pending | No | PQ-M13 |
 | R17 | GL | ME-GOV-2 | IFRS 10 same reporting date; NetSuite elimination after close (digest 3.1, 3.6) | Partial | n/a |
 | R18 | GL, WEB | ME-DEP-5, ME-BR-5, ME-RPT-1 to -5 | researcher 2: P&L by tag is easy, balance sheet by tag is not (digest 2.2) | No | PQ-M6a |
 | R19 | GL, CM | ME-GOV-1, ME-RATE-5 | NetSuite audit report; Dynamics reversal history (digest 1.2, 3.4) | No | n/a |
@@ -318,11 +318,11 @@ No mixed-currency sums in the type system; additive, nullable migrations only; s
 | Piece | Sketch | Source in the research or design |
 |---|---|---|
 | Account currency | `accounts.currency` nullable; v1 only cash and bank assets may be non-null | GL Phase 2a section 5 |
-| Foreign memo on lines | `journal_lines.foreign_amount`, `foreign_currency`, `fx_rate`, `fx_rate_id`, all nullable; base amount unchanged | GL Phase 2a option C; Odoo stores `amount_currency`, `currency_id`, `balance` |
-| Rate table | `fx_rates(id, from, to, rate, as_of, rate_type, source, entered_by, entered_at, override_reason)`; scope per PQ-M5 | GL Phase 2a; Dynamics and SAP rate types |
-| FX accounts | realised and unrealised FX gain/loss, plus a per-currency rounding account, delivered to existing Companies through `AddMissingStandardAccountsUseCase` | survey 4.1 |
+| Foreign memo on lines | `journal_lines.foreign_amount NUMERIC`, `foreign_currency CHAR(3)`, `fx_rate NUMERIC(18,8)`, `fx_rate_id UUID`, all nullable; the base amount stays authoritative and the rate is informational (a memo rate may not reproduce the base amount to the cent) | GL Phase 2a option C; Odoo stores `amount_currency`, `currency_id`, `balance` |
+| Rate table | `exchange_rates(id, from, to, rate NUMERIC(18,8), as_of, rate_type SPOT or CLOSING or AVERAGE or HISTORICAL, source, entered_by, entered_at, override_reason)`; never updated in place; scope per PQ-M5 | GL Phase 2a; Dynamics and SAP rate types |
+| FX accounts | realised FX gain/loss, unrealised FX gain/loss, rounding, and (only when consolidation is built) a translation reserve; delivered to existing Companies through `POST /companies/{id}/standard-accounts` | survey 4.1; GL review |
 | Dimension master | `dimension_values(company_id, type, code, name, active)` and `account_dimension_rules(company_id, account_id, type, rule)` | Odoo plans, Dynamics account structures |
-| New dimension types | BRANCH (or reuse LOCATION), COUNTERPARTY (partner Company id) | survey 4.2 |
+| New dimension types | BRANCH (or reuse LOCATION), COUNTERPARTY (partner Company id). `DimensionType` is a closed enum persisted as text: adding a value is a boundary change, so every service that mirrors it declares the value first (strict decoding). Whether WEB, EA or CBB mirrors of account-postings lines carry `dimensions` is to be checked before adding values. | survey 4.2; GL review |
 | Group | `companies.parent_company_id`, ownership percentage, from and to; a group presentation currency | `docs/DDD_Design.md` about line 386 |
 | Mapping | `group_account_mapping(group_id, company_id, company_account_code, group_account_code, version)` | Dynamics options, Odoo mapping by code |
 | Consolidation run | `consolidation_runs(id, group_id, as_of, presentation_currency, rate_set, mapping_version, status, created_by, created_at)`, `consolidation_lines`, `consolidation_adjustments(kind ELIMINATION or ADJUSTMENT)` | NetSuite elimination subsidiary, Dynamics consolidation entity; hybrid frozen run |
@@ -369,7 +369,7 @@ Actors: **Business Owner**, **Accountant** (a Tenant's), **Operator** (Prodeo st
 
 ## 7. Policy questions for Femi (options and a recommendation; none decided)
 
-Each answer can be one line. **GL's Phase 2a questions (Q1 to Q8 in section 10 of the IAS 21 design) are still unanswered and gate this work; they are carried here by reference, not repeated.** New questions below use the prefix PQ-M.
+Each answer can be one line. **GL's Phase 2a questions (Q1 to Q8 in section 10 of the IAS 21 design) are still unanswered (GL checked the Decisions Log, 2026-10-22; Q1, Q2 and Q6 gate this playbook most) and gate this work; they are carried here by reference, not repeated.** New questions below use the prefix PQ-M.
 
 | # | Question | Options | Recommendation |
 |---|---|---|---|
@@ -386,7 +386,7 @@ Each answer can be one line. **GL's Phase 2a questions (Q1 to Q8 in section 10 o
 | PQ-M10 | PQ-21 resolution: a person taxed under another PAYE jurisdiction. | (a) Employed by a Company (branch or subsidiary) in that jurisdiction; not supported in one payroll. (b) One payroll with a per-person PAYE jurisdiction and a foreign-currency pay run (this relaxes the just-built D-1 refusal on purpose, per person; the per-person jurisdiction would live with Payroll's pay terms, or with HR as a work-location fact: to decide with you). (c) An employer of record outside FiSH. | (a) for version one. |
 | PQ-M11 | Foreign customers and suppliers: this phase or a later SPUTO (Phase 2a Q7). | Later / now. | Later. |
 | PQ-M12 | Access control by department or branch (an RBAC change). | After Live / now. | After Live. |
-| PQ-M13 | The tax rules the research could not settle (section 3.9 and digest section 6) per jurisdiction: the VAT rate for a foreign-currency invoice, the currency of corporation-tax computation, branch registration, PAYE for a person working abroad. | A table is added when the research is in. | Femi confirms the table row by row. |
+| PQ-M13 | The tax rules the research could not settle (section 3.9 and digest section 6) per jurisdiction: the VAT rate for a foreign-currency invoice, the currency of corporation-tax computation, branch registration, PAYE for a person working abroad. | UK and Ireland rows are in digest 6.1 and 6.2; Nigeria and the Mano River rows are added when that report is in. Unresolved: the UK ECB option, the Irish rate date, the currency of branch profits in both, and the rate for translating whole-profit Irish computations (digest 6.3). | Femi confirms the table row by row. |
 | PQ-M14 | Does Payroll split pay-run cost by department or branch in the ledger? It needs HR to hold a department or branch per person first. HR's view: yes for branch-based Companies. | (a) Yes, per-line pay-run journal with the tags. (b) Not now. | (a), after Wave 1, because it only needs HR's field and GL's agreed per-line journal. |
 
 ## 8. Parked, conflicting or unsourced (never filled in here)
@@ -479,7 +479,7 @@ WEB reported (2026-10-22) that no FX, exchange-rate, revaluation, department, br
 
 | Party | What was asked | Status |
 |---|---|---|
-| GL | confirm or correct the ledger side; claim a row; answer which Phase 2a questions are open | asked; no reply at the time of writing |
+| GL | confirm or correct the ledger side; claim a row; answer which Phase 2a questions are open | reviewed (written note, 2026-10-22): corrections folded into section 1, ME-FX-3, ME-RATE-8, section 5; Phase 2a Q1 to Q8 all still unanswered, Q1 (currencies a Company may open), Q2 (rate source) and Q6 (presentation-currency translation) gate this playbook most; GL prefers adding its cells to this document plus one short design note, `docs/GL_Multi_Currency_Departmental_Branch_Consolidation_SPUTO.md`; GL's recommended order: ME-FX-3 guard alone, then Femi's answers to Q1/Q2/Q6 and PQ-M1/M2/M5, then rate table + FX accounts + account currency + memo fields, then realised and unrealised posting, dimension master and P&L by dimension in parallel, then parent link and intercompany, consolidation last |
 | CBB (GL session for now) | confirm the cash and bank side | via GL; CM confirms no dedicated CBB backend session exists |
 | FiSH+ER WEB (and WEB-CBB through it) | UI needs, existing screens, shell constraints, contact; foreign-currency cash and bank | replied twice; folded into section 11 and ME-CASH-6 to -8 |
 | HR/Payroll | department and branch tags on pay lines, UC-HR12, per-person jurisdiction | replied (from the code): no tags today; UC-HR12 designed, not built; no per-person jurisdiction; currency check built locally; folded into ME-SVC-3, ME-DEP-7, ME-IC-4, T-ME-12, PQ-M10, PQ-M14 |
@@ -497,5 +497,5 @@ WEB reported (2026-10-22) that no FX, exchange-rate, revaluation, department, br
 - IAS 21 and IFRS 10 text and paragraph numbers (digest caveat).
 - Every "could not verify" item in the digest sections 1.7, 2.8 and 3.8.
 - Whether GL has already drafted its part (the GL session had not replied at the time of writing); GL's cells are Tx's proposal until it does.
-- The tax research (digest section 6, pending at the time of writing): ME-TAX-2 and ME-TAX-3 and matrix rows R15 and R16 state questions, not answers.
+- The tax research: UK and Ireland are in digest section 6 (summaries of pages, not statute text; Irish statute pages returned 403); Nigeria and the Mano River countries were still pending at the time of writing, so ME-TAX-2, ME-TAX-3, R15 and R16 are answered for UK and Ireland only.
 - HR's statements are from its code read, not run (HR's own caveat).
