@@ -27,6 +27,7 @@
 | Parked, conflicting, unsourced | section 10 |
 | WEB's half (needs only) | section 13 |
 | Evidence and what was not verified | section 14 |
+| Identifier index (traceability) | section 15 |
 
 ## 1. What exists today (verified 2026-10-22)
 
@@ -477,3 +478,24 @@ For the `FiSH+ER WEB` session to turn into screens (it owns how and when):
 - That EA never sees the jurisdiction: from a search of EA `src/main` for jurisdiction and company-creation code, not a full trace of the onboarding call chain.
 - Whether `GET /api/jurisdictions` is registered in `fish-contracts`; whether HR enforces pay-rate currency anywhere I did not search.
 - The UK and IE rows in `tax_rules` were seeded by migration; I did not run the computations.
+
+## 15. Identifier index (for traceability)
+
+Femi's traceability rule (UAT): every branch, commit, fix, migration and test cites the requirement ID and the use case ID it serves. **IDs here are stable: never renumbered or reused; a dropped item keeps its ID and is marked withdrawn; new items are appended.** Approval status: **DRAFT** until Femi records approval in the Decisions Log (work citing these IDs is traced to a draft playbook until then).
+
+| Kind | IDs | Where defined |
+|---|---|---|
+| Requirements, jurisdiction registry | TJ-REG-1 to TJ-REG-7 | 3.1 |
+| Requirements, currency | TJ-CUR-1 to TJ-CUR-10 | 3.2 |
+| Requirements, tax types and rulebook | TJ-RUL-1 to TJ-RUL-9 | 3.3 |
+| Requirements, VAT categories and rates | TJ-VAT-1 to TJ-VAT-10 | 3.4 |
+| Requirements, Company jurisdiction and currency read | TJ-CO-1, TJ-CO-1a, TJ-CO-2 to TJ-CO-5 | 3.5 |
+| Requirements, consumers | TJ-CON-1 to TJ-CON-5 | 3.6 |
+| Requirements, governance, maintenance and rollout | TJ-GOV-1 to TJ-GOV-8 | 3.7 |
+| Requirements, non-functional | TJ-NFR-1 to TJ-NFR-7 | 3.8 |
+| Use cases | UC-TJ-1 to UC-TJ-14 | 7 |
+| Policy questions for Femi | PQ-1 to PQ-21 | 9 |
+| Tasks | T-TJ-01 to T-TJ-32 | 11 |
+| WEB needs | W1 (section 5, operator routes); the section 13 needs are unnumbered and cited by section | 5, 13 |
+
+The multi-entity playbook (`docs/Multi_Entity_Accounting_Playbook.md`, section 14) carries the ME-*, UC-ME-*, PQ-M* and T-ME-* IDs.
