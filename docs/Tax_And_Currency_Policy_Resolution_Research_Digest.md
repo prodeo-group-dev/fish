@@ -5,7 +5,7 @@ Evidence file for `docs/Tax_And_Currency_Policy_Resolution_Playbook.md`. Every f
 Sections are added as each researcher reports:
 - Section 1: jurisdiction and currency lifecycle (reported).
 - Section 2: VAT behaviour (pending).
-- Section 3: rulebook governance and the rate conflicts (pending).
+- Section 3: rulebook governance and the rate conflicts (reported).
 - Section 4: multi-entity open decisions (reported).
 
 ## 1. Jurisdiction and currency lifecycle (researcher C)
@@ -74,6 +74,84 @@ Researcher's inference: treat USD as a transaction and foreign-balance currency 
 
 ### 1.6 Gaps the researcher listed
 Primary texts for the Liberia Revenue Code s.6 and ss.212-216; Nigeria Tax Administration Act 2025 s.39 (read by the earlier tax researcher, see multi-entity digest 6.4); the Sierra Leone Amendment Act 2024 wording; Guinea's BCRG regulation; the SIX official ISO 4217 list (404); Business Central local-currency documentation; vendor-documentation coverage of Workday and ADP cross-border payroll.
+
+## 3. Rulebook governance and the disputed rate figures (researcher B)
+
+Web search was weak for vendor internals; several vendor claims rest on job postings or product pages and are marked S.
+
+### 3.1 Headline findings
+- Sierra Leone corporate income tax is 30% from Finance Act 2026: secondary sources agree, no primary text read.
+- Guinea has no single 35% or 30% "standard" rate: the draft code sets 25% general, 35% for telecoms, banks, insurance and petroleum distribution, 30% for mining.
+- Cote d'Ivoire has no 35% non-resident corporate rate in any current source.
+- Nigeria has a live conflict on straddling periods (below).
+
+### 3.2 Maker-checker on rate and rule changes
+- **Vendor-side change process (S).** Vertex and Sovos job postings describe analysts who monitor legislation, structure the content, test it and stage it, with "documented" quality checks. Sovos describes a Regulatory Analysis team handing off to a separate Regulatory Content Team (a maker and publisher split in practice). Neither publishes who approves a given rate change.
+- **Thomson Reuters ONESOURCE (P: release letters).** Content is released in versioned, numbered monthly updates ("Content Update #1 January 2026"), each with a release letter and customer notices.
+- **Dynamics 365 Finance (P: Microsoft Learn, updated 2026-09-01, Tax Calculation feature).** A feature setup is created as a Draft version; status is changed to Complete; "After the status is changed to Complete, you can't edit the version"; legal entities then select a Completed version. This is draft/complete immutability; the documentation describes no separate approver role, and a named four-eyes step could not be verified.
+- **Oracle Fusion Tax (P).** The 25D guide assigns rate setup to "Application Implementation Consultant or Tax Manager"; no approval step documented; privileges could not be verified.
+- **SAP (S).** FTXP and VK11 changes are tracked as validity-dated entries; change-document, authorization-object and four-eyes details could not be verified.
+- **Odoo (P/S).** Lock dates exist (non-adviser, all-users, tax lock date) and protect posted entries; no standard field-level audit trail for tax edits was found (only a paid third-party app).
+- **NetSuite SuiteTax and Avalara:** no maker-checker documentation could be verified.
+- **Standards (control wording, not tax domain).** ISO/IEC 27001:2022 Annex A 8.32 (S): "Changes to information processing facilities and information systems should be subject to change management procedures." Secondary guides expect records of who requested, who approved, what testing occurred and when it deployed (the licensed standard was not read). SOC 2 CC8.1 (S): practitioner sources describe authorize, design, test, approve, implement, with tickets and deployment logs as evidence (AICPA text not read). ISAE 3402 (S): not readable; third-party control libraries use "authorized, tested, and approved". **None of the three requires segregation of duties between requester and approver.**
+
+Researcher's inference: the proposer of a rate cannot be its approver; versions are immutable once approved; the record keeps requester, approver, timestamps, source citation and a before/after diff (Dynamics' Draft-to-Complete pattern and what CC8.1 / 8.32 evidence expects). No vendor documentation read mandates a named four-eyes role, so this is good practice, not a market standard.
+
+### 3.3 What counts as a "verified" source
+- **Vendor practice.** Vertex postings (S): analysts interpret "case law, statutes, regulations and legislation". Sovos postings (S): "legislation, regulations, decrees, administrative rulings, and official guidance". ONESOURCE release letters (P) cite the instrument by number and date (example: "Decree No. 49,136/2025 published on November 28, 2025, changed the effective date of Decree 49,107/2025 from December 1, 2025, to April 1, 2026"; thomsonreuters.com intl-2026-01-1 and us-2026-01-1 release letters).
+- **Published rate databases.** TaxAtlas methodology (S, taxatlas.io/methodology) lists official authority publications and legislation alongside OECD, PwC, Deloitte, EY, KPMG and IMF material, does not rank them, shows a per-country last update date and states "at least quarterly" review (an earlier snippet claiming credentialed-professional review and "preliminary" labels was not confirmed on the page). PwC Tax Summaries (S) show a "Last reviewed" date (the Cote d'Ivoire page said 9 September 2026). Stanford and Oxford CBT databases (S, snippets) record the governing law per change and the source of each figure.
+- **Vendor accuracy language.** No vendor content disclaimer or primary-versus-secondary policy was found; Avalara's "expert-verified" is marketing (S).
+
+Researcher's inference: record per rate the legal instrument (name, number, article), source URL, source class (primary or secondary), `verifiedBy`, `verifiedOn` and a review-by date; only a primary source sets a rate to `verified`; secondary-only or conflicting sources set `unverified/conflict`; quarterly review plus an event-driven review at each budget or Finance Act matches observed practice.
+
+### 3.4 Future-dated (enacted but not yet effective) rates
+- **Dynamics AX 2012 (P, archived).** Rate values carry From and To dates: "You can set up sales tax code values for future periods well in advance of the date on which the values apply." "Changes in sales tax code values do not change the values of sales taxes that are already posted." The same wording for current Dynamics 365 was not confirmed.
+- **Oracle Fusion (S/P mix).** End-date the old rate row the day before and add a new row with the new percentage and start date.
+- **SAP (S: SAP Insider VAT checklist).** Copy the old tax code to a new one with the new rate; end-date the old pricing condition and create the new from the effective date to 9999; some settings can be changed only "on the day the new VAT codes become valid". No notice period given.
+- **ONESOURCE pending-law wording (P).** Not yet enacted: "We are monitoring the legislative process for VAT amendments proposed by the Finance Bill 2025. The changes include... a reduced 9% VAT rate for restaurant and catering services, and hairdressing services, effective July 1, 2026. We will implement these changes once the relevant legislation is promulgated." Rate may lapse: "We are monitoring the possible extension of the 15 % VAT rate established by Decree 470... If the 15% rate is not extended, the standard VAT rate will revert to 13%." So pending law is monitored and announced, not stored as a live rate, until enacted. Channel: monthly release with letter, plus "content notices will be sent to all customers for changes of significant impact" (P, US Telco January 2026 letter); an email for each monthly update (search snippet only; the help page returned 404).
+- **Avalara (S).** Rates updated "with no change to your service"; monthly rate-change blog roundups; no stated lead time.
+- **Sierra Leone shows why separate dates matter.** Enacted 26 or 27 November 2025; gazetted 7 January 2026 (Payspace, S); effective 1 January 2026 (BDO, S): the effective date precedes gazette publication.
+
+Researcher's inference: store `enactedOn`, `publishedOn` and `effectiveFrom/To` as separate fields; allow a `pending` row (enacted, future effective) and a separate `proposed/monitoring` state that never feeds computation; show pending rows in a banner, with notification at enactment and again before the effective date; no vendor publishes a fixed lead time, so the notice schedule is our own policy.
+
+### 3.5 A wrong rate that was already posted
+- **Dynamics AX (P):** posted taxes do not change when a rate value changes; corrections are new postings.
+- **Oracle Fusion Receivables (P, docs.oracle.com 26b fautx):** a completed transaction with wrong tax can be reopened only if no activity exists; otherwise "Create a credit memo for a tax credit or make a tax adjustment for your transaction"; taxes are "determined when you save, edit, or complete a transaction"; no auto-reversal described.
+- **QuickBooks (S):** set up a new rate rather than editing one already used. **ServiceTitan (S):** correcting the tax zone does not retroactively fix open invoices; each is fixed individually.
+- **ONESOURCE retroactive law (P, US Telco letter).** Retroactive legislation gets a historical rate row for the gap period, used with custom taxability rules; where the update is released within 3 days of the effective date the standard rate applies from the law's effective date. Nothing read says vendors auto-reverse posted customer transactions; the customer decides.
+- No vendor documentation of an "affected transactions" report for a wrong rate was found (Avalara, Vertex, Sovos: could not verify).
+
+Researcher's inference: never edit a used rate in place; supersede with an effective-dated correction row carrying a reason; provide an impact query listing postings made under the wrong rate in the affected window; the Tenant, not the platform, decides on correcting journals, as a normal reversing or adjusting entry; no silent auto-reversal.
+
+### 3.6 Corporate tax rate change inside an accounting period
+- **United Kingdom (P).** CTA 2010 s3: "Corporation tax is charged at the rate set by Parliament for the financial year as the main rate." CTA 2010 s1172: "Any apportionment to different periods which falls to be made under the Corporation Tax Acts is to be made on a time basis... subject to any provision to the contrary." A straddling period (ATT, S, att.org.uk, reported as HMRC's confirmed view) is split into two notional periods on the rate-change date and total profits including chargeable gains are time-apportioned (example: 90/365 and 275/365 at 1 April 2023). The small-profits limits of 50,000 and 250,000 pounds are reduced pro rata for the shorter notional period (ATT, S). The section number the researcher first expected (s8) was wrong; only s3 and s1172 were verified.
+- **Ireland (P).** TCA 1997 s26(3): "Corporation tax for any financial year shall be charged on profits arising in that year; but assessments to corporation tax shall be made on a company by reference to accounting periods, and the amount chargeable... shall where necessary be apportioned between the financial years in which the accounting period falls." The Revenue Note for Guidance (S, charteredaccountants.ie mirror) says "This apportionment of profits is made on a time basis by virtue of section 4(6)." The Irish Statute Book returned 403; Revenue's own manual text not found.
+- **Nigeria (S).** The transition rule is disputed. The Minister's General Transition Guidelines (cited in a Joe Adinma article, S) say income of an accounting period ending before 1 January 2026 stays under the old, repealed law regardless of filing date; the same article reports NRS guidance of February 2026 took a filing-based approach. No source explains how a period straddling 1 January 2026 is split. Could not verify.
+- **Sierra Leone, Liberia, Guinea, Cote d'Ivoire:** no statute text or guidance on straddling periods found. Could not verify any.
+- **Tax software.** Dynamics AX (P) applies From/To-dated values by transaction date; Oracle and SAP use dated rate rows per transaction (P/S). No vendor documentation of corporate-income-tax apportionment inside the accounting engine was found; it is generally a tax-computation or return product's job.
+
+Researcher's inference: store the rate by financial year or effective window; split a straddling period into notional sub-periods on the rate-change date and time-apportion taxable profit by days with pro-rated thresholds; apply this as the default only for the UK and Ireland, where it is statutory; for the other five jurisdictions (including Nigeria, where authorities conflict) flag the period "straddle - manual determination" rather than assuming.
+
+### 3.7 The three disputed figures
+**Sierra Leone corporate income tax: 30% (up from 25%), from Finance Act 2026.**
+- Agreeing sources (all S): BudgIT SL commentary ("Increase the Corporate Income Tax (CIT) rate from 25% to 30%"; read, no effective date given); Bloomberg Tax budget-statement summary (snippet); Orbitax (snippet, enactment 27 November 2025); BDO global 2026 changes page ("30%, up from 25%", generally "as from 1 January 2026 (unless otherwise noted)"); an Awoko news article (snippet).
+- Payspace (S, support.payspace.com Sierra Leone 2026 Finance Act): Gazette Extraordinary Vol. CLXVII No. 3, 7 January 2026; withholding tax on non-resident contractors up to 20% from 10%; on management and professional fees up to 20% from 15%; does not mention the corporate rate.
+- Not read: the Parliament press release and the Act itself (TLS certificate error); nothing from nra.gov.sl surfaced. Status: 30% well supported by secondary sources, no primary text read; 25% is the pre-2026 rate (the NRA 2022 guide, multi-entity digest 6.5, predates it).
+
+**Guinea standard corporate tax: three tiers, standard 25%.**
+- Primary text read: "Projet de Code General des Impots" (Ministry of Budget, mbudget.gov.gn); its final article says "applicable a compter du 1er janvier 2022". Art. 229 II sets the corporate income tax rates: 35% for telephony companies, banks and insurance, and companies importing, warehousing, storing or distributing petroleum products; 30% for holders of a mining research permit or mining exploitation title; 25% for all other legal entities. Art. 107 bis: the IBIC rate is 25%.
+- Caveats: the document is titled "PROJET", so it could not be confirmed to match the enacted law or later finance-law amendments. PwC's Guinea page returned 404. Our docs' "35%/30%" matches the sector rates, not a standard rate; the standard rate is 25%. The YAML encoding needs checking.
+
+**Cote d'Ivoire non-resident corporate rate: no 35% rate in current sources.**
+- DGI "Le systeme fiscal ivoirien" (P, undated, post-2022): "25 % pour les personnes physiques et morales; 30 % pour les entreprises du secteur des telecommunications, des technologies de l'information et de la communication."
+- PwC Tax Summaries (S, last reviewed 9 September 2026): 25% standard, 30% telecom/IT/communication; non-resident digital platforms deemed profit of 10% of turnover taxed at 30% once turnover reaches XOF 50 million; non-residents with no permanent establishment 20% withholding; with a permanent establishment taxed like a resident company; "35" appears only as the XOF 35 million cap on minimum tax. Chambers 2026 (S): same 25%/30%, no separate non-resident rate, and the 2026 Finance Annex does not change the headline.
+- Where 35% appears (S, low quality): cours-de-droit.net (25% resident, 35% non-resident) and an old ISFAD document; treated as outdated or incorrect. The ADOCC export sheet (S) and a DGI service note (P, search snippet only) mention a 25% withholding on service fees to non-residents without a permanent establishment, which conflicts with PwC's 20%; unresolved.
+- Not read: the CGI text (a-tla.org's .docx showed Art. 64 only as a heading).
+
+Researcher's inference: carry Sierra Leone 30%, Guinea's three-tier structure and Cote d'Ivoire 25%/30%; do not seed any 35% Cote d'Ivoire non-resident rate; mark all three `secondary-sourced` or `draft-source` until a primary gazette or code text is read; non-resident withholding rates belong in a separate withholding rule, not in the corporate rate.
+
+### 3.8 Pages that failed or were not read
+parliament.gov.sl press release PDF (TLS error); irishstatutebook.ie s26 (403; the charteredaccountants.ie mirror was read); PwC Tax Summaries Guinea and Sierra Leone (404; Cote d'Ivoire worked); ONESOURCE "Tax content updates" help page (404 in three variants; release-letter PDFs used); Avalara April 2019 rate-change blog (404); Oracle "Change your tax rate" page (wrong document returned); Odoo accounting taxes page (no relevant content). The Guinea CGI, DGI and ONESOURCE PDFs came back binary and were extracted locally with pdftotext.
 
 ## 4. Multi-entity open decisions (researcher D)
 
