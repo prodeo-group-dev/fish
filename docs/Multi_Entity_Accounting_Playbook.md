@@ -329,6 +329,41 @@ No mixed-currency sums in the type system; additive, nullable migrations only; s
 
 **Reads and writes (paths under GL's `/api`, each new read gets a `fish-contracts` fixture first):** `GET /exchange-rates?from=&to=&asOf=`; operator and accountant writes to the rate table with the change log; `GET /companies/{id}/dimensions/{type}` and its writes; report routes with an optional `dimension` and `value` scope; `POST /groups/{id}/consolidations` and `GET /groups/{id}/consolidations/{run}`; `POST /companies/{id}/revaluations` for the explicit "revalue as at date" action; the intercompany reconciliation report. Shapes are GL's to define.
 
+### 5.1 GL's cells, answers and design commitments (GL session, 2026-10-22)
+
+Written by the GL session against GL's code on master and the Phase 2a design. These are GL's proposals for Femi to decide where a question is open; nothing here is built.
+
+**Matrix A/B cells GL confirms or sharpens (rows owned by GL).**
+
+| Row | GL's cell |
+|---|---|
+| R2 | Confirmed. The base amount is authoritative; the foreign amount, currency and rate are a memo on the line (option C). The base amount is the foreign amount times the rate, rounded half-even to the base currency's minor units; the rate stored is informational. Gate: PQ-M1 and the ME-FX-3 refusal in place first. |
+| R3 | One platform-wide table owned by GL, never updated in place (a correction is a new row), rate type on every row, a Tenant or Company override stored as a separate override row with a reason. Lookup is "latest row on or before the date for that type". Needs PQ-M5. |
+| R4 | Realised difference is computed at settlement as the settlement's base amount minus the carrying base amount of the item settled (for a foreign cash or bank book, the book's weighted-average carrying rate, Phase 2a Q3), posted to the realised FX account, tagged with the unit of the item settled (PQ-M6a). |
+| R5 | Revaluation is an explicit "revalue as at date" action over accounts with a currency only (monetary accounts); one dated entry per currency, difference to the unrealised FX account; not auto-reversing in version one (GL recommends; Phase 2a Q5 is Femi's); rerun for every later closed period when an earlier one is reopened. The existing `RecordFXRevaluationUseCase` (one receivable, caller-supplied rate and carrying value, no route) is superseded by this action and is retired when it ships. |
+| R9 | Confirmed: stock and fixed assets keep the transaction-date rate in the entity's books; they are translated only at consolidation. |
+| R10 | Confirmed, with one correction to the survey: GL does write dimension tags today (CUSTOMER, VENDOR, ITEM, VAT_CATEGORY, VAT_DIRECTION, CASH_FLOW_ACTIVITY, PAYROLL_ELEMENT), but never DEPARTMENT, COST_CENTER, PROJECT or LOCATION, and nothing reads any of them except receivables and payables ageing. Values are opaque strings on `JournalLine` until the master list (T-ME-03) exists. |
+| R11 | Confirmed. Inside one Company an inter-branch transfer is one entry carrying both branch tags; across Companies each side posts its own entry to a due-to or due-from account per partner (two entries, never one across two ledgers). |
+| R12, R13 | GL builds translation and elimination as a reporting layer over frozen inputs and never writes a Company ledger. Do not start before T-ME-04 (licensed text) and Q6. |
+| R17 | Period close exists per Company; a consolidation run refuses entities whose reporting dates differ (ME-GRP-7) and uses closed-period trial balances only. |
+| R18 | Profit and loss by dimension is one grouped query over journal lines with an explicit Unassigned row and a check that the report total equals the ledger total; the report routes gain an optional `dimension` and `value` scope. A balance sheet by dimension is not version one. |
+| R19 | Rates, mapping versions and consolidation runs are written once with who and when; nothing is edited in place. |
+
+**ME-FX-3 (refuse a foreign-currency line), the first thing GL ships.** Today `PostJournalEntryUseCase` and the Record* use cases never compare a line's currency with the Company's; the route accepts any ISO currency per line, and an entry only has to balance within each currency. GL's plan: one shared guard used by the journal post and every Record* use case (sale, obligation, payment, collection, credit note, receipt and issue, payroll, pay-run journal, cash book), refusing with 409 `currency_not_company_currency` and a plain-words detail naming the line and both currencies; additive, no migration; about 1.5 GL days with tests and mutation checks (T-ME-02 raised from 1). **Before it ships**, one read-only check on production (run by Femi or whoever holds database access, never by an agent): `SELECT c.id, jl.currency, count(*) FROM journal_lines jl JOIN journal_entries je ON je.id = jl.journal_entry_id JOIN periods p ON p.id = je.period_id JOIN companies c ON c.id = p.company_id WHERE jl.currency <> c.base_currency GROUP BY c.id, jl.currency;`. Any rows are test data to be reviewed, not silently refused later.
+
+**Data model (section 5): GL confirms it as the starting point, with these commitments.**
+- `Company` stays in GL (its table is GL's), so `parent_company_id`, ownership and the group currency are GL migrations; EA owns only the Tenant side and the screens' access. EA is asked before T-ME-17 whether `Tenant.baseCurrency` conflicts with a per-Company currency.
+- Every migration is additive and nullable; every new read gets a `fish-contracts` fixture before it ships; a new `DimensionType` value (BRANCH, COUNTERPARTY) is declared by every consumer that decodes dimensions before GL emits it (the account-postings lines CBB reads carry dimension tags, so CBB is checked first).
+- New standard accounts (realised and unrealised FX, rounding; later the translation reserve) go into the chart templates and reach existing Companies through `POST /companies/{id}/standard-accounts`, the same path 5510 and 4930 took.
+- The rate-table write is an audited accountant or operator act (T-ME-01); it is never reachable by a service account.
+- Consolidation runs and their lines are GL tables of their own; eliminations live in a non-posting scope and never in a Company ledger.
+
+**What GL needs from Femi before building past ME-FX-3.** Phase 2a Q1 (which currencies a Company may open), Q2 (rate source and who keeps it current), Q6 (is presentation-currency translation needed), then PQ-M1 (shape of a foreign line, GL recommends C), PQ-M2 (branch is a dimension by default) and PQ-M5 (rate table scope). Q3 to Q5 have GL recommendations in the Phase 2a design and can follow.
+
+**What GL asks of the other owners.** CBB: foreign-currency books, rate field on receipts, payments and transfers, reconciliation in the book's currency (ME-CASH). HR and Payroll: a department or branch per person before any pay-line tag (T-ME-12). WEB: the surfaces in section 11, after GL's fixtures. Tx: the rate sources, the tax rows and the licensed-text check (T-ME-04). EA: the Tenant-side question above.
+
+**Where GL's own design note goes.** Once Femi answers Q1, Q2 and Q6, GL writes the short `docs/GL_Multi_Currency_Departmental_Branch_Consolidation_SPUTO.md` for what this playbook cannot hold: the posting algorithm for realised and unrealised differences, the rounding rule, the report queries and the migration order. Until then this section is GL's position.
+
 ## 6. Use cases (U)
 
 Actors: **Business Owner**, **Accountant** (a Tenant's), **Operator** (Prodeo staff), **Femi** (the tax professional), **GL**, **CBB** (GL session for now), **Consumer service** (SOP, POP, IM, HR/Payroll), **WEB**.
@@ -413,7 +448,7 @@ Estimates are rough working days of the owning session, tests first. GL's Phase 
 | ID | Task | Owner | Est. | Depends on |
 |---|---|---|---|---|
 | T-ME-01 | Platform change log reused for rates, mappings, runs and dimension masters (same as T-TJ-01) | GL | 1.5 (shared) | none |
-| T-ME-02 | Refuse a line whose currency is not the Company's unless it carries the foreign fields (ME-FX-3): closes today's silent gap, ships first | GL | 1 | none |
+| T-ME-02 | Refuse a line whose currency is not the Company's unless it carries the foreign fields (ME-FX-3): closes today's silent gap, ships first (GL: 1.5 days; a read-only production check for existing foreign-currency lines comes first, see section 5.1) | GL | 1.5 | none |
 | T-ME-03 | Dimension master list, validation and unknown-value refusal; BRANCH and COUNTERPARTY dimension types declared by consumers first | GL | 3 | PQ-M2 |
 | T-ME-04 | Confirm IAS 21 and IFRS 10 paragraphs and the intragroup monetary treatment against the licensed text | Tx, Femi | 1 plus access | none |
 | T-ME-05 | Femi states Purse's structure, parent, group currency, management versus statutory | Femi | n/a | none |
@@ -479,7 +514,7 @@ WEB reported (2026-10-22) that no FX, exchange-rate, revaluation, department, br
 
 | Party | What was asked | Status |
 |---|---|---|
-| GL | confirm or correct the ledger side; claim a row; answer which Phase 2a questions are open | reviewed (written note, 2026-10-22): corrections folded into section 1, ME-FX-3, ME-RATE-8, section 5; Phase 2a Q1 to Q8 all still unanswered, Q1 (currencies a Company may open), Q2 (rate source) and Q6 (presentation-currency translation) gate this playbook most; GL prefers adding its cells to this document plus one short design note, `docs/GL_Multi_Currency_Departmental_Branch_Consolidation_SPUTO.md`; GL's recommended order: ME-FX-3 guard alone, then Femi's answers to Q1/Q2/Q6 and PQ-M1/M2/M5, then rate table + FX accounts + account currency + memo fields, then realised and unrealised posting, dimension master and P&L by dimension in parallel, then parent link and intercompany, consolidation last |
+| GL | confirm or correct the ledger side; claim a row; answer which Phase 2a questions are open | GL's cells, answers and commitments are in section 5.1 (2026-10-22); earlier, reviewed (written note, 2026-10-22): corrections folded into section 1, ME-FX-3, ME-RATE-8, section 5; Phase 2a Q1 to Q8 all still unanswered, Q1 (currencies a Company may open), Q2 (rate source) and Q6 (presentation-currency translation) gate this playbook most; GL prefers adding its cells to this document plus one short design note, `docs/GL_Multi_Currency_Departmental_Branch_Consolidation_SPUTO.md`; GL's recommended order: ME-FX-3 guard alone, then Femi's answers to Q1/Q2/Q6 and PQ-M1/M2/M5, then rate table + FX accounts + account currency + memo fields, then realised and unrealised posting, dimension master and P&L by dimension in parallel, then parent link and intercompany, consolidation last |
 | CBB (GL session for now) | confirm the cash and bank side | via GL; CM confirms no dedicated CBB backend session exists |
 | FiSH+ER WEB (and WEB-CBB through it) | UI needs, existing screens, shell constraints, contact; foreign-currency cash and bank | replied twice; folded into section 11 and ME-CASH-6 to -8 |
 | HR/Payroll | department and branch tags on pay lines, UC-HR12, per-person jurisdiction | replied (from the code): no tags today; UC-HR12 designed, not built; no per-person jurisdiction; currency check built locally; folded into ME-SVC-3, ME-DEP-7, ME-IC-4, T-ME-12, PQ-M10, PQ-M14 |
