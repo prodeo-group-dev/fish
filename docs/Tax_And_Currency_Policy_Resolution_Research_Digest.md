@@ -1,0 +1,76 @@
+# Tax and Currency Policy Resolution: Research Digest
+
+Evidence file for `docs/Tax_And_Currency_Policy_Resolution_Playbook.md`. Every finding the researchers returned is recorded here with its source label. **P** = primary (statute, regulator, central bank, vendor documentation). **S** = secondary (law firm, news, forum, third-party site). "(my knowledge)" marks a statement the researcher did not read in a source. "Could not verify" means the text was not read; nothing here is filled from memory unless marked. Read 2026-10-22.
+
+Sections are added as each researcher reports:
+- Section 1: jurisdiction and currency lifecycle (reported).
+- Section 2: VAT behaviour (pending).
+- Section 3: rulebook governance and the rate conflicts (pending).
+- Section 4: multi-entity open decisions (pending).
+
+## 1. Jurisdiction and currency lifecycle (researcher C)
+
+### 1.1 Is a company's country or base currency changeable after creation or first posting?
+
+| Vendor | Finding | Source |
+|---|---|---|
+| NetSuite (OneWorld) | Locked. "You can't change a subsidiary's base currency after the subsidiary record has been saved for the first time." Workaround (S): deactivate or zero out the old subsidiary and create a new one. | P: docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N269257.html; S: netsuiteprofessionals archive, Salto blog |
+| Sage Intacct | Base currency can be changed only before any transactions exist. The documentation warns "Changing the base currency can have a major impact on your financials." In multi-entity setups each new entity can have its own base currency. Third-party guidance (S, Cleverence): create a new company, carry over opening balances and open items, archive the old one. | P: intacct.com help "Set the base currency for your company" |
+| QuickBooks Online | Home currency can be changed only while multicurrency is off. Once multicurrency is on (a "can't undo" confirmation) it is permanent. The researcher read search summaries of Intuit's support pages, not each full page. | P/S: quickbooks.intuit.com/learn-support (en-ie and en-za multicurrency articles); S: maestrano wiki |
+| Odoo | Official documentation states no lock on the main currency. In practice the error "You cannot change the currency of the company since some journal items already exist" is reported (S, forum); a forum SQL workaround is called unsafe; a vendor blog recommends a new fiscal year or a migration. The fiscal localization (country) package can be switched only until the first entry is posted: "As long as you haven't posted any entry, you can still select another package." | P: odoo.com/documentation fiscal localization packages page; S: odoo.com/forum/help-1/currency-change-issue-157547 |
+| SAP S/4HANA | Company-code currency and local-currency types cannot be changed once the company code is live with postings. Customising changes in OB22 are blocked (FC362); a currency-code change on a currency type with postings raises FINS_ACDOC_CUST 173; a depreciation-area currency change is blocked once posted assets exist (AC 607). The researcher read search summaries of the knowledge-base articles, not the full text. | P (summary level): userapps.support.sap.com KBA 2567579 and 3776091; S: michaelmanagement.com |
+| Xero | No official Xero help article found. Third parties and a long-standing unresolved Xero Ideas request ("Organisation settings - Change base currency") say it is fixed at organisation creation; the practice is to open a new organisation. | S: productideas.xero.com; approvalmax and temperstack knowledge bases |
+| Business Central | Could not verify. The local currency code is set in General Ledger Setup; "Adjust Exchange Rates" restates foreign-currency entries and does not change the local currency. No Microsoft statement either way was found. | S/P: learn.microsoft.com Adjust Exchange Rates module |
+
+Pattern: the ledger currency is fixed at entity creation or at first posting; the only later route is a new entity plus an opening-balance migration. Odoo and Intacct allow a change while the entity is empty; Odoo also lets the country package change only before the first posting.
+
+Researcher's inference (not a fact): lock a Company's jurisdiction and base currency at the first posting (or the first non-opening posting); before that allow changes; after that offer "create a new Company and migrate opening balances" as the only path.
+
+### 1.2 Legal basis for the books currency, and ISO 4217 decimals
+
+ISO 4217 minor units: GBP 2, EUR 2, NGN 2, SLE 2, LRD 2, USD 2, GNF 0, XOF 0. Source: the Wikipedia ISO 4217 table (S); the SIX official List One returned 404, so these are not confirmed against the registration authority. SLE is numeric 925 and replaced SLL on 1 July 2022 at 1000:1 (S: Wikipedia; Bank of Sierra Leone public notice, September 2022, via a SIX PDF).
+
+- **Sierra Leone (best evidence).** The Bank of Sierra Leone (Amendment) Act 2024 (gazetted 13 March 2025, per a search summary of the parliament.gov.sl text; the Act itself could not be fetched, certificate error) replaces section 26 so that: the currency continues to be the Leone; prices of transactions in Sierra Leone shall be indicated in Leones; and the Leone is the currency for official purposes including accounting and financial reporting. It sets the prefix "NLe" for the new currency, with "Le" reserved for old-Leone references. Old notes ceased to be legal tender on 31 December 2023. The wording of any dollar-pricing exception is unverified. Wikipedia still shows "Le" (S).
+- **Liberia.** Dual currency (LRD and USD) is the legal reality. A Central Bank of Liberia governor cites the 1999 CBL Act as making USD legal tender (S, undated). The Liberia Revenue Authority said in 2017 that taxpayers may pay in LRD or USD (S, FrontPageAfrica, 23 March 2017). Revenue Code s.6(c) translates foreign currency, or USD to LRD, at the Central Bank's published buying rate; s.6(a) covers USD payments at the market rate on the payment date (as quoted in that article; the primary Code text for this was not read by this researcher, but the earlier tax researcher read s.6(a) and found the books-in-LRD-or-USD rule, digest `Multi_Entity_Accounting_Research_Digest.md` 6.5). Methods of accounting ss.214-216 and the currency-fluctuation s.212 were not read. The CBL notice says "selling" for USD-stated taxes, so buying versus selling is a conflict.
+- **Guinea.** The GNF is legal tender (S, Financial Afrik 2025). A third-party regulatory summary (S, regalert.today, February 2020) says Guinean francs are required for domestic invoicing and cross-border settlements must go through local banks. In 2018 the President ordered strict enforcement of the existing ban on foreign-currency invoicing (S, Guineenews). Guinea is an OHADA member (treaty in force 21 November 2000; P: ohada.com/etats-membres/guinee.html), so SYSCOHADA applies. The primary BCRG regulation and the tax code's currency clause were not found.
+- **Cote d'Ivoire and UEMOA.** XOF (FCFA) is issued by the BCEAO, and Cote d'Ivoire is an OHADA member. The Ivorian tax authority's service note of 6 January 2016 requires financial statements under the OHADA accounting system (S/P: ohada.com). The Revised Uniform Act on Accounting Law (26 January 2017; in force 1 January 2018 for individual accounts) governs. The exact text on reporting currency could not be verified. (My knowledge, unverified: accounts in the CFA franc and tax declarations in FCFA.)
+- **Nigeria.** The Naira is the only legal tender. The Central Bank of Nigeria's 2015 circulars call pricing goods in foreign currency illegal, citing CBN Act 2007 s.20(5) (P/S: Templars law note; BusinessDay); lawyers dispute that the Act bans foreign-currency pricing. The Corporate Affairs Commission has applied the Naira-only principle to share capital denomination (S: Aelex). The Nigeria Tax Administration Act 2025 has a section 39 "Currency of assessment and payment" (title confirmed in several PDFs; the earlier tax researcher read its text, digest 6.4). The Nigeria Tax Act 2025 is effective 1 January 2026 (S: EY, KPMG).
+- **United Kingdom.** GBP. HMRC computes corporation tax profits in sterling, though accounts may use another presentation currency and a functional-currency computation applies (P: HMRC Corporate Finance Manual CFM64120 and the GIM4130 snippet). Companies Act 2006 s.394 and the local-currency election rules were not read.
+- **Ireland.** EUR. Companies Act 2014 and Revenue rules not retrieved here (see the multi-entity digest 6.2).
+
+Researcher's inference: ledger and tax currency come from the jurisdiction (SL=SLE, GN=GNF, CI=XOF, NG=NGN, UK=GBP, IE=EUR). Liberia is the real exception, since Liberian businesses legitimately keep books in either LRD or USD. Store amounts as integer minor units with a per-currency exponent (0 for GNF and XOF, 2 for the rest); never hard-code 2 decimals. Per the project's SLE-only onboarding decision only SLE needs seeding now, but the exponent table should be data-driven.
+
+### 1.3 Should a platform enable a country before its tax data is complete?
+
+- **Odoo (P):** "Fiscal Localization Packages are country-specific modules that install pre-configured taxes, fiscal positions, chart of accounts, and legal statements." They install automatically by country at database creation; the documentation says you must still "fine-tune your chart of accounts... activate the taxes you use... configure your country-specific statements and certifications." Coverage is a documented module list per version. Source: odoo.com/documentation/17.0/applications/finance/fiscal_localizations.html.
+- **Business Central (P):** the Microsoft Learn page "apptest-countries-and-translations" lists, per country, availability (available or planned), who provides the localization (Microsoft or partner), and the Azure geography. "About localization" distinguishes Microsoft-led and partner-led localizations; partner ones are built on the W1 base and sold through Marketplace. The list concerns online Business Central, not partner localizations.
+- **SAP (P):** "more than 130 countries... 1,000+ local versions"; some services are restricted (for example Russia is limited to multinational customers). Source: sap.com/products/embedded-localization.html. SAP's Product Availability Matrix was not read.
+
+Models (researcher's inference, not a vendor taxonomy): the vendors effectively publish three tiers: vendor-maintained full localization; partner-supplied or generic base version with the customer completing setup; not available or planned. None presents a numeric completeness score.
+
+Researcher's inference: publish a per-jurisdiction status such as Full / Partial (list the missing items, for example "PAYE bands unconfirmed") / Planned or not available; allow Companies in Partial jurisdictions with a visible warning and the missing items listed; block only the specific computations that would be wrong; guard the computation, not company creation.
+
+### 1.4 Cross-border payroll
+
+Evidence is thin; the researcher could not read vendor documentation for Workday, ADP, Sage or SuccessFactors specifics.
+- **Enterprise HCM norm (S/P, SAP product pages):** SuccessFactors Employee Central Payroll offers country-specific payroll for about 60 countries (53 by SAP, 7 by partners), with partners (Deel, Neeyamo) extending to 150+. This is the "separate legal entity per country plus a local payroll engine per country" model.
+- **Shadow payroll (S: Remote, Applic8, HSP):** the employee stays on the home payroll and a parallel reporting-only calculation runs for the host country, usually triggered by tax residency (often 183 days). Different from split payroll, which divides actual pay. An enterprise mobility tool.
+- **Employer of record (S: Deel):** the employer of record becomes the legal employer in the host country, signs the contract, runs payroll and withholds tax locally (Deel claims 100-150+ countries; counts vary by page).
+- **Small-business payroll (S):** Xero payroll is per country and domestic; its Ideas forum shows no support for overseas addresses on AU payroll for foreign-resident employees, and a Xero reply said no near-term plans for other regions' payroll products. WhichPayroll (weak source) labels Xero UK "domestic only". QuickBooks and Sage: not verified.
+
+Norm for small-business software (S, indirect): payroll is configured per legal entity in one country, with that country's tax rules; cross-border cases are pushed to employer-of-record or partner products.
+
+Researcher's inference: payroll tax is computed under the jurisdiction of the paying Organisation, with the employee's tax jurisdiction defaulting to it; no shadow payroll or multi-jurisdiction employees; an employee working in another country needs a separate Organisation (legal entity) there, or is flagged out of scope and referred to an employer of record.
+
+### 1.5 Should USD be a supported ledger currency in SL, LR, GN, NG, CI?
+
+- **Liberia:** USD is legal tender alongside LRD; the dollar dominates (IMF working paper, about 90 percent of the money supply, dated 2009; S). Taxes may be paid in either currency (LRA 2017, S). USD books are legitimate; the primary rule on books currency was unverified by this researcher.
+- **Sierra Leone:** the 2024 Amendment Act (search summary only) makes the Leone the official currency including accounting and financial reporting and says prices shall be indicated in Leones, which strongly suggests SLE-only books with USD as a transaction currency. Verify the full text.
+- **Guinea:** the GNF is required for domestic invoicing and foreign-currency invoicing is banned (S, 2020 summary and 2018 news). Primary text not read.
+- **Nigeria:** the Naira is the sole legal tender. The 2015 circular says foreign-currency pricing is illegal, though lawyers dispute its basis (S). Foreign-currency tax receipts were about 35.5 percent of 2025 tax revenue (S: Nairametrics/NBS), so USD payment occurs in practice. Oil and gas operators and certain agencies were exempted from the circulars (S). Whether NTAA s.39 permits non-Naira returns: see the multi-entity digest 6.4 (the text read there points to assessment and payment in the currency of the transaction).
+- **Cote d'Ivoire:** search results did not establish pricing or legal-tender rules for XOF; could not verify. Treating XOF as the book currency (OHADA/UEMOA context) is an assumption.
+
+Researcher's inference: treat USD as a transaction and foreign-balance currency (FX-valued, held in USD bank or cash accounts), not a ledger currency, for SL, GN, NG and CI; allow USD as an optional ledger currency only in Liberia, as a per-Company election locked at first posting. The Liberian books rule is the one point to confirm with a Liberian adviser, which the researcher notes is Femi's call as the tax professional.
+
+### 1.6 Gaps the researcher listed
+Primary texts for the Liberia Revenue Code s.6 and ss.212-216; Nigeria Tax Administration Act 2025 s.39 (read by the earlier tax researcher, see multi-entity digest 6.4); the Sierra Leone Amendment Act 2024 wording; Guinea's BCRG regulation; the SIX official ISO 4217 list (404); Business Central local-currency documentation; vendor-documentation coverage of Workday and ADP cross-border payroll.
