@@ -27,6 +27,7 @@
 | WEB's half (needs only) | section 11 |
 | Collaboration status | section 12 |
 | Evidence and what was not verified | section 13 |
+| Identifier index (traceability) | section 14 |
 
 ## 1. What exists today (verified 2026-10-22, from the repository survey in the digest, section 4)
 
@@ -219,7 +220,16 @@ Priority: **M** must, **S** should, **C** could. Today: **Built**, **Partial**, 
 | ME-GOV-4 | Revaluation and consolidation runs are idempotent per (Company, as-of) and (group, as-of, parameters). | M | No |
 
 ### 3.12 Non-functional (ME-NFR)
-No mixed-currency sums in the type system; additive, nullable migrations only; strict decoding with declared-first fields; golden tests with hand-calculated figures (including rounding and a three-currency chain); consolidation computed on demand for up to ten entities; a `fish-contracts` fixture for every new read; plain-words refusals; no currency literal anywhere (Femi D-5).
+| ID | Requirement |
+|---|---|
+| ME-NFR-1 | No mixed-currency sums in the type system. |
+| ME-NFR-2 | Additive, nullable migrations only. |
+| ME-NFR-3 | Strict decoding with declared-first fields. |
+| ME-NFR-4 | Golden tests with hand-calculated figures, including rounding and a three-currency chain. |
+| ME-NFR-5 | Consolidation computed on demand for up to ten entities. |
+| ME-NFR-6 | A `fish-contracts` fixture for every new read. |
+| ME-NFR-7 | Plain-words refusals. |
+| ME-NFR-8 | No currency literal anywhere (Femi D-5). |
 
 ## 4. The matrix: foreign-currency requirements by organisational shape
 
@@ -534,3 +544,27 @@ WEB reported (2026-10-22) that no FX, exchange-rate, revaluation, department, br
 - Whether GL has already drafted its part (the GL session had not replied at the time of writing); GL's cells are Tx's proposal until it does.
 - The tax research: UK and Ireland are in digest section 6 (summaries of pages, not statute text; Irish statute pages returned 403); Nigeria and the Mano River countries are in digest 6.4 to 6.6; the Guinea text is a draft code and the Sierra Leone income-tax text is the 2008 consolidation, so those rows are weaker evidence than UK and Ireland.
 - HR's statements are from its code read, not run (HR's own caveat).
+
+## 14. Identifier index (for traceability)
+
+Femi's traceability rule (UAT): every branch, commit, fix, migration and test cites the requirement ID and the use case ID it serves. **IDs here are stable: never renumbered or reused; a dropped item keeps its ID and is marked withdrawn; new items are appended.** Approval status: **DRAFT** until Femi records approval in the Decisions Log (work citing these IDs is traced to a draft playbook until then).
+
+| Kind | IDs | Where defined |
+|---|---|---|
+| Requirements, foreign amounts | ME-FX-1 to ME-FX-10 | 3.1 |
+| Requirements, exchange rates | ME-RATE-1 to ME-RATE-8 | 3.2 |
+| Requirements, departments and dimensions | ME-DEP-1 to ME-DEP-8 | 3.3 |
+| Requirements, branches | ME-BR-1 to ME-BR-5 | 3.4 |
+| Requirements, groups and consolidation | ME-GRP-1 to ME-GRP-10 | 3.5 |
+| Requirements, intercompany | ME-IC-1 to ME-IC-6 | 3.6 |
+| Requirements, cash and bank | ME-CASH-1 to ME-CASH-8 | 3.7 |
+| Requirements, other services | ME-SVC-1 to ME-SVC-5 | 3.8 |
+| Requirements, tax | ME-TAX-1 to ME-TAX-7 | 3.9 |
+| Requirements, reporting | ME-RPT-1 to ME-RPT-5 | 3.10 |
+| Requirements, governance | ME-GOV-1 to ME-GOV-4 | 3.11 |
+| Requirements, non-functional | ME-NFR-1 to ME-NFR-8 | 3.12 |
+| Matrix rows | R1 to R20 (columns Dept, Br-D, Br-F, Sub-S, Sub-F) | 4.2, 4.3 |
+| Use cases | UC-ME-1 to UC-ME-17 | 6 |
+| Policy questions for Femi | PQ-M1 to PQ-M14 (including PQ-M6a); GL's Phase 2a Q1 to Q8 are cited by reference | 7 |
+| Tasks | T-ME-01 to T-ME-29 | 9 |
+| WEB needs | W1 to W11 | 11 |
