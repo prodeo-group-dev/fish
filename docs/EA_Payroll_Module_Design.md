@@ -29,7 +29,7 @@
 | **Prepare a pay run** (and preview it) | **HR at WRITE or PAYROLL at WRITE** (HR may also read pay runs) | HR at WRITE |
 | **Approve a pay run** (approve, reject, retry, resume; this posts to the ledger) | **Owner Admin ONLY** (a PAYROLL APPROVE grant does not confer it); the Owner may approve a run they prepared, flagged `selfApproved` | Owner Admin only |
 | Salary advances and expense claims: record and view | HR WRITE or PAYROLL WRITE (the request forms stay in Personnel, per the decision) | HR WRITE |
-| Salary advances and expense claims: approve or reject | Owner Admin only, same rule as a pay run (HR confirming the doors) | Owner Admin only |
+| Salary advances and expense claims: approve or reject | Owner Admin only, same rule as a pay run (confirmed Owner only, Femi 2026-10-22 item 1.2) | Owner Admin only |
 | See or change bank details | **Owner Admin only**, not a module permission (unchanged) | same |
 | Employee records, leave, division, `employeeId` | HR (unchanged) | same |
 
@@ -74,7 +74,7 @@ The flag is HR's (an environment value CM sets; default off). It switches **only
 | `.../postings/retry` (and resume) | Owner Admin only | Owner Admin only (corrected 2026-10-21) |
 | `POST /payroll/run-submissions/{id}/approve` and `/reject` | `requireOwnerCaller` | **Owner Admin only** (corrected 2026-10-21; was PAYROLL APPROVE + preparer rule) |
 | `POST /employees/{id}/salary-advances`, `/expense-claims` (request) | HR WRITE | HR WRITE or PAYROLL WRITE |
-| their approve/reject | Owner-only | Owner Admin only (HR confirming the doors) |
+| their approve/reject | Owner-only | Owner Admin only (confirmed Owner only, Femi 2026-10-22 item 1.2) |
 | `PUT /companies/{c}/expense-claim-policy` | Owner-only | unchanged (Owner-only) |
 | Employees, leave, team, module responsibilities | HR | HR (unchanged) |
 
