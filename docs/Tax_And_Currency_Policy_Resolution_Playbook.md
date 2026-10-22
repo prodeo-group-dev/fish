@@ -19,6 +19,7 @@
 | 6. Order (O) | section 7 |
 | What research could not settle (verification tasks, not questions) | section 8 |
 | What is still needed from Femi | section 9 |
+| Tax as its own peer: ownership, the extraction questions, the order | section 11 |
 | Identifier index (traceability) | section 10 |
 
 ---
@@ -186,7 +187,7 @@ Every former question, with the route (section 2.2), the answer, and the require
 | PQ-13 | RESEARCH | Supersede, never edit; impact query; the Tenant decides corrections. | PR-GV-8 | Pending approval |
 | PQ-14 | RESEARCH | The local term from the registry (VAT, GST, TVA) as localisation data. | PR-VT-8 | Pending approval |
 | PQ-15 | TECHNICAL | Payroll owns payroll tax tables until a Tax service exists; same row shape so a later move is not a rewrite. | (decision of ownership; no new requirement) | Pending approval |
-| PQ-16 | TECHNICAL | VAT rate tables stay in GL until the Tax extraction is scheduled; the guardrail TJ-NFR-7 (no second source of truth, no synchronous dependency at posting) prevails; revisit when the extraction is scheduled. | (no change now) | Pending approval |
+| PQ-16 | LOG | **Answered by Femi, 2026-10-22: "All things Tax should be abstracted to Tx."** VAT rates, categories and returns are Tax's. Until the extraction (after the Live switch and UAT) GL holds them, under the guardrail TJ-NFR-7 (no second source of truth, no synchronous dependency at posting). | PR-TX-1 to -4, section 11 | **Decided** (2026-10-22) |
 | PQ-17 | RESEARCH | A last-reviewed date per jurisdiction as a reminder to the verifier, not a gate. | PR-GV-7 | Pending approval |
 | PQ-18 | RESEARCH | USD is a foreign-balance and transaction currency; a USD ledger is a Liberia-only election built later. | PR-LC-6 | Pending approval |
 | PQ-19 | RESEARCH | An operator corrects jurisdiction before the first posting; afterwards, a new Company. | PR-LC-4 | Pending approval |
@@ -326,6 +327,56 @@ Each is task T-PR-26 unless noted. None is asked of Femi; each ends as a recorde
 
 **Femi's approval.** Approval is recorded in `docs/Decisions_Log.md`. Until then every requirement here is traced to a DRAFT playbook. Three choices are flagged in the text for his eye at approval, because nothing in the evidence prefers one lawful design: the verifier role being his until delegated (PR-GV-1), the IFRS for SMEs basis for management consolidation versus full IAS 21 (PR-MF-4, only relevant once a group exists), and the 7-day reminder schedule (PR-GV-6).
 
+## 11. Tax as its own peer: what Tx owns, the extraction questions, and the order
+
+**Direction (Femi, 2026-10-22, logged by CM): "All things Tax should be abstracted to Tx."** This reaffirms `docs/Tax_Extraction_DDD_Design.md` (2026-09-19): Tax is a peer of GL under Finance. Nothing is extracted yet. The timing is Femi's; CM recommends after the Live switch and UAT, and this section agrees. This section is docs only.
+
+### 11.1 What Tx owns, and what stays outside
+
+| Tx owns (the rulebook and its computations) | Stays outside Tx |
+|---|---|
+| The **jurisdiction registry** and each jurisdiction's currency and tax settings (TJ-REG, TJ-CUR) | **Posting** to the ledger is GL's. Tax never writes a journal. |
+| The **rate schedule**: VAT categories per jurisdiction, VAT rates by effective window, and the corporate income tax rule matrix by tax type and jurisdiction | **VAT amounts on a document** are calculated by the document's owner (SOP, POP, CBB, Payroll) with the commons `VatCalculator`, using rates and categories read from Tx; the owner sends GL the finished journal. |
+| The **payroll tax tables** (PQ-15), once Payroll's own tables are moved to the same row shape | **Product VAT category assignment** stays with IM (a person sets it per product); Tx owns what categories exist per jurisdiction and period. |
+| **VAT return computation** and **corporate tax computation**, and the audit record of each | **The ledger figures** a return needs (net income for a date range, VAT Control Account lines by direction) stay in GL and are read by Tx. |
+| The **rulebook change log**: who changed or verified a rate or rule, when, from what source (PR-GV-1 to PR-GV-4, T-PR-05) | **Who may see the Tax area** (`ManagedModule.TAX`) stays an EA access-grant concept. |
+| **Availability status** per jurisdiction and capability (PR-LC-1) | **Company creation** stays in GL and EA; they read Tx's registry. |
+
+**Rate change log (CM's audit finding).** `vat_rates` has no changed-by or history today, so a rate change is a SQL insert with no record. The rulebook change log (`rulebook_change_log`, append-only; requester, verifier, timestamps, before/after, source) is Tx's from the first day, built in GL's tax package now (T-PR-05, extending T-TJ-01) and moving with the rulebook on extraction. It is already requirement PR-GV-2.
+
+**Requirements.**
+
+| ID | Requirement | Owner | Pri |
+|---|---|---|---|
+| PR-TX-1 | The rulebook (registry, currency settings, VAT categories and rates, corporate rule matrix, payroll tax tables) is exposed to every consumer only through a **versioned read contract** published in `fish-contracts`, never by a consumer reading Tax tables or copying rates into its own code. GL is the interim provider; on extraction the provider changes and the contract does not. | Tx, GL | M |
+| PR-TX-2 | No new code outside `domain.tax` may depend on a Tax table or class. New Tax-owned data enters through the contract. | GL | M |
+| PR-TX-3 | VAT and corporate tax computations and their audit records live in the Tax context (today inside GL's `domain.tax`): `vat_return`, `vat_filing_period`, `ComputeTaxUseCase`. They read ledger figures through GL read endpoints. | GL, Tx | M |
+| PR-TX-4 | A document owner's use of the commons `VatCalculator` takes its rate, category and effective window from the contract (PR-TX-1) and records on the document the rate row and source it used. | SOP, POP, CBB, Payroll | M |
+
+### 11.2 The extraction design's open questions (`docs/Tax_Extraction_DDD_Design.md` section 8) against today's work
+
+| # | Open question (2026-09-19) | Status today (2026-10-22) |
+|---|---|---|
+| 1 | Period selection: how Tax asks GL for net income for a chosen period | **Answered in effect.** `GET /companies/{companyId}/reports/profit-and-loss` now accepts `?from=&to=` (UAT v2.2, inclusive, spanning periods) in its own response type. A closed period is read by its dates. This also serves the straddling-period rule (PR-CT-1), which needs date ranges. A `?periodId=` form was never added and is not needed. |
+| 2 | How `Jurisdiction` is shared between Company and Tax | **Answered in design, not built.** The registry (TJ-REG) makes a jurisdiction data owned by Tx, not an enum duplicated or folded into `fish-common`; Company holds a jurisdiction code and reads the registry (PR-LC-3, PR-LC-4). GL's `Jurisdiction` enum and `V34__jurisdiction_currency.sql` are the interim. Decisions Log 2026-10-18 already placed rates and rules outside `common`. |
+| 3 | Destination, repo name, stack | **Still open.** The same Kotlin, Ktor and Exposed stack as every sibling is the default; repo name not chosen. |
+| 4 | Service-account authentication | **Answered by precedent.** The Cognito service-account pattern is proven four times (POP to IM, SOP, IM and HR to GL, POP to GL); Tax needs one more instance. Note the direction: Tax calls GL for ledger figures, and GL and every document owner call Tax for rates. |
+| 5 | WEB cutover | **Open, and larger.** WEB now reads the VAT categories and the Company read; every screen that shows a rate or category must repoint when the provider changes, which the contract-first rule (PR-TX-1) makes a configuration change rather than a code change. |
+| 6 | Database | **Answered by precedent:** its own database, as every extracted system has. |
+| 7 | `ManagedModule.TAX` meaning | **Answered:** remains an EA access-grant concept (11.1). |
+| New | Where VAT rates and VAT returns live after extraction (the question PQ-16 left open; the 2026-09-19 design never placed VAT) | **Answered by Femi's direction of 2026-10-22:** VAT rates, categories and returns are Tax's. Until extraction GL holds them (TJ-NFR-7: no second source of truth, no synchronous dependency at posting). |
+| New | What GL needs from Tax at posting time, and what Tax needs from GL for returns | **Open, and the main blocker below.** Posting a document needs the rate synchronously. Tax needs VAT Control Account lines by direction and net income by date range from GL. |
+
+### 11.3 Recommended extraction order, and what blocks each step
+
+1. **Now, no extraction, no risk (Waves 0 and 1 of section 7).** Correct the data (T-PR-17), build the rulebook change log and roles (T-PR-05 to T-PR-07), and keep `domain.tax` free of incoming dependencies (PR-TX-2). Blocker: none.
+2. **Contract first (new task T-PR-30).** Publish the Tax read contract in `fish-contracts` (jurisdictions and currencies, VAT categories and rates by window, corporate rule matrix), with GL implementing it as the interim provider, and move SOP, POP, CBB, IM and WEB to read through it. This is "abstracting to Tx" without a new service. Blockers: the commons `VatCalculator` design (GL-T-29) must take its rate from the contract (PR-TX-4); consumer-first fixtures (T-PR-28).
+3. **Resolve the posting dependency (new task T-PR-31, design only).** Decide how GL gets a rate at posting once Tax is a separate service: a locally held read-through copy of the rate window refreshed from Tax, so posting never calls Tax synchronously and a Tax outage cannot stop a sale. This is the structural blocker for physical extraction, and it follows the guardrail TJ-NFR-7. Femi's Live-switch timing does not block the design, only the build.
+4. **Physical extraction (new task T-PR-32), after the Live switch and UAT.** Lift `domain.tax`, the VAT tables and the Tax routes into the new service with its own database; add the Cognito service account; point GL, SOP, POP, CBB, IM, HR and WEB at it; move the change log with the rulebook. Blockers: steps 2 and 3 done; Femi's go; the destination and name decided (question 3); a CI pipeline and Terraform from CM; the VAT-lines and date-range reads from GL confirmed as the only things Tax needs from the ledger.
+5. **Payroll tax tables last (PQ-15).** They move to Tax's row shape only after Payroll's own tables are stable.
+
+New tasks: T-PR-30 (the Tax read contract and the consumer move), T-PR-31 (the posting-time rate access design), T-PR-32 (physical extraction, parked until after the Live switch and UAT).
+
 ## 10. Identifier index (for traceability)
 
 IDs are stable: never renumbered or reused; a dropped item keeps its ID and is marked withdrawn; new items are appended. Status: DRAFT until Femi records approval in the Decisions Log.
@@ -341,5 +392,6 @@ IDs are stable: never renumbered or reused; a dropped item keeps its ID and is m
 | Principles | P1 to P8 | 2.4 |
 | Resolution register | rows for PQ-1 to PQ-22, PQ-M1 to PQ-M14 (including PQ-M6a), Phase 2a Q1 to Q8 | 4 |
 | Use cases | UC-PR-1 to UC-PR-16 | 5 |
-| Tasks | T-PR-01 to T-PR-29 | 6 |
+| Tasks | T-PR-01 to T-PR-29; T-PR-30 to T-PR-32 (added in section 11.3) | 6, 11.3 |
+| Requirements, Tax as its own peer | PR-TX-1 to PR-TX-4 | 11.1 |
 | Verification items | V-1 to V-13 | 8 |
