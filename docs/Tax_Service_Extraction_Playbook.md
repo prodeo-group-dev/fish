@@ -4,10 +4,11 @@
 
 **Owner:** Tax Jurisdiction session (Tx). **Related:** `docs/Tax_Extraction_DDD_Design.md` (2026-09-19, the original design; its section 8 questions are answered here), `docs/Tax_And_Currency_Policy_Resolution_Playbook.md` (section 11 and PR-TX-1 to PR-TX-4), `docs/Tax_And_Currency_Jurisdictions_Playbook.md`, `docs/Tax_And_Currency_Policy_Resolution_Research_Digest.md`.
 
-**Decisions this playbook rests on (all Femi, 2026-10-22, logged):**
+**Decisions this playbook rests on (all Femi, 2026-10-22; items 1 to 4 logged):**
 1. "All things Tax should be abstracted to Tx."
 2. Extract now: "No time like the present. Let us extract things that need to do with taxes to Tx. It will provide context for PAYE, and VAT." This overrules the earlier "after the Live switch and UAT" timing. It runs in parallel with, and does not delay, the 24 October VAT deliveries in GL.
 3. "He should provide a window into that portal." Tx provides a Tax screen in the shared front end.
+5. **"Go ahead with Tx. Provide Tax context for each country's jurisdiction, e.g. UK VAT, PAYE, Self Employed etc."** (relayed by CM). The go is beyond docs: code in `fish-tax` once the infrastructure is ready, and fixtures in `fish-contracts` on a branch; the GL `RateSource` port (T-TS-03) still waits for GL's 24 October work. Scope added: a catalogue of all tax types per jurisdiction (TS-11).
 4. The repo and service name is **`fish-tax`** (Femi "Yes" to CM's suggestion): Kotlin, Ktor and Exposed like its siblings, its own database, service accounts like the others. This answers question 3 of the original design.
 
 ## Contents (the six parts of a Playbook, `docs/Playbook_Definition.md`)
@@ -103,6 +104,8 @@ Tax rules are scattered. GL holds the rates and the corporate and VAT computatio
 | TS-7 | **PAYE.** Tax provides payroll tax tables through the contract; Payroll consumes them through its own read-through copy and keeps the computation (section 8). | Tx, Payroll | M | T-TS-16, T-TS-17 |
 | TS-8 | **The window.** Tax provides the Tax screen requirements (section 7); WEB builds them; operator rulebook screens go to Omniview. | Tx, WEB, Omniview | M | T-TS-18, T-TS-19 |
 | TS-9 | **Do not delay GL.** Nothing in this plan edits files GL has claimed for the 24 October VAT deliveries. GL introduces the single rate-lookup port (T-TS-03) in its own time. | GL | M | T-TS-03 |
+| TS-11 | **Tax-types catalogue.** For each jurisdiction (UK, IE, NG, SL, LR, GN, CI) Tax holds a catalogue of **every tax type that applies**, not only VAT and corporate tax: VAT, GST or TVA; PAYE (employee income tax withheld by the employer); employee and employer social contributions; **self-employed** taxes (sole-trader income tax and the self-employed social contributions, such as Class 2 and Class 4 National Insurance in the UK, PRSI Class S in Ireland, and the equivalents elsewhere); corporate income tax; capital gains; withholding taxes; payroll levies; and any other tax a small business or its owner meets. Each entry has the local name, the payer, the authority and filing channel, the filing and payment periods, the headline rates, bands and thresholds by effective window, a status (`VERIFIED`, `UNVERIFIED` or `CONFLICT`) and a `volatile` flag. It is served by one read (section 3.3) and shown in the Tax window (W-TX-9). | Tx | M | T-TS-24, T-TS-25 |
+| TS-12 | **Scaffold.** `fish-tax` follows the package layout, build, auth and delivery conventions of its siblings (section 3.8) so CM can prepare CI and the `TX/` submodule path. | Tx, CM | M | T-TS-07 |
 | TS-10 | **Operations.** Tax emits JSON logs with a `requestId`, has a real `/health`, per-service database, rate limiting on writes, backup and restore documented, and graceful shutdown, matching the platform readiness findings. | Tx, CM | S | T-TS-07, T-TS-06 |
 
 ### 3.3 The read contract (T-PR-30), specified
@@ -117,6 +120,7 @@ Paths are under Tax's `/api`. All reads require a valid service-account token or
 | `GET /api/jurisdictions/{code}/rules?asOf=` | The corporate rule matrix by tax type | `{"jurisdiction":"IE","asOf":"...","rulebookVersion":41,"rules":[{"taxType":"CORPORATE_INCOME_TAX","rateStructure":{...},"effectiveFrom":"...","sourceClass":"PRIMARY"}]}` (shape as `rate_structure` encodes today, exposed as JSON) |
 | `GET /api/jurisdictions/{code}/payroll-tax?asOf=` | PAYE bands and contribution rates | section 8.2 |
 | `GET /api/jurisdictions/{code}/rate-history?type=&from=&to=` | The rulebook change history for the window screen | rows of `{"changedOn","summary","effectiveFrom","sourceClass","supersedes"}`; no operator names (Prodeo is a landlord; role-level only) |
+| `GET /api/jurisdictions/{code}/tax-types?asOf=` | **The catalogue of every tax type that applies in the jurisdiction (TS-11)** | `{"jurisdiction":"UK","asOf":"2026-10-22","rulebookVersion":41,"taxTypes":[{"code":"VAT","localName":"VAT","family":"TRANSACTION","payer":"BUSINESS","authority":{"name":"HMRC","channel":"Making Tax Digital for VAT"},"filing":{"frequency":"QUARTERLY","rule":"one month and seven days after the period end"},"headline":[{"label":"Standard rate","value":"20%","effectiveFrom":"2011-01-04"}],"status":"VERIFIED","volatile":false,"detailRead":"vat-categories"}]}`. `code` values: `VAT`, `CORPORATE_INCOME_TAX`, `PAYE`, `EMPLOYEE_SOCIAL`, `EMPLOYER_SOCIAL`, `SELF_EMPLOYED_INCOME_TAX`, `SELF_EMPLOYED_SOCIAL`, `CAPITAL_GAINS`, `WITHHOLDING`, `PAYROLL_LEVY`, `OTHER` (new codes are added, never repurposed; consumers declare a code before Tax sends it). `family`: `TRANSACTION`, `PROFIT`, `PAYROLL`, `PERSONAL`, `OTHER`. `payer`: `BUSINESS`, `EMPLOYEE`, `EMPLOYER`, `OWNER`. `detailRead` names the contract read that holds the detailed figures (`vat-categories`, `rules`, `payroll-tax`) or is null where the catalogue entry is information only. |
 | `GET /api/rulebook-version` | Cheap version probe for cache refresh | `{"rulebookVersion": 41}` |
 
 Computation routes (Tax calls GL): `POST /api/companies/{companyId}/tax` (corporate tax for a period or date range) and `POST /api/companies/{companyId}/vat-return` (VAT return for a filing period), keeping today's request and response shapes, with the audit record stored in Tax.
@@ -177,6 +181,23 @@ Each step is reversible, and only CM pushes, merges and deploys.
 | 6 | Computation routes move; Tax calls GL's read routes. GL keeps a facade that answers 410 with a pointer for one release. | route back | return reproduced for a known period |
 | 7 | After an agreed period, GL removes the moved code and tables (T-TS-21), with CM. | none (restore from backup) | Femi's go |
 
+### 3.8 The first scaffold of `fish-tax` (for CM: CI and the `TX/` submodule path)
+
+Mirror POP, the closest sibling (Kotlin, Ktor, Exposed, Flyway, Postgres); CM copies POP's `build.gradle.kts`, `Dockerfile`, `Jenkinsfile` and `settings.gradle.kts` as the starting point and sets the names.
+
+| Item | Value |
+|---|---|
+| Repo, path | `fish-tax` (private); submodule path `TX/` in the FiSH superproject |
+| Root layout | `build.gradle.kts`, `settings.gradle.kts`, Gradle wrapper, `Dockerfile`, `Jenkinsfile`, `README.md`, submodules `common/` (`fish-common`) and `contracts/` (`fish-contracts`), as POP has |
+| Main class | `com.theprodeogroup.tax.infrastructure.web.ApplicationKt` |
+| Package layout | `com.theprodeogroup.tax.domain` (`jurisdiction`, `rulebook` for rates, rules, payroll tax and the tax-types catalogue, `computation` for tax computation and VAT return), `com.theprodeogroup.tax.application` (use cases), `com.theprodeogroup.tax.infrastructure.web` (routes, DTOs, `Application.kt`, `Auth.kt`), `...infrastructure.persistence` (Exposed tables and repositories), `...infrastructure.audit` (the change log writer), `...infrastructure.ea` (membership gateway and `TaxMembershipAuthorizer`), `...infrastructure.gl` (read client for net income and VAT control lines, with its service-account token provider), `...infrastructure.notification` (rate-change notices through EA) |
+| Resources | `logback.xml` (JSON with `requestId`), `db/migration/V1__baseline.sql` (the fresh baseline of section 3.5), later versions numbered from V2 |
+| Tests | `src/test` (domain and application), `src/integrationTest` (real Postgres, as POP) |
+| Auth | Cognito JWT for human callers, with the membership check (EA `GET /me`) and the module grant `TAX`; service-account providers for each caller (GL, SOP, POP, CBB, IM, Payroll, EA, Omniview) named `FISH_JWT_SERVICE_AUTH_NAME_*`; service-account calls bypass the membership check by design |
+| Configuration | Database URL and credentials from Secrets Manager; EA base URL; GL base URL and the Tax-to-GL service-account credentials; no secret in code or in the repo |
+| Endpoints in the first scaffold | `/health` (real: database reachable), then `GET /api/jurisdictions` (reads the baseline), so the pipeline deploys something real before the rulebook is ported |
+| Sequence | CM prepares CI and `tax.tf`; Tx lands the scaffold (T-TS-07) as the first commit, on a branch, handed to CM; CM merges and deploys |
+
 ## 4. Use cases (U)
 
 | ID | Use case | Serves |
@@ -221,13 +242,16 @@ Sizes are working days. Owners are sessions; Tx builds in its own `TX/` checkout
 | T-TS-21 | Remove moved code and tables from GL after the verified period | GL, CM | 3 | T-TS-20, Femi's go |
 | T-TS-22 | Golden and contract tests; the strict-decoding mirror in each consumer | Tx and each consumer | with each | T-TS-04 |
 | T-TS-23 | README, operator sheet, update the extraction design doc | Tx | 2 | T-TS-14 |
+| T-TS-24 | **Tax-types catalogue (TS-11):** research and seed the catalogue for UK, IE, NG, SL, LR, GN, CI, including the self-employed taxes, each entry with authority, filing periods, headline figures by window and status. Only the country docs' sections exist today (section 9); self-employed and the other taxes are researched in this task | Tx | 6 | T-TS-09 |
+| T-TS-25 | Add the `tax-types` read to the contract fixtures, consumer-first, and implement it (extends T-TS-04 and T-TS-10) | Tx | 2 | T-TS-04 |
+| T-TS-26 | Tax window: add W-TX-9 (taxes that apply) to the WEB handoff | Tx, WEB | 1 | T-TS-25 |
 
 ## 6. Order (O): foundations before features
 
 - **Wave 0, now:** T-TS-01, T-TS-02. Docs only, no dependency.
 - **Wave 1, inside GL, after CM confirms and GL's 24 October work lands:** T-TS-03 (the port), T-TS-04 (contract fixtures, GL as provider), T-TS-05 (change log and roles). Nothing moves yet; consumers can already read the contract.
 - **Wave 2, the repo (parallel with Wave 1):** T-TS-06 (CM), T-TS-07 (scaffold).
-- **Wave 3, the service:** T-TS-08, T-TS-09, T-TS-10, T-TS-17, then T-TS-11 (seed and compare).
+- **Wave 3, the service:** T-TS-08, T-TS-09, T-TS-10, T-TS-17, T-TS-24 and T-TS-25 (the catalogue), then T-TS-11 (seed and compare).
 - **Wave 4, GL and consumers:** T-TS-12 (read-through copy), T-TS-13 (ledger read), T-TS-15, T-TS-14, T-TS-16.
 - **Wave 5, cutover:** T-TS-20 steps 2 to 6.
 - **Wave 6, the window:** T-TS-18, T-TS-19 start as soon as T-TS-10 serves the contract, in parallel with Waves 4 and 5.
@@ -250,13 +274,14 @@ Direction: Femi, 2026-10-22: "He should provide a window into that portal." This
 
 | ID | Screen | What the user sees | Source |
 |---|---|---|---|
-| W-TX-1 | **My jurisdiction** | Country name, the local tax word (VAT, GST, TVA), the Company's currency, and what is available now: VAT, corporate tax, payroll tax, each Full, Partial (with what is missing in plain words) or not yet available. | `GET /api/jurisdictions` and the Company read |
+| W-TX-1 | **My jurisdiction** | Country name, the local tax word (VAT, GST, TVA), the Company's currency, and what is available now: VAT, corporate tax, payroll tax, each Full, Partial (with what is missing in plain words) or not yet available; a link to W-TX-9. | `GET /api/jurisdictions` and the Company read |
 | W-TX-2 | **VAT categories and rates** | Each category with its rate and effective-from date; the next enacted change with its date as a banner ("From 1 July 2026 this rate becomes 9%"); a date picker to see the schedule as at any date. | `vat-categories?asOf=` |
 | W-TX-3 | **Rate history** | A timeline of changes: what changed, when it took effect, whether the source is primary or secondary, and what it superseded. No operator names. | `rate-history` |
 | W-TX-4 | **Payroll tax (PAYE) tables** | The bands, thresholds and contribution rates for the jurisdiction as at a date, in the jurisdiction's currency, with an "unverified" mark where a row is not yet verified; read-only. | `payroll-tax?asOf=` |
 | W-TX-5 | **VAT return** (Accountant) | Pick a filing period; run or view the return: output VAT, input VAT, net due and direction (payable or refundable), with a breakdown by category and a link to the postings. A return cannot be run if the jurisdiction's VAT is not Full. | `POST` and `GET vat-return` |
 | W-TX-6 | **Corporate tax** (Accountant) | Pick a period; see the computation: taxable profit, rule applied, tax due; for a period straddling a rate change, the split or "manual determination" message. | `POST` and `GET tax` |
 | W-TX-7 | **Notices** | A banner on any screen that shows an affected rate or category when a change is scheduled; reminder 7 days before; shown on the day (PR-GV-6). Notices come from EA; this screen is where the banner links. | EA notice; `pending` in W-TX-2 |
+| W-TX-9 | **Taxes that apply to me** | The catalogue for the Company's jurisdiction: every tax type (VAT, PAYE, social contributions, self-employed taxes, corporate tax, withholding, others) with the local name, who pays, the authority and where to file, how often and by when, the headline rates and thresholds with effective dates, and a status mark (verified, unverified, volatile). Tapping a row opens its detail (the VAT rates, the PAYE tables or the corporate rule) or, for information-only entries, a plain description. A self-employed owner sees the self-employed taxes first. | `tax-types?asOf=` |
 | W-TX-8 | **Tax and currency help** | A short plain explanation of the tax word, the tax point, and why a rate may differ from another system. | static text from the rulebook |
 
 ### 7.3 Behaviour rules
@@ -298,6 +323,7 @@ For each jurisdiction and effective window:
 | Cote d'Ivoire | ITS bands after the 2024 reform; CNPS itemised | volatile in places; flagged |
 
 ## 9. Evidence and what was not verified
+- **Catalogue data on file today (country docs and YAML, section keys):** UK: corporation tax, VAT, PAYE, National Insurance. Ireland: corporation tax, VAT, income tax, USC, PRSI. Nigeria: companies income tax, VAT, personal income tax, pension. Sierra Leone: corporate income tax, GST, PAYE, NASSIT. Liberia: corporate income tax, GST, PAYE, NASSCORP. Guinea: corporate income tax, TVA, ITS, CNSS. Cote d'Ivoire: corporate income tax, TVA, ITS, CNPS. **No country doc has a self-employed or sole-trader section**, and capital gains, withholding, payroll levies (Sierra Leone Payroll Tax Act, Guinea Versement Forfaitaire, Cote d'Ivoire employer contribution, Nigeria development levy) appear only in research digests. T-TS-24 closes this gap; two researchers were sent out for it on 2026-10-22 and their findings go in a new section of the research digest before anything is seeded.
 - The inventory in section 1 is from reading the GL checkout and the `fish-contracts` fixtures on 2026-10-22; the **VAT Control Account line read** Tax needs is not confirmed to exist as a separate GL route (the return use case reads the lines internally today).
 - The proposed host name, database name, refresh interval (15 minutes), horizon (400 days) and alarm threshold (one hour) are proposals for CM and GL to confirm.
 - The PAYE contract shape in 8.2 is a first shape, not checked against Payroll's `TaxBand` and `PayrollTaxType` beyond reading them.
@@ -311,8 +337,8 @@ IDs are stable: never renumbered or reused; a dropped item keeps its ID; new ite
 | Kind | IDs | Where defined |
 |---|---|---|
 | Decisions | Q1 to Q9 | 3.1 |
-| Requirements | TS-1 to TS-10 | 3.2 |
+| Requirements | TS-1 to TS-12 | 3.2 |
 | Principles | S1 to S6 | 2.4 |
 | Use cases | UC-TS-1 to UC-TS-10 | 4 |
-| Tasks | T-TS-01 to T-TS-23 (expand T-PR-30 to T-PR-32 of the Policy Resolution playbook) | 5 |
-| Window screens | W-TX-1 to W-TX-8 | 7.2 |
+| Tasks | T-TS-01 to T-TS-26 (expand T-PR-30 to T-PR-32 of the Policy Resolution playbook) | 5 |
+| Window screens | W-TX-1 to W-TX-9 | 7.2 |
