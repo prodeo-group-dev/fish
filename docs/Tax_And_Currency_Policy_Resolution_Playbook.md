@@ -129,6 +129,7 @@ Each requirement states the rule, the question(s) it resolves, its evidence, and
 | PR-VT-8 | The tax word (VAT, GST, TVA), the mandatory invoice fields and any required legal wording per tax code are **localisation data per jurisdiction**, not hard-coded labels. Example wording that must be possible: Guinea's franchise statement and Ireland's reverse-charge notation. | PQ-14 | Digest 2.5 | GL, WEB | M |
 | PR-VT-9 | A product's VAT category is effective-dated per jurisdiction and period, as already decided. This playbook restates it only so the question is closed in one place. | PQ-9 | Decisions Log 2026-10-13, 2026-10-15 | IM | M |
 | PR-VT-10 | VAT on an invoice in a foreign currency is computed in the jurisdiction's currency; the rate type, the rate date and the return currency are per-jurisdiction rulebook data (see `Multi_Entity_Accounting_Playbook.md` ME-TAX-2 and the digest 6.1 to 6.5 there). | (cross-ref) | Multi-entity digest 6 | GL, Tx | M |
+| PR-VT-11 | **Rounding of VAT from a VAT-inclusive (gross) amount.** VAT is computed from the gross by the authority's own formula, `vat = round(gross x rate / (100 + rate))`, and `net = gross - vat`, so net plus VAT always equals the typed gross. Rounding is to the currency's minor unit (0 for GNF and XOF, 2 otherwise). A VAT-exclusive amount is `vat = round(net x rate)` per line, never from a document total. One rounding mode is used platform-wide and written down; the authorities read do not prescribe half-even or half-up for exact ties (only that UK retailers must not round down). Asked by CM for GL's shared VAT calculator (GL-T-29), 2026-10-22. | (CM question) | Read 2026-10-22 directly (not yet in the digest): UK Notice 700 paras 7.3.1, 16.6.2, 17.5, 17.6; Revenue pages (no rounding rule found) | GL (commons) | M |
 
 ### 3.4 Corporate income tax (PR-CT)
 
@@ -316,6 +317,7 @@ Each is task T-PR-26 unless noted. None is asked of Femi; each ends as a recorde
 | V-9 | Full IAS 21 and IFRS 10 paragraph numbers. | Licensed text not read; IFRS for SMEs read directly instead (T-ME-04). | 4.3 |
 | V-10 | The Bank of England licence terms for GBP rates (the LSEG exclusion), and the Bank of Sierra Leone and CBN terms of use. | Not stated on the pages read. | 4.5 |
 | V-11 | Liberian books-currency election (PR-LC-6): confirm the rule before building. | No primary text on the currency of books of account found beyond s.6(a). | 1.2, 1.5 |
+| V-13 | VAT rounding: Ireland's and Nigeria's rule for rounding VAT on an invoice or from a gross amount, and the tie-breaking mode in each of the three jurisdictions. | Revenue pages searched found no rounding rule; Nigeria not researched; HMRC states only which direction rounding may go. | (this playbook, PR-VT-11) |
 | V-12 | The Irish CUSO framework (Central Bank CP169) and whether credit unions in any of the three jurisdictions must produce group accounts. | A consultation, not final; no requirement found. | 4.1 |
 
 ## 9. What is still needed from Femi
@@ -332,7 +334,7 @@ IDs are stable: never renumbered or reused; a dropped item keeps its ID and is m
 |---|---|---|
 | Requirements, lifecycle | PR-LC-1 to PR-LC-7 | 3.1 |
 | Requirements, governance | PR-GV-1 to PR-GV-8 | 3.2 |
-| Requirements, VAT | PR-VT-1 to PR-VT-10 | 3.3 |
+| Requirements, VAT | PR-VT-1 to PR-VT-11 | 3.3 |
 | Requirements, corporate tax | PR-CT-1 to PR-CT-3 | 3.4 |
 | Requirements, exchange rates | PR-RT-1 to PR-RT-4 | 3.5 |
 | Requirements, multi-entity | PR-MF-1 to PR-MF-8 | 3.6 |
@@ -340,4 +342,4 @@ IDs are stable: never renumbered or reused; a dropped item keeps its ID and is m
 | Resolution register | rows for PQ-1 to PQ-22, PQ-M1 to PQ-M14 (including PQ-M6a), Phase 2a Q1 to Q8 | 4 |
 | Use cases | UC-PR-1 to UC-PR-16 | 5 |
 | Tasks | T-PR-01 to T-PR-29 | 6 |
-| Verification items | V-1 to V-12 | 8 |
+| Verification items | V-1 to V-13 | 8 |
