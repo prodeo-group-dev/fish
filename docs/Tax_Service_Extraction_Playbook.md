@@ -10,6 +10,8 @@
 3. "He should provide a window into that portal." Tx provides a Tax screen in the shared front end.
 5. **"Go ahead with Tx. Provide Tax context for each country's jurisdiction, e.g. UK VAT, PAYE, Self Employed etc."** (relayed by CM). The go is beyond docs: code in `fish-tax` once the infrastructure is ready, and fixtures in `fish-contracts` on a branch; the GL `RateSource` port (T-TS-03) still waits for GL's 24 October work. Scope added: a catalogue of all tax types per jurisdiction (TS-11).
 6. Femi adds (relayed by CM): Tx "will provide the tax context for each country's jurisdiction ... within each fiscal year". The catalogue and the contract are therefore organised by **tax year** per jurisdiction as well as by date (TS-13).
+8. Femi answered the maintenance question (logged): who watches each tax authority for changes is **"The business owner"**. Section 3.11 reconciles this with Tx's duty to keep its rows accurate, and records the confirmation mechanism (TS-15).
+7. Femi adds (relayed by CM): Tx "will maintain [the tax context] for all jurisdictions we work in: UK, IE etc." Maintenance is a **standing responsibility** of Tx, for every jurisdiction in the registry, present and added later as reference data (TS-14, section 3.10).
 4. The repo and service name is **`fish-tax`** (Femi "Yes" to CM's suggestion): Kotlin, Ktor and Exposed like its siblings, its own database, service accounts like the others. This answers question 3 of the original design.
 
 ## Contents (the six parts of a Playbook, `docs/Playbook_Definition.md`)
@@ -107,6 +109,8 @@ Tax rules are scattered. GL holds the rates and the corporate and VAT computatio
 | TS-9 | **Do not delay GL.** Nothing in this plan edits files GL has claimed for the 24 October VAT deliveries. GL introduces the single rate-lookup port (T-TS-03) in its own time. | GL | M | T-TS-03 |
 | TS-11 | **Tax-types catalogue.** For each jurisdiction (UK, IE, NG, SL, LR, GN, CI) Tax holds a catalogue of **every tax type that applies**, not only VAT and corporate tax: VAT, GST or TVA; PAYE (employee income tax withheld by the employer); employee and employer social contributions; **self-employed** taxes (sole-trader income tax and the self-employed social contributions, such as Class 2 and Class 4 National Insurance in the UK, PRSI Class S in Ireland, and the equivalents elsewhere); corporate income tax; capital gains; withholding taxes; payroll levies; and any other tax a small business or its owner meets. Each entry has the local name, the payer, the authority and filing channel, the filing and payment periods, the headline rates, bands and thresholds by effective window, a status (`VERIFIED`, `UNVERIFIED` or `CONFLICT`) and a `volatile` flag. It is served by one read (section 3.3) and shown in the Tax window (W-TX-9). | Tx | M | T-TS-24, T-TS-25 |
 | TS-13 | **Tax years.** (a) The **tax-year definition** per jurisdiction (start and end rule, for example the UK's 6 April to 5 April and Ireland's calendar year; the others are researched, not assumed) is Tx-owned data, distinct from a Company's own `fiscalYearStartMonth` in GL and from a company's accounting period. (b) For each jurisdiction and each tax year Tx gives the rates, bands, allowances, thresholds, contribution rates and filing deadlines in force, from 2024/25 onward as sources allow. (c) A **mid-year change** is shown as an effective window inside the year (date and new figure), never as a separate year. (d) A read **by tax year** sits beside the `asOf` read, and both answer from the same effective-dated rows, so they cannot disagree. (e) The Tax window has a tax-year selector (W-TX-10). The personal tax year, the corporate filing year and the Company's accounting year are three different things and are labelled as such. | Tx | M | T-TS-24, T-TS-25, T-TS-27 |
+| TS-14 | **Standing maintenance.** Tx maintains the tax context for **every jurisdiction in the registry**, not only the first market, and for any added later. Each row (rate, band, threshold, allowance, contribution rate, filing deadline, tax-year definition, catalogue entry) carries a status (`VERIFIED`, `UNVERIFIED`, `CONFLICT`), a `verifiedOn` date and a `reviewBy` date. Each jurisdiction has an authority watch list, a calendar of known change events, and a defined path from a detected change to a published, verified row (section 3.10). A row not reviewed by its date is **flagged**, not silently trusted. | Tx | M | T-TS-28, T-TS-29, T-TS-30 |
+| TS-15 | **Business Owner confirmation.** The Business Owner watches their own tax authority for changes and confirms, per Organisation, that each published row applies to them. Tax records each confirmation as an audit-trail event (who confirmed which row version, when). A row that is `UNVERIFIED`, or that has changed since the Organisation last confirmed it, shows a visible flag in the Tax window. Flags never block a computation or a posting. Tx still verifies its own rows against sources (accuracy is FiSH's onus); the owner confirms applicability and watches for change (section 3.11). | Tx, WEB, EA | M | T-TS-31, T-TS-32, T-TS-33 |
 | TS-12 | **Scaffold.** `fish-tax` follows the package layout, build, auth and delivery conventions of its siblings (section 3.8) so CM can prepare CI and the `TX/` submodule path. | Tx, CM | M | T-TS-07 |
 | TS-10 | **Operations.** Tax emits JSON logs with a `requestId`, has a real `/health`, per-service database, rate limiting on writes, backup and restore documented, and graceful shutdown, matching the platform readiness findings. | Tx, CM | S | T-TS-07, T-TS-06 |
 
@@ -202,6 +206,84 @@ Mirror POP, the closest sibling (Kotlin, Ktor, Exposed, Flyway, Postgres); CM co
 | Endpoints in the first scaffold | `/health` (real: database reachable), then `GET /api/jurisdictions` (reads the baseline), so the pipeline deploys something real before the rulebook is ported |
 | Sequence | CM prepares CI and `tax.tf`; Tx lands the scaffold (T-TS-07) as the first commit, on a branch, handed to CM; CM merges and deploys |
 
+### 3.10 Standing maintenance: who watches, how a change is published, how long a row may go unreviewed (TS-14)
+
+**Who owns it.** (Amended by section 3.11: the Business Owner watches their own authority and confirms the rows apply to them; Tx keeps FiSH's rows accurate. The process below is how Tx keeps them accurate.) The Tax Jurisdiction session (Tx) owns keeping each jurisdiction's published rows current and accurate. It proposes (editor); the verifier (Femi, until he delegates, PR-GV-1) approves. Prodeo is a landlord (Decisions Log 2026-10-15): this is the platform's own reference data, never a Tenant's. Where Tx is not available, CM records the gap; nothing is auto-published.
+
+**What is watched, per jurisdiction.** A watch list lives with the rulebook (data, not code): the authority pages and the gazettes or Finance Acts that announce changes, the statutory instruments, and the dates of known events. The starting lists come from the research digest section 5 and the per-country docs, for example: UK: HMRC rates-and-thresholds pages, the Budget and Finance Act, employer rates pages each January and March; Ireland: Revenue tax-and-duty manuals and eBriefs, the October Budget, the Finance Act, the Department of Social Protection PRSI guides (PRSI steps each 1 October); Nigeria: Nigeria Revenue Service notices, the gazette, ministerial guidelines and the Withholding Tax Regulations; Sierra Leone: National Revenue Authority notices and the Finance Act each November or December; Liberia: Liberia Revenue Authority notices and tax amendment acts; Guinea: the finance law and the Directorate General of Taxes; Cote d'Ivoire: the finance annex each December.
+
+**Known events calendar** (a per-jurisdiction table of dated checks): UK 6 April (tax year), 1 April (minimum wage, Corporation Tax financial year), the Autumn Budget; Ireland 1 January, 1 October (PRSI), the October Budget; Nigeria 1 January (regime year), notices as issued; Sierra Leone, Liberia, Guinea, Cote d'Ivoire: the finance law each year-end and any mid-year amendment. The calendar creates a review task before each event.
+
+**From a detected change to a published row.**
+1. A change is detected (a watch-list page changes, a calendar event, a consumer or Tenant report).
+2. The editor enters a **draft** row with the instrument, URL, source class, and the effective window (`pending` if enacted ahead of its date, `monitoring` if only proposed).
+3. The verifier checks the source, records primary or a recorded professional judgment (PR-GV-4), and approves; the row becomes `VERIFIED` with `verifiedOn`.
+4. The rulebook version increases; consumers' copies refresh; the Tax window and, for a pending row, the owner notice follow (PR-GV-6).
+5. The change log records requester, verifier, time, source and the before and after.
+
+**How long a row may go without review (proposed thresholds, configuration data; Femi can change them).**
+
+| Condition | Flag | Where it shows |
+|---|---|---|
+| A draft or `UNVERIFIED` row older than **14 days** | amber "awaiting verification" | the verifier's queue |
+| A `VERIFIED` row past its `reviewBy` date (default **90 days**, the quarterly review of PR-GV-7) | amber "review due" | the verifier's queue |
+| A row marked `volatile` past **30 days** | amber "review due" | the verifier's queue |
+| A row past **180 days** unreviewed, or any `CONFLICT` row | red "may be out of date" | the verifier's queue and the Tax window (W-TX-9 status mark) |
+| A calendar event reached with no review done | red "event not reviewed" | the verifier's queue |
+
+A flag never blocks a computation by itself (a `VERIFIED` row stays usable until the verifier withdraws it); it makes the staleness visible to the verifier and, past 180 days, to the owner. A row that is `UNVERIFIED` or `CONFLICT` is not used in a computation (PR-GV-4).
+
+**Where the catalogue comes from.** The per-country catalogue is seeded from the researchers' findings (research digest section 5), each row with its source class and status exactly as reported, and nothing seeded as `VERIFIED` until the verifier approves it. Rows the researchers could not verify are seeded `UNVERIFIED` or `CONFLICT`, never filled in. The UK and Irish PAYE, NIC, PRSI and USC figures by tax year; Nigeria's 2026 regime; and the Mano River catalogue (when reported) are the first seed.
+
+## Open items inside maintenance
+- **Who is the second pair of eyes when Femi is unavailable** is Femi's to decide when he delegates the verifier role; until then verification waits (it does not self-approve).
+- The thresholds above, the watch lists and the events calendar are Tx's proposals, to be confirmed at approval.
+
+### 3.11 Who watches the authority, and the Business Owner's confirmation (TS-15)
+
+**Femi's answer (logged, 2026-10-22):** who watches each tax authority for changes is "The business owner". This sits with two standing rules: FiSH prepares and analyses and the Tenant owns its records and answers to its authority ("preparation is not audit", Decisions Log 2026-10-16), and the accuracy of what FiSH publishes is FiSH's onus.
+
+**Reconciling them: two different duties.**
+
+| Duty | Whose | What it means |
+|---|---|---|
+| The rows FiSH publishes are accurate | **FiSH (Tx)** | Tx checks each row against its source, records the source and class, marks it `VERIFIED`, `UNVERIFIED` or `CONFLICT`, dates it, and corrects it when told or when it finds it wrong. Tx does not promise to be the Tenant's early-warning service for every authority announcement; section 3.10 is how Tx keeps its own rows accurate. |
+| Watching the authority for changes that affect the business | **The Business Owner** | The owner is the party who answers to the authority and who knows their own situation. They watch announcements from their authority and tell FiSH when a published row no longer matches. |
+| Confirming a published row applies to this business | **The Business Owner** (per Organisation) | A row can be correct and still not apply (a small business below a threshold, a sector rate). The owner confirms, and the confirmation is recorded. |
+| What the business actually files | **The Business Owner** | FiSH prepares figures from the Tenant's records and the confirmed rows; the Tenant files and is audited. |
+
+**The confirmation record (an audit-trail event).** `tax_row_confirmations(id, tenant_id, company_id, jurisdiction, row_key, row_version, confirmed_by, confirmed_at, note)`:
+- `row_key` identifies the rule (for example `VAT/STANDARD`, `PAYE/bands`, `SELF_EMPLOYED_SOCIAL/class4`); `row_version` is the rulebook row version confirmed (the immutable approved row, PR-GV-2), so "changed since confirmed" is exact.
+- Written only by a caller authorised at that Organisation through the EA membership check; for the first release, the Organisation's Owner Admin (RBAC is frozen until the Live switch, so no new delegation model). Append-only; a re-confirmation is a new event.
+- Read by the same Tenant only. Tax holds tenant-scoped data in this one table; it is scoped by `tenant_id` and `company_id` at the application layer like the sibling services, and is included in the platform's tenant-isolation scope (`docs/Database_Tenant_Isolation_RLS_Scope.md`). Prodeo operators do not read it.
+- The event is also written to the Organisation's audit trail as "Business Owner confirmed [rule] as at [date]".
+
+**Flag rules (what the owner sees, and when).** All thresholds are configuration data.
+
+| State | Flag the owner sees | When it appears |
+|---|---|---|
+| Row is `UNVERIFIED` or `CONFLICT` | amber **"FiSH has not verified this yet"** (and the source note) | from the moment the row is visible; not used in any computation |
+| A row was `VERIFIED` and has since changed (a new approved row, a correction, a new effective window) and the owner has not confirmed the new version | amber **"Changed on [date]: please review and confirm"** with the old and new figures and the effective date | when the new row is published, even while it is `pending`; a reminder 7 days before its effective date (PR-GV-6) |
+| Same, and the effective date has arrived with no confirmation | red **"In use since [date], not yet confirmed by you"** | on the effective date |
+| A standing row the Organisation has never confirmed | grey **"Not confirmed by you"** | after the Organisation's first posting that uses it, and a reminder 30 days later |
+| A confirmation older than 12 months | grey **"Confirm again for the new tax year"** | at the start of the jurisdiction's tax year (TS-13) |
+| A row Tx flags as `may be out of date` (3.10, 180 days or `CONFLICT`) | red **"FiSH has not re-checked this for [n] days"** | as in 3.10 |
+
+A flag never stops a posting, a computation or a return. It informs; the owner decides. A "Report a problem" action on any row puts the row in the verifier's queue (3.10) and records who reported it.
+
+**What the Business Owner sees (the Tax window, W-TX-11).** A list "Rules I rely on" for the Organisation: each rule that applies (VAT rates, PAYE, social contributions, self-employed taxes, corporate tax), with the figure and effective date, the status chip (`VERIFIED on [date]` with the source class, or `NOT VERIFIED`), the flag from the table above, the old and new figure when changed, a link to the authority's own page, a **"Confirm this applies to us"** button, a **"Report a problem"** button, and the Organisation's own confirmation history. A summary at the top: "N rules to review, M changed since you last confirmed." Phone-first and compact (the WEB layout checklist).
+
+**Wording for Femi's approval (plain words, shown in the Tax window and in onboarding).**
+- "FiSH publishes the tax rules for your country. For each one we show where it came from, when we last checked it, and whether we have verified it."
+- "You answer to your tax authority. Please watch your authority's announcements, and confirm here that each rule applies to your business. When a rule changes we will tell you, and show you what changed."
+- "If something looks wrong, tell us and we will check and correct it. We prepare your figures from your records and these rules; you remain responsible for what you file."
+
+**Open points for Femi (docs only; nothing built).**
+1. Whether the owner's confirmation is per Organisation (proposed) or per Tenant.
+2. Whether a delegate (an accountant with APPROVE) may confirm; proposed no for the first release (RBAC freeze), Owner Admin only.
+3. The reminder intervals (7 days before, 30 days after first use, 12 months) and whether "red on the effective date" is the right escalation.
+4. Whether Tx should also offer an optional change-alert service (a digest when Tx's own watch finds a change) as a courtesy; proposed yes, clearly marked as not a substitute for the owner's own watch.
+
 ### 3.9 GL's view, and Tx's answers (source: `Playbooks/GL/GL_Tax_Extraction_GL_View.md`, GL session, 2026-10-22)
 
 GL read this plan against its code and added four findings. Tx accepts all of them; the plan above is amended as follows.
@@ -236,6 +318,11 @@ One point Tx raises back. GL says the closed `Jurisdiction` enum stays where it 
 | UC-TS-7 | **Payroll computes PAYE.** Payroll reads the bands and contributions for the Company's jurisdiction from its copy and computes; if the rule is unverified or the copy lacks the date, it refuses with a plain message. | TS-7 |
 | UC-TS-8 | **A Business Owner opens the Tax window.** The owner sees their jurisdiction, currency, the tax word, what is available, the VAT categories and rates with effective dates, the next change, the history and the PAYE tables. | TS-8 |
 | UC-TS-9 | **Cutover step 3 fails.** The flag is flipped back; GL reads its own table; no posting is lost. | TS-6 |
+| UC-TS-11 | **A budget changes a rate.** The calendar reaches the Irish October Budget; Tx reviews the announced measures, enters `monitoring` rows for what is only announced and `pending` rows for what is enacted; the verifier approves what has a source; consumers refresh. | TS-14 |
+| UC-TS-12 | **A jurisdiction goes stale.** A jurisdiction's rows pass their review dates; the verifier's queue turns red for it; the Tax window shows "may be out of date" against the affected rows; Tx reviews and the flags clear. | TS-14 |
+| UC-TS-13 | **The Business Owner confirms a rule.** The owner opens "Rules I rely on", reads the Standard VAT rate row, taps Confirm; Tax records the confirmation (who, which row version, when) and the flag clears. | TS-15 |
+| UC-TS-14 | **A rate changes after the owner confirmed.** A new row is published as `pending`; the owner's row shows "Changed on [date]: please review and confirm" with old and new figures; a reminder 7 days before; if still unconfirmed on the effective date it turns red; the owner confirms or reports a problem. Postings are never blocked. | TS-15 |
+| UC-TS-15 | **The owner reports a wrong rule.** The owner taps Report a problem on a row; it goes to the verifier's queue with who reported it; Tx checks the source, corrects by a superseding row if wrong (PR-GV-8) or replies with the source if right. | TS-15, TS-14 |
 | UC-TS-10 | **Tax is deployed during a sale.** The refresher sees a transient error, keeps the copy, retries; no user effect. | TS-4 |
 
 ## 5. Tasks (T)
@@ -270,6 +357,12 @@ Sizes are working days. Owners are sessions; Tx builds in its own `TX/` checkout
 | T-TS-24 | **Tax-types catalogue (TS-11, TS-13):** research and seed the catalogue for UK, IE, NG, SL, LR, GN, CI, including the self-employed taxes, each entry with authority, filing periods, headline figures by window and status, **organised by tax year from 2024/25 onward as sources allow, with each jurisdiction's tax-year definition**. Only the country docs' sections exist today (section 9); self-employed and the other taxes are researched in this task | Tx | 6 | T-TS-09 |
 | T-TS-25 | Add the `tax-types` read to the contract fixtures, consumer-first, and implement it (extends T-TS-04 and T-TS-10) | Tx | 2 | T-TS-04 |
 | T-TS-26 | Tax window: add W-TX-9 (taxes that apply) to the WEB handoff | Tx, WEB | 1 | T-TS-25 |
+| T-TS-28 | **Maintenance data (TS-14):** the per-jurisdiction authority watch list and events calendar as data; the `verifiedOn`, `reviewBy`, `volatile` and status columns on every rulebook row; the review flags (the table in 3.10) computed from them | Tx | 4 | T-TS-09 |
+| T-TS-29 | **Maintenance process:** the verifier's queue (awaiting, review due, may be out of date, event not reviewed) as an Omniview screen, with the thresholds as configuration | Omniview via CM, Tx | 3 | T-TS-28, T-TS-19 |
+| T-TS-30 | **First maintenance cycle:** seed the catalogue for UK, IE, NG from digest section 5 (and the Mano River four when reported), each row with status and source class; run the first review round; record the calendar | Tx | 5 | T-TS-24, T-TS-28 |
+| T-TS-31 | **Confirmation record (TS-15):** the `tax_row_confirmations` table, the write and read routes (`POST` and `GET /api/companies/{companyId}/tax-confirmations`) behind the EA membership check, the audit-trail event, fixtures consumer-first | Tx | 5 | T-TS-07, the first Company-scoped route |
+| T-TS-32 | **Flag computation:** the owner-side flag rules (3.11) computed from row status, row version and confirmations; configuration for the intervals; the "changed since confirmed" diff | Tx | 3 | T-TS-31, T-TS-28 |
+| T-TS-33 | **Window:** W-TX-11 "Rules I rely on" added to the WEB handoff; notices through EA for the reminders | Tx, WEB, EA | 2 | T-TS-32 |
 | T-TS-27 | **Tax years (TS-13):** the tax-year definition table and the two by-year reads in the contract fixtures, consumer-first; implement from the same effective-dated rows; W-TX-10 added to the WEB handoff | Tx, WEB | 3 | T-TS-24, T-TS-25 |
 
 ## 6. Order (O): foundations before features
@@ -309,6 +402,7 @@ Direction: Femi, 2026-10-22: "He should provide a window into that portal." This
 | W-TX-7 | **Notices** | A banner on any screen that shows an affected rate or category when a change is scheduled; reminder 7 days before; shown on the day (PR-GV-6). Notices come from EA; this screen is where the banner links. | EA notice; `pending` in W-TX-2 |
 | W-TX-9 | **Taxes that apply to me** | The catalogue for the Company's jurisdiction: every tax type (VAT, PAYE, social contributions, self-employed taxes, corporate tax, withholding, others) with the local name, who pays, the authority and where to file, how often and by when, the headline rates and thresholds with effective dates, and a status mark (verified, unverified, volatile). Tapping a row opens its detail (the VAT rates, the PAYE tables or the corporate rule) or, for information-only entries, a plain description. A self-employed owner sees the self-employed taxes first. | `tax-types?asOf=` |
 | W-TX-10 | **Tax-year selector** | A selector on W-TX-2, W-TX-4, W-TX-5 and W-TX-9 for the tax year (default: the current one), showing the year's start and end and labelling it as the personal tax year, the corporate filing year or the Company's own accounting year where they differ; a mid-year change appears inside the year as a dated step; a year with unsourced figures is marked partial. | `tax-years`, `tax-years/{year}/tax-types` |
+| W-TX-11 | **Rules I rely on** (Business Owner, section 3.11) | The list of rules that apply to the Organisation with status chip, change flag, old and new figures, a link to the authority, **Confirm this applies to us**, **Report a problem**, and the Organisation's confirmation history; a summary "N to review, M changed since you last confirmed". | `tax-types`, `tax-years/{year}/tax-types`, `tax-confirmations` |
 | W-TX-8 | **Tax and currency help** | A short plain explanation of the tax word, the tax point, and why a rate may differ from another system. | static text from the rulebook |
 
 ### 7.3 Behaviour rules
@@ -364,8 +458,8 @@ IDs are stable: never renumbered or reused; a dropped item keeps its ID; new ite
 | Kind | IDs | Where defined |
 |---|---|---|
 | Decisions | Q1 to Q9 | 3.1 |
-| Requirements | TS-1 to TS-13 | 3.2 |
+| Requirements | TS-1 to TS-15 | 3.2 |
 | Principles | S1 to S6 | 2.4 |
-| Use cases | UC-TS-1 to UC-TS-10 | 4 |
-| Tasks | T-TS-01 to T-TS-27 (expand T-PR-30 to T-PR-32 of the Policy Resolution playbook) | 5 |
-| Window screens | W-TX-1 to W-TX-10 | 7.2 |
+| Use cases | UC-TS-1 to UC-TS-15 | 4 |
+| Tasks | T-TS-01 to T-TS-33 (expand T-PR-30 to T-PR-32 of the Policy Resolution playbook) | 5 |
+| Window screens | W-TX-1 to W-TX-11 | 7.2 |
