@@ -144,7 +144,7 @@ Refusal codes keep today's stable codes: `no_vat_rate_schedule`, `no_tax_rule`, 
 4. **Posting reads only the local copy.** If the copy has no row for the date, posting refuses with the existing `no_vat_rate_schedule` error (never a default, per the Decisions Log 2026-10-15), and logs that the copy may be stale.
 5. **Tax down is fine.** The copy keeps serving. Rates are effective-dated facts; a rate in force on a date changes only by a correction, which the refresher picks up after Tax recovers.
 6. **Staleness is visible, not blocking.** `fetched_at` and `rulebook_version` are on a GL admin read and in a metric; an alarm fires if `fetched_at` is older than one hour. Posting does not block on staleness.
-7. **Corrections.** A correction row in Tax is a new effective-dated row. Each posted VAT line records the **rate row it used** (rate, effective-from and rulebook version), so the impact query (PR-GV-8) can list postings made under a superseded row.
+7. **Corrections.** A correction row in Tax is a new effective-dated row. Because callers now compute VAT (GL sees an amount and a category, not a rate row), the **caller sends the basis** it used, `vatBasis { ratePercent, rulebookVersion, effectiveFrom }` (optional, consumer-first), and GL stores it beside the source reference, so the impact query (PR-GV-8) can list postings made under a superseded row (section 3.9).
 8. **First deploy.** The table already holds the live rows; the first Tax export is compared with it row by row (T-TS-11) before GL switches its refresher on.
 
 **Failure modes.**
@@ -157,14 +157,14 @@ Refusal codes keep today's stable codes: `no_vat_rate_schedule`, `no_tax_rule`, 
 | A jurisdiction is added or becomes available | Appears at the next refresh; a Company created in it before then waits at most the refresh interval. |
 | Copy missing a date | `no_vat_rate_schedule`; nothing is posted. |
 
-**Who needs a copy.** GL (posting) in phase one; Payroll (PAYE) in phase two (section 8). SOP, POP, CBB and IM read the rate through GL's facade (`GET /companies/{companyId}/vat-categories`, kept for a release) and so inherit the copy; they move to reading Tax directly only if they need to. WEB reads Tax directly (online, display only).
+**Who needs a copy.** GL in phase one (it serves the rate facade, and, until GL-T-26b lands, its posting); Payroll (PAYE) in phase two (section 8). SOP, POP, CBB and IM read the rate through GL's facade (`GET /companies/{companyId}/vat-categories`, kept **until a caller holds its own copy**) and so inherit the copy; they move to reading Tax directly only if they need to. WEB reads Tax directly (online, display only).
 
 ### 3.5 What moves, what stays
 
 | Moves to `fish-tax` | Stays in GL |
 |---|---|
 | Tables: `jurisdictions`, `tax_rules`, `tax_computations`, `vat_rates` (becomes Tax's source of truth; GL keeps a copy under TS-4), `vat_returns` | `companies` (with the jurisdiction **code**), `periods`, `journal_entries`, `journal_lines`, the VAT Control Account and all postings |
-| `domain/tax/*` (rule, type, rate structure, computation, VAT category, rate schedule, filing period, return, repositories, ids), `ComputeTaxUseCase`, `ComputeVatCategoriesUseCase`, `ComputeVatReturnUseCase`, `TaxRoutes`, `VatCategoriesRoutes`, `VatReturnRoutes`, `JurisdictionRoutes`, the Exposed repositories, `rate_structure_encoding`, tests | The three posting use cases (they call the `RateSource` port), the profit-and-loss report route, the VAT-control-line read (new, TS-5), `ManagedModule.TAX` (tenancy), the VAT calculator input (the document owner's job) |
+| `domain/tax/*` (rule, type, rate structure, computation, rate schedule, filing period, return, repositories, ids; **`VatCategory` and `VatLineDirection` go to `fish-common`**, section 3.9; the return takes plain VAT-line records, not GL's journal types), `ComputeTaxUseCase`, `ComputeVatCategoriesUseCase`, `ComputeVatReturnUseCase`, `TaxRoutes`, `VatCategoriesRoutes`, `VatReturnRoutes`, `JurisdictionRoutes`, the Exposed repositories, `rate_structure_encoding`, tests | The three posting use cases (they call the `RateSource` port), the profit-and-loss report route, the VAT-control-line read (new, TS-5), `ManagedModule.TAX` (tenancy), the VAT calculator input (the document owner's job) |
 | Migrations V5, V9, V25, V29, V30, V31, V34 become a **fresh baseline** in `fish-tax` (new repo, new database), seeded by an export, not a literal copy of history | The migrations stay as GL's history; GL later adds one that removes the moved tables |
 | New: roles, `rulebook_change_log`, availability, `pending` and `monitoring` states, source records, correction rows | |
 
@@ -182,7 +182,7 @@ Each step is reversible, and only CM pushes, merges and deploys.
 | 3 | GL's refresher reads Tax; the table becomes the copy; GL's own write path is switched off. A feature flag on the `RateSource` implementation. | flip the flag back; GL's table is still the source | Tax stable for a week; alarm tested |
 | 4 | WEB and consumers repoint reads (base URL change). | repoint back | contract tests green |
 | 5 | Operator writes move to Tax (Omniview). GL's write routes removed. | restore the routes from the previous release | change log verified |
-| 6 | Computation routes move; Tax calls GL's read routes. GL keeps a facade that answers 410 with a pointer for one release. | route back | return reproduced for a known period |
+| 6 | Computation routes move; Tax calls GL's read routes. GL keeps a facade that answers 410 with a pointer for one release (except `vat-categories`, which stays as the rate facade until every caller has its own copy, section 3.9). | route back | return reproduced for a known period |
 | 7 | After an agreed period, GL removes the moved code and tables (T-TS-21), with CM. | none (restore from backup) | Femi's go |
 
 ### 3.8 The first scaffold of `fish-tax` (for CM: CI and the `TX/` submodule path)
@@ -201,6 +201,27 @@ Mirror POP, the closest sibling (Kotlin, Ktor, Exposed, Flyway, Postgres); CM co
 | Configuration | Database URL and credentials from Secrets Manager; EA base URL; GL base URL and the Tax-to-GL service-account credentials; no secret in code or in the repo |
 | Endpoints in the first scaffold | `/health` (real: database reachable), then `GET /api/jurisdictions` (reads the baseline), so the pipeline deploys something real before the rulebook is ported |
 | Sequence | CM prepares CI and `tax.tf`; Tx lands the scaffold (T-TS-07) as the first commit, on a branch, handed to CM; CM merges and deploys |
+
+### 3.9 GL's view, and Tx's answers (source: `Playbooks/GL/GL_Tax_Extraction_GL_View.md`, GL session, 2026-10-22)
+
+GL read this plan against its code and added four findings. Tx accepts all of them; the plan above is amended as follows.
+
+| # | GL's point | Tx's answer and the amendment |
+|---|---|---|
+| 1 | After GL-T-26b callers (SOP, POP, CBB) compute VAT, so GL's posting reads no rate; the "never call Tax while posting" guardrail now bites on the callers. | **Agreed.** Section 3.4 is amended: the read-through copy serves GL's `vat-categories` facade, and the callers read their rate from that facade. |
+| Q1 | Keep GL's `vat-categories` facade until a caller has its own copy, rather than for one release? | **Yes.** The facade stays until a caller holds its own copy, not on a fixed date. The callers already need GL to be up to post, so reading the rate from GL adds no dependency, and Tax can be down for hours without stopping a sale. Cutover step 6 (section 3.6) no longer says "one release". |
+| Q2 | Accept an optional `vatBasis { ratePercent, rulebookVersion }` on VAT-bearing postings, so the impact query (PR-GV-8) is possible? | **Yes.** Point 7 of section 3.4 (the posting records the rate row it used) is replaced: the caller sends the basis and GL stores it. Tx asks for one more optional field, `effectiveFrom` (the effective date of the rate row used), so the row is identified exactly: `vatBasis { ratePercent, rulebookVersion, effectiveFrom }`, all optional, consumer-first. |
+| 2 / Q3 | `VatCategory` and `VatLineDirection` are vocabulary GL writes into the ledger; they cannot come from `fish-tax`. Move them to `fish-common` (GL-T-33) in place of "domain/tax moves" for those two types? | **Yes.** Section 3.5's "domain/tax/*" row is amended: those two enums are the exception and live in `fish-common`, beside `VatCalculator`, unchanged. Adding a value is a contract change declared by consumers first. Tax-types catalogue codes (TS-11) are Tax's own and stay in `fish-tax`. |
+| 2 | `VatReturn.of` takes GL's `JournalEntry` and `JournalLine`; Tx must not depend on GL's domain. | **Agreed.** Tax's port takes plain VAT-line records (below); the classification moves with the function and its tests. |
+| Q4 | Raw VAT-line records, or a pre-classified list? | **Raw.** One rule, Tax's, classifies, exactly as `VatReturn.of` does. Tx needs from `GET /companies/{companyId}/vat-lines?from=&to=` (GL-T-32): entry id, entry date, side, amount, currency, the raw `VAT_DIRECTION` tag (possibly absent), the `VAT_CATEGORY` tag, the source reference, and entry status "posted or reversed" only (the `affectsBalance` rule). |
+| Q5 | Company creation: a copy of the registry in GL, or a synchronous read with a fallback? | **A copy.** GL keeps its small `jurisdictions` table as a copy refreshed with the rate window. Tx asks that the copy carry `code`, `name`, `enabled`, `currency`, plus the additive `currencyStatus` and the `companyCreation` availability, so GL can refuse creation in a Planned jurisdiction (PR-LC-3) without a call to Tax. |
+| 3 | The `RateSource` port is smaller than planned (after T-26b only the legacy path calls it). | **Agreed;** T-TS-03 is GL-T-34. |
+| 4 | The settlement door (`vat-settlement`) stays in GL because it posts. | **Agreed.** Tax's return gives the net due; CBB or WEB records the payment through GL; the next return excludes the SETTLEMENT-tagged lines. |
+| 5 | Order: the 24 October VAT work first, then T-33 (enums to common), T-34 (port), T-35 (contract fixtures), T-32, T-36 (refresher), deletion last. | **Agreed.** Mapped below. |
+
+One point Tx raises back. GL says the closed `Jurisdiction` enum stays where it is. The registry migration (`V29__jurisdictions.sql`, Femi 2026-10-05) records the opposite decision: jurisdiction is reference **data** that can be added without a code change or deploy, replacing the compiled enum. The plan follows the 2026-10-05 decision (Tax-owned registry, Company holds a code). If GL's `Jurisdiction` enum is still compiled anywhere, GL should treat it as legacy to remove, not as a vocabulary other services must copy.
+
+**Mapping of GL's tasks to this plan.** GL-T-33 (enums to `fish-common`) and GL-T-34 (the port) = prerequisites of T-TS-03; GL-T-35 (serve the contract fixtures) = T-TS-04; GL-T-32 (VAT-line read) = T-TS-13; GL-T-36 (refresher, admin read, jurisdictions copy) = T-TS-12. T-TS-12 now includes the `jurisdictions` copy for Company creation.
 
 ## 4. Use cases (U)
 
@@ -234,8 +255,8 @@ Sizes are working days. Owners are sessions; Tx builds in its own `TX/` checkout
 | T-TS-09 | Rulebook write path, roles, source records, `pending` and `monitoring`, correction rows, impact query, change log (PR-GV-1 to -8) | Tx | 8 | T-TS-08 |
 | T-TS-10 | Implement the read contract routes (section 3.3) | Tx | 5 | T-TS-08, T-TS-04 |
 | T-TS-11 | Export from GL, seed Tax, row-by-row comparison script | Tx, GL | 3 | T-TS-10 |
-| T-TS-12 | GL read-through copy and refresher, alarm, admin read (T-PR-31 build) | GL | 5 | T-TS-03, T-TS-10 |
-| T-TS-13 | GL: VAT Control Account lines by direction for a date range (read for Tax); P&L `?from&to` already exists | GL | 2 | CM confirm |
+| T-TS-12 | GL read-through copy and refresher, alarm, admin read, and the `jurisdictions` copy for Company creation (T-PR-31 build; GL-T-36) | GL | 5 | T-TS-03, T-TS-10 |
+| T-TS-13 | GL: the VAT-line read with raw fields for Tax (`GET /companies/{companyId}/vat-lines?from=&to=`, GL-T-32); P&L `?from&to` already exists | GL | 2 | CM confirm |
 | T-TS-14 | Tax computation routes (corporate tax, VAT return) reading GL; audit records | Tx | 6 | T-TS-10, T-TS-13 |
 | T-TS-15 | Consumers read through the contract: SOP, POP, CBB, IM, WEB (base-URL changes) | each | 1 each | T-TS-12 |
 | T-TS-16 | Payroll: PAYE read and read-through copy; remove its unpopulated `PayrollTaxRule` storage (extends T-TJ-09) | Payroll | 4 | T-TS-10, T-TS-17 |
