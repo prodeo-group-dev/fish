@@ -416,6 +416,46 @@ Direction: Femi, 2026-10-22: "He should provide a window into that portal." This
 ### 7.4 What is NOT the window
 **Operator rulebook screens** (enter a draft row, verify, supersede, mark a review, the impact report) are platform-operator tooling and belong to **Omniview**, which is outside the front-end convention (Decisions Log 2026-10-03); they are specified as T-TS-19 and routed through CM, not WEB.
 
+### 7.5 WEB's review answered (FiSH+ER WEB reviewer, 2026-10-22)
+
+**Layers and MVP order (answers WEB question 1).** Agreed: one Tax area, two layers, so a phone-first Business Owner sees five surfaces, not eleven. **Owner layer:** W-TX-1 My jurisdiction, W-TX-9 Taxes that apply to me, W-TX-7 the notices banner, W-TX-11 Rules I rely on, W-TX-8 help. **Accountant layer** (a second tab behind one tap): W-TX-2 VAT categories and rates, W-TX-3 rate history, W-TX-4 PAYE tables, W-TX-5 VAT return, W-TX-6 corporate tax; W-TX-10 the tax-year selector is a control on W-TX-2, 4, 5 and 9, not a screen. The layer is a layout choice, not a role: WEB shows both tabs to anyone with the Tax grant and the server answers 403 where it must (answer 5).
+
+| Order | Screens | Why this order (foundations first) | Needs |
+|---|---|---|---|
+| MVP 1 | W-TX-1, W-TX-9, W-TX-8 | Femi asked first for the tax context of each country; these are read-only reference data and the easiest to ship | `jurisdictions`, `tax-types` |
+| MVP 2 | W-TX-2, W-TX-10 | VAT rates already exist in GL's `vat-categories`; the year selector needs the by-year reads | `vat-categories`, `tax-years` |
+| MVP 3 | W-TX-11, W-TX-7 | The owner's confirmation and the change banner; needs the confirmation routes and EA notices | `tax-confirmations`, EA notice |
+| MVP 4 | W-TX-4, W-TX-3 | PAYE tables and history | `payroll-tax`, `rate-history` |
+| MVP 5 | W-TX-5, W-TX-6 | Computations; depend on GL's VAT-line read (T-TS-13) and the Tax computation routes (T-TS-14) | the return and tax computation reads and writes |
+
+**Contract additions (answers WEB question 2).** Starting points are GL's existing fixtures `vat-return.json` and `tax-computation.json`; each addition is published as a fixture first and declared by WEB before Tax sends it (answer 3). Refusal codes keep GL's existing stable codes; the new ones below are declared with their fixtures.
+
+| Route | Shape |
+|---|---|
+| `GET /api/companies/{companyId}/vat-returns?from=&to=` | A list of past returns, newest first: `{"returns":[{id, filingPeriodStartDate, filingPeriodEndDate, outputVat, inputVat, netVatDue, direction, currency, computedAt}]}`, the entry shape of `vat-return.json`. |
+| `GET /api/companies/{companyId}/vat-returns/{id}` | One return: `vat-return.json` plus an additive `categoryBreakdown` (category, base and VAT, derived from the tagged lines, not stored). |
+| `POST /api/companies/{companyId}/vat-returns` | Computes and stores a return for `{filingPeriodStartDate, filingPeriodEndDate}`; `Idempotency-Key` required; the same key replays the same result. GL's `POST /companies/{companyId}/vat-return` keeps working as the interim path. |
+| `GET /api/companies/{companyId}/tax-computations` and `.../tax-computations/{id}` | Corporate tax: the list by period and one by id, the entry shape of `tax-computation.json`. `POST` takes `{periodId}` or a date range, with `Idempotency-Key`; for a straddling period the response carries `splitPeriods` or the refusal `straddle_manual_determination` (PR-CT-1). |
+| `GET /api/companies/{companyId}/tax-confirmations` | `{"companyId":..., "confirmations":[{"rowKey":"VAT/STANDARD","rowVersion":17,"confirmedBy":"owner@example.com","confirmedAt":"2026-10-22T09:00:00Z","note":null}]}`. |
+| `POST /api/companies/{companyId}/tax-confirmations` | Body `{rowKey, rowVersion, note?}`; `Idempotency-Key` required; 201 on first write, 200 with the original on replay. Refusals: 409 `row_version_superseded` (the row changed since the screen loaded; the body names the current `rowVersion`), 404 `row_not_found`, 400 `bad_request`, 403 `forbidden`. |
+| `POST /api/companies/{companyId}/tax-problem-reports` | Body `{rowKey, rowVersion, message}` (message up to 2,000 characters); `Idempotency-Key` required; 201 `{id, status:"OPEN"}`. Same refusals. The report goes to the verifier's queue (3.10) with who reported it. |
+| `payroll-tax` | Every section carries a per-row `status` (`VERIFIED`, `UNVERIFIED`, `CONFLICT`): `incomeTax.status` and each `contributions[].status`, plus an optional `statusNote` in plain words. Bands inherit their section's status. |
+| `tax-types`, `tax-years/{year}/tax-types` | Each entry already carries `status` and `volatile`; additive `verifiedOn` (date) and `source` (`PRIMARY` or `SECONDARY`) are added for the "Rules I rely on" screen. |
+
+**Link to the postings (W-TX-5).** Tax does not return a link. WEB composes it: GL's VAT-line read `GET /companies/{companyId}/vat-lines?from=&to=` (GL-T-32), called with the return's filing period. **Notices (W-TX-7).** The notice shape is EA's. Tax hands EA `{kind:"TAX_CHANGE", jurisdiction, rowKey, rowVersion, effectiveFrom, summary}`; Tx will agree the field names with EA before T-TS-33 and WEB reads the notice from EA's existing route, not from Tax.
+
+**Fixtures first (answer 3).** Accepted as stated: every read gets a golden fixture in `fish-contracts` before the route ships: a success, the empty or not-configured case, partial availability, and each refusal. Every added field and every new enum value (tax-type codes, availability states, statuses, `family`, `payer`) is published as a fixture and declared by WEB before Tax sends it; WEB shows a generic sentence for a value it does not know. Tx will tell CM before touching `fish-contracts`.
+
+**Money and words (answer 4).** Agreed. Amounts in W-TX-5 and W-TX-6 arrive as decimal strings at the currency's minor units (GNF and XOF have none), with the currency code in the body; rates arrive as decimal percent strings. The tax word comes from `taxWord` and the currency from the Company read; no literal in Tax's responses or WEB's screens. Existing WEB labels that say "VAT" move to `taxWord` in a later label branch, not in T15.
+
+**Access (answer 5).** Agreed: WEB uses the existing module-grant check only and does not invent an Accountant rule; the server decides and answers 403, which WEB shows as a plain line. `ManagedModule.TAX` exists in GL's tenancy (migration V16, membership grants); **whether EA's `GET /me` already emits it in `grantedModules` is not verified by Tx**; WEB declares it consumer-first and EA confirms.
+
+**Provider switch (answer 6).** One per-service base URL (`VITE_TAX_API_BASE_URL`, fail-closed in strict mode) is right; the move from GL to Tax is a configuration change because the contract is identical. CORS: Tax's scaffold allows `Authorization` and `Content-Type` and `GET`; before the first write route Tax adds `POST`, `Idempotency-Key` and `X-Tenant-Id`, and allows WEB's origin through `TAX_CORS_ALLOWED_ORIGIN`. Tell Tx if WEB sends any other header.
+
+**Caching (answer 7).** Use `rulebookVersion` as the cache key. Expected freshness: rulebook data changes rarely; WEB probes `GET /api/rulebook-version` when a Tax screen opens and at most every 5 minutes while it stays open, and treats a copy older than one hour as stale (re-fetch). A version change invalidates every cached Tax read.
+
+**States (answer 8).** For every screen WEB specifies, and Tx confirms, these states before the build: loading; empty because the jurisdiction is Planned ("not yet available"); partial (some tax types available, some not); unverified rows; a flagged row; a value the screen does not know (generic sentence); an error; and a 403 (plain line). W-TX-11 adds: nothing to review; changes to review; and the confirm and report actions in flight, failed and replayed. Tx will review WEB's front-end half against this list.
+
 ## 8. PAYE: what Tax provides, and how Payroll consumes it
 
 ### 8.1 What Tax holds for payroll
