@@ -99,6 +99,20 @@ S1 is deliberately the small path: the Education Runtime raises one CREDIT sale 
 **UC-SOP-AR-9 SOP and the ledger disagree.** Main: for a date, SOP's open total (FR-SOP-AR-20) is compared with GL's 1100 balance; a difference is shown with both figures and is not corrected by SOP (reported, not enforced).
 **UC-SOP-AR-8 A credit note is issued and the apply step is lost.** The reconciler applies it within 15 minutes; applying twice is impossible.
 
+## 3b. Sale entry: money is computed by the service, never by the screen: `FR-SOP-SAL` (CM and WEB reviewer, 2026-10-22; Femi: "our definition of money must come from the commons repo"; CBB-NFR-14 "WEB never computes money"; GL draft GL-FR-CUR-7)
+
+Today, read in code: a sale request carries a unit price and a quantity per line and **no client total**; the service computes each line as `unitPrice x quantity` with the commons `Money` (rounded half-even to the currency's minor units, one rounding per line); a stock-tracked line is priced from Inventory's selling price for the quantity actually issued, and the client's price is ignored; the answer carries `netAmount` (SOP) and `vatAmount` / `grossAmount` (GL). So the ledger is never fed a browser-computed total. What is missing: no per-line total in the answers, and no way for the form to show the totals before the sale (WEB multiplies in floating point in `SalesTab.tsx` and prefills the amount, which can differ by a cent from the service's figure).
+
+| ID | Requirement | Status |
+|---|---|---|
+| FR-SOP-SAL-01 | Line totals and the document total are computed only by SOP, with the commons `Money`, and returned as decimal strings at the currency's minor units: additive `lines[].lineAmount` on the sale answer and the sales list. No consumer computes or rounds a money amount. | **Not built** (additive; the totals themselves already exist inside the service) |
+| FR-SOP-SAL-02 | A read-only **quote** route: lines in, per-line totals, net, VAT and gross out, recording nothing, for the sale form to call while the person types. It applies the same rules as the sale (the Company's currency, the item's price and VAT category from Inventory) and takes no Idempotency-Key. | **Not built** (proposed shape: `POST /api/companies/{companyId}/sales/quote`, READ access to Sales) |
+| FR-SOP-SAL-03 | VAT and gross in a quote come from GL's pure VAT preview (net + category + date -> vat, gross); SOP never repeats the rate arithmetic. Until GL offers it, the quote returns net and line totals and marks VAT/gross unavailable. | **Not built; waits GL's preview** (GL offered one, 2026-10-22) |
+| FR-SOP-SAL-04 | The posted sale is the authority: a quote is a preview, and the sale answer states what was actually posted, even if Inventory's price changed in between. | **Not built** (answer already states the posted amounts) |
+
+**UC-SOP-SAL-1 See the totals while filling the form.** Main: the person picks an item and a quantity; the form asks the quote route; it shows each line total, net, VAT and gross exactly as returned, and computes nothing itself. Err: the quote route is unavailable: the form shows no total and still lets the person submit, because the sale itself is authoritative.
+**UC-SOP-SAL-2 The price changed between the quote and the sale.** Main: the sale posts at Inventory's current price; the answer shows the posted figures, which may differ from the quote; the screen displays the answer, not the quote.
+
 ## 4. What delivered work cites (for CM's gate; the IDs above must be approved first)
 
 | Delivered | Cites |
