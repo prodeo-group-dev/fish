@@ -138,6 +138,19 @@ Operator writes (Omniview): create a draft row, verify, supersede, mark a review
 
 Refusal codes keep today's stable codes: `no_vat_rate_schedule`, `no_tax_rule`, `vat_category_not_supported`, `company_not_found`; new: `rulebook_unavailable` for a caller that asked for a rate window the copy cannot serve.
 
+### 3.3a Contract status: what is built (2026-10-22)
+
+First slice, in `fish-tax` branch `reads/contract-1`, with golden fixtures written by the service's own route tests into `fish-contracts/contracts/tax/`. All behind the same JWT authentication as the scaffold; nothing deploys until Femi's DNS, database and Jenkins steps.
+
+| Read | Built as | Differs from the sketch in 3.3 |
+|---|---|---|
+| `GET /api/rulebook-version` | `{"rulebookVersion": n}` | none |
+| `GET /api/jurisdictions` | GL's `code`, `name`, `currency` plus `currencyStatus`, `timeZone`, `timeZoneNote`, `taxWord`, `availability` and the top-level `rulebookVersion` | `availability` is **derived from the data that exists**, not stored: company creation is FULL for an onboarded currency, PARTIAL when the currency is not named (the creator names it), PLANNED for a reference-only currency; VAT is FULL only when a verified schedule exists; corporate tax and payroll tax are PLANNED until their rulebook tables are built |
+| `GET /api/jurisdictions/{code}/vat-categories?asOf=` | GL's shape plus `rulebookVersion`, per-category `effectiveFrom` and `pending` (the next enacted change); percent strings; verified rows only; not-configured is `vatScheduleConfigured: false` with no categories | `asOf` defaults to today (UTC) and is echoed; a malformed value is 400 `invalid_as_of`; an unknown code is 404 `jurisdiction_not_found` |
+| `GET /api/jurisdictions/{code}/tax-years` | `definitions` (one per kind, PERSONAL and CORPORATE, with `startRule`, `endRule`, `effectiveFrom`, `status`) and `years` from the first year starting in 2024, to next year, each with `timing` PAST, CURRENT or FUTURE | The year `status` of the sketch (COMPLETE, ANNOUNCED, PARTIAL) is **not** built: it would claim a completeness Tax cannot yet know. `timing` is purely about the date; data completeness arrives, additively, with the catalogue. Definitions are served marked VERIFIED, UNVERIFIED or CONFLICT; drafts and retired rows are never shown |
+
+**Not yet built:** `tax-types` and `tax-years/{year}/tax-types` (the catalogue needs its own tables and the seeded research, T-TS-24/25/30), `payroll-tax`, `rate-history`, the computation routes, the confirmation routes. **Registry data:** V3 enters the IANA zones, tax words and the unchanged currency status for the seven original jurisdictions as the registry's initial reference data (like V1); moving the registry under the maker-checker write path, which TS-16 and T-TS-34 foresaw, is a later task, because the zones are objective facts in the IANA database and the tax words follow the research digest.
+
 ### 3.4 The local read-through copy (T-PR-31), designed
 
 **The problem.** Posting a sale needs the VAT rate now. If GL called Tax for each posting, a Tax outage, deploy or slow response would stop every sale and purchase in the platform (S1, TJ-NFR-7).
