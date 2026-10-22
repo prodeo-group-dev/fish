@@ -503,3 +503,5 @@ Femi's traceability rule (UAT): every branch, commit, fix, migration and test ci
 | WEB needs | W1 (section 5, operator routes); the section 13 needs are unnumbered and cited by section | 5, 13 |
 
 The multi-entity playbook (`docs/Multi_Entity_Accounting_Playbook.md`, section 14) carries the ME-*, UC-ME-*, PQ-M* and T-ME-* IDs.
+
+**Ownership boundary (Femi, 2026-10-22: "All things Tax should be abstracted to Tx").** Tx owns the jurisdiction registry and currency and tax settings, the rate schedule (VAT categories and rates, the corporate rule matrix), tax and VAT return computation and their audit, and the rulebook change log. Posting is GL's; VAT amounts on a document are calculated by the document's owner with the commons `VatCalculator`, using rates read from Tax; the ledger figures a return needs stay in GL. The extraction questions and order are in `docs/Tax_And_Currency_Policy_Resolution_Playbook.md` section 11 (PR-TX-1 to PR-TX-4, T-PR-30 to T-PR-32).
