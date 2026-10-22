@@ -31,3 +31,6 @@
 [submodule "Omniview"]
 	path = Omniview
 	url = https://github.com/prodeo-group-dev/fish-er-omniview.git
+[submodule "TX"]
+	path = TX
+	url = https://github.com/prodeo-group-dev/fish-tax.git
