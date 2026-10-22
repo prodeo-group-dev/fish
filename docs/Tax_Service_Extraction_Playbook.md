@@ -235,6 +235,8 @@ A flag never blocks a computation by itself (a `VERIFIED` row stays usable until
 
 **Where the catalogue comes from.** The per-country catalogue is seeded from the researchers' findings (research digest section 5), each row with its source class and status exactly as reported, and nothing seeded as `VERIFIED` until the verifier approves it. Rows the researchers could not verify are seeded `UNVERIFIED` or `CONFLICT`, never filled in. The UK and Irish PAYE, NIC, PRSI and USC figures by tax year; Nigeria's 2026 regime; and the Mano River catalogue (when reported) are the first seed.
 
+**Seed status (2026-10-22).** The research for all seven jurisdictions is in digest section 5 (5.1 UK, 5.2 Ireland, 5.3 Nigeria, 5.4 Sierra Leone, Liberia, Guinea and Cote d'Ivoire), each row with its source class. The Mano River work also settled several conflicts with the country docs: the Sierra Leone PAYE unit (NLe) and corporate rate (30% verified), the Liberian PAYE bands, NASSCORP split and GST date, the Guinea corporate tiers, and the Ivorian CMU. T-TS-30 seeds from it.
+
 ## Open items inside maintenance
 - **Who is the second pair of eyes when Femi is unavailable** is Femi's to decide when he delegates the verifier role; until then verification waits (it does not self-approve).
 - The thresholds above, the watch lists and the events calendar are Tx's proposals, to be confirmed at approval.
