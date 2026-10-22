@@ -186,7 +186,7 @@ Every former question, with the route (section 2.2), the answer, and the require
 | PQ-12 | RESEARCH | In-app notice at scheduling, a reminder 7 days before, a banner on the day. | PR-GV-6 | Pending approval |
 | PQ-13 | RESEARCH | Supersede, never edit; impact query; the Tenant decides corrections. | PR-GV-8 | Pending approval |
 | PQ-14 | RESEARCH | The local term from the registry (VAT, GST, TVA) as localisation data. | PR-VT-8 | Pending approval |
-| PQ-15 | TECHNICAL | Payroll owns payroll tax tables until a Tax service exists; same row shape so a later move is not a rewrite. | (decision of ownership; no new requirement) | Pending approval |
+| PQ-15 | LOG | **Superseded by Femi, 2026-10-22: Tax is extracted now and "will provide context for PAYE, and VAT".** Tax owns the payroll tax tables; Payroll consumes them through a read-through copy and keeps the computation. Plan in `Tax_Service_Extraction_Playbook.md` section 8. | TS-7 | **Decided** (2026-10-22) |
 | PQ-16 | LOG | **Answered by Femi, 2026-10-22: "All things Tax should be abstracted to Tx."** VAT rates, categories and returns are Tax's. Until the extraction (after the Live switch and UAT) GL holds them, under the guardrail TJ-NFR-7 (no second source of truth, no synchronous dependency at posting). | PR-TX-1 to -4, section 11 | **Decided** (2026-10-22) |
 | PQ-17 | RESEARCH | A last-reviewed date per jurisdiction as a reminder to the verifier, not a gate. | PR-GV-7 | Pending approval |
 | PQ-18 | RESEARCH | USD is a foreign-balance and transaction currency; a USD ledger is a Liberia-only election built later. | PR-LC-6 | Pending approval |
@@ -329,7 +329,7 @@ Each is task T-PR-26 unless noted. None is asked of Femi; each ends as a recorde
 
 ## 11. Tax as its own peer: what Tx owns, the extraction questions, and the order
 
-**Direction (Femi, 2026-10-22, logged by CM): "All things Tax should be abstracted to Tx."** This reaffirms `docs/Tax_Extraction_DDD_Design.md` (2026-09-19): Tax is a peer of GL under Finance. Nothing is extracted yet. The timing is Femi's; CM recommends after the Live switch and UAT, and this section agrees. This section is docs only.
+**Direction (Femi, 2026-10-22, logged by CM): "All things Tax should be abstracted to Tx."** This reaffirms `docs/Tax_Extraction_DDD_Design.md` (2026-09-19): Tax is a peer of GL under Finance. Nothing is extracted yet. **Timing updated the same day:** Femi decided to extract now ("No time like the present"), in parallel with and without delaying the 24 October VAT deliveries in GL, and the service is `fish-tax` (Femi "Yes" to CM's suggestion). The full plan, contract, read-through copy design, migration and cutover are in `docs/Tax_Service_Extraction_Playbook.md`; 11.3 below keeps the order but its step 4 is no longer after the Live switch.
 
 ### 11.1 What Tx owns, and what stays outside
 
@@ -372,10 +372,10 @@ Each is task T-PR-26 unless noted. None is asked of Femi; each ends as a recorde
 1. **Now, no extraction, no risk (Waves 0 and 1 of section 7).** Correct the data (T-PR-17), build the rulebook change log and roles (T-PR-05 to T-PR-07), and keep `domain.tax` free of incoming dependencies (PR-TX-2). Blocker: none.
 2. **Contract first (new task T-PR-30).** Publish the Tax read contract in `fish-contracts` (jurisdictions and currencies, VAT categories and rates by window, corporate rule matrix), with GL implementing it as the interim provider, and move SOP, POP, CBB, IM and WEB to read through it. This is "abstracting to Tx" without a new service. Blockers: the commons `VatCalculator` design (GL-T-29) must take its rate from the contract (PR-TX-4); consumer-first fixtures (T-PR-28).
 3. **Resolve the posting dependency (new task T-PR-31, design only).** Decide how GL gets a rate at posting once Tax is a separate service: a locally held read-through copy of the rate window refreshed from Tax, so posting never calls Tax synchronously and a Tax outage cannot stop a sale. This is the structural blocker for physical extraction, and it follows the guardrail TJ-NFR-7. Femi's Live-switch timing does not block the design, only the build.
-4. **Physical extraction (new task T-PR-32), after the Live switch and UAT.** Lift `domain.tax`, the VAT tables and the Tax routes into the new service with its own database; add the Cognito service account; point GL, SOP, POP, CBB, IM, HR and WEB at it; move the change log with the rulebook. Blockers: steps 2 and 3 done; Femi's go; the destination and name decided (question 3); a CI pipeline and Terraform from CM; the VAT-lines and date-range reads from GL confirmed as the only things Tax needs from the ledger.
+4. **Physical extraction (new task T-PR-32), now (Femi, 2026-10-22), no longer after the Live switch and UAT; expanded as T-TS-06 to T-TS-23 in the extraction playbook.** Lift `domain.tax`, the VAT tables and the Tax routes into the new service with its own database; add the Cognito service account; point GL, SOP, POP, CBB, IM, HR and WEB at it; move the change log with the rulebook. Blockers: steps 2 and 3 done; Femi's go; the destination and name decided (question 3); a CI pipeline and Terraform from CM; the VAT-lines and date-range reads from GL confirmed as the only things Tax needs from the ledger.
 5. **Payroll tax tables last (PQ-15).** They move to Tax's row shape only after Payroll's own tables are stable.
 
-New tasks: T-PR-30 (the Tax read contract and the consumer move), T-PR-31 (the posting-time rate access design), T-PR-32 (physical extraction, parked until after the Live switch and UAT).
+New tasks: T-PR-30 (the Tax read contract and the consumer move, now T-TS-04), T-PR-31 (the posting-time rate access design, now section 3.4 of the extraction playbook and T-TS-12), T-PR-32 (physical extraction, now T-TS-06 to T-TS-21).
 
 ## 10. Identifier index (for traceability)
 

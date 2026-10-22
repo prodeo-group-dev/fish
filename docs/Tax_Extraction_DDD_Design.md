@@ -102,3 +102,21 @@ Given the user's own framing — Finance as a named division containing GL *and*
 ## 9. What this document changes right now
 
 **Nothing in `fish-fish-gl-engine`.** `TaxRule`/`TaxComputation`/`ComputeTaxUseCase`/`TaxRoutes.kt` stay exactly as built (now with the closed `Jurisdiction` enum from earlier today). This document exists so that when extraction actually happens, the real open questions above get resolved deliberately — the same discipline `[[feedback_park_dont_guess]]` already established as this project's working style, and the same one every prior extraction in this family has followed before touching code.
+
+---
+
+## 10. Update 2026-10-22: extraction decided now; name decided; open questions answered
+
+Femi decided on 2026-10-22 (logged in `docs/Decisions_Log.md`): "All things Tax should be abstracted to Tx"; extract now ("No time like the present"), in parallel with and without delaying the 24 October VAT deliveries in GL; Tax provides a window into the portal; and the service is **`fish-tax`** (Femi "Yes" to CM's suggestion: Kotlin, Ktor and Exposed like its siblings, its own database, service accounts like the others).
+
+**Answer to section 8, question 3:** repo and service name `fish-tax`; local folder `TX/`; package `com.theprodeogroup.tax`. Host name and database name are CM's to set (proposed `tax-api.theprodeogroup.com` and `tax_production`).
+
+The other section 8 questions, against today's code, and the full plan are in `docs/Tax_Service_Extraction_Playbook.md`:
+1. Period selection: answered; GL's profit-and-loss report accepts `?from=&to=`.
+2. Jurisdiction sharing: answered; the registry becomes Tax-owned data and Company holds a code.
+4. Service-account authentication: answered by precedent.
+5. WEB cutover: eased by a contract-first read API; open as a task.
+6. Database: answered by precedent.
+7. `ManagedModule.TAX`: answered; stays an EA access grant.
+
+Scope has grown since 2026-09-19: VAT rates, categories, VAT return computation and PAYE tables now belong to the Tax context (section 0's inventory lists only corporate tax). Section 9's statement that nothing in GL changes now still holds for this document; the changes are tasks in the extraction playbook, and nothing is built until CM confirms.
