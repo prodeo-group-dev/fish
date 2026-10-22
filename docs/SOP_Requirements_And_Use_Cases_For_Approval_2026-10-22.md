@@ -124,6 +124,26 @@ Today, read in code: a sale request carries a unit price and a quantity per line
 | PR #42 receipts and credit application | FR-SOP-AR-01..06, 12, 13; UC-SOP-AR-1..3, 7, 8 |
 | PR #43 ageing summary | FR-SOP-AR-10; UC-SOP-AR-4 |
 
+## 4b. Tasks and Order (T, O): dependency-ordered, foundations first (Femi 2026-10-22: "Everyone should follow their dependency ordered tasks in their playbook")
+
+Task IDs `T-SOP-nn`. A task is started only when its row says **Ready**; **Held** rows wait for the named decision, fixture or go. Every commit cites its requirement, use case and task IDs. Already delivered work is not listed again (section 4).
+
+| Task | Does | Serves | Depends on | State |
+|---|---|---|---|---|
+| T-SOP-01 | **Pin GL's record-sale / record-collection fixtures** (fish-contracts `gl/sale-collection-fixtures`, GL-FR-CTR-2) in SOP's gateway tests: success shapes, the `line_account_*` and settlement refusals, and tolerance of `settlement_account_not_a_cash_book` in both GL modes (log-first and enforce). Test-only: no behaviour change. | FR-SOP-AR-13, FR-SOP-AR-14 (groundwork) | GL's fixture branch merged and pinned | **Ready** (needs CM's go: not yet in the approved set) |
+| T-SOP-02 | Confirm the Company-read allow-list with one real call from SOP's service account (CM watches the logs). | FR-SOP-CUR-05 | GL deployed (:147/:148) | CM-owned check |
+| T-SOP-03 | Validate the settlement account against GL's `settlementAccounts`; payment method resolves to a per-Company account (never a silent fallback). | FR-SOP-AR-14, UC-SOP-AR-1 | T-SOP-01; Femi's MVP line for AR-14 | **Held** (Femi) |
+| T-SOP-04 | Numbered receipts (`RCT-000001`), voided not deleted, printable. | FR-SOP-AR-14 | T-SOP-03 | **Held** (Femi) |
+| T-SOP-05 | Bill-for-Collection collection also records a receipt on the sale. | FR-SOP-AR-15 | T-SOP-01 | **Held** (Femi's MVP line) |
+| T-SOP-06 | Receivables reconciliation: SOP's open total against GL's 1100 as at a date, reported not enforced; and the replay-with-the-same-key finisher in place of a new GL read. | FR-SOP-AR-20, FR-SOP-AR-16, UC-SOP-AR-9 | T-SOP-01 | **Held** (Femi) |
+| T-SOP-07 | Overpayment posting to GL's "Overpayments on Invoice" (feature-detected `overpaymentAccountId`); then the interim refusal goes. | FR-SOP-AR-02 | GL account approved by Femi | **Held** (Femi, GL) |
+| T-SOP-08 | Overdue from the due date once credit terms exist. | FR-SOP-AR-11 | POP's shared payment-terms fixture merged | **Held** (POP) |
+| T-SOP-09 | Additive `lineAmount` on every sale-answer and sales-list line. | FR-SOP-SAL-01 | Femi approves the document; CM go | **Held** |
+| T-SOP-10 | The quote route with its fixtures first. | FR-SOP-SAL-02, -03, -05, -04; UC-SOP-SAL-1, -2 | T-SOP-09; GL's VAT preview; release window | **Held** |
+| T-SOP-11 | Credit-note issue time recorded. | FR-SOP-AR-17 | Femi's MVP line | **Held** |
+| T-SOP-12 | Swap the Company-currency guard to the shared `fish-common` rule. | FR-SOP-CUR-08 | GL's design (GL-FR-CUR-7, GL-T-25) built | **Held** (GL) |
+| T-SOP-13 | Fee invoice items still parked (FR-SOP-FEE-04 and the Epic 13 model). | FR-SOP-FEE | Education Runtime work resumed | **Parked** (Femi) |
+
 ## 5. Decisions needed from Femi
 
 1. *(Not Femi's: parked as `PQ-22` in the Tax playbook; CM can settle it. SOP stays at 400.)*
