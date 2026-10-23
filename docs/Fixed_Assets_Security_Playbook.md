@@ -19,6 +19,7 @@
 | 2026-10-13 | **Both directions of error matter.** "Inflated FA means false profits and a threat of going concern status." Understating hurts too (hidden value, wrong tax, a lender misled the other way). | told directly |
 | 2026-10-13 | **D-FA-A resolved: every asset purchase, at any amount, requires approval from the Owner Admin.** ("It will require approval from the Owner Admin", clarifying his earlier "yes, except it is Owner Admin".) | Decisions_Log |
 | 2026-10-13 | **D-FA-F and D-FA-G settled by Femi's standing rule "The owner is the final authority"** (relayed by CM): the Owner Admin approves acquisitions, disposals and impairments, and when the Owner Admin is the requester or buyer they remain the approver, with the self-approval recorded and flagged in the attention list and the audit (option (a)). CM says it is logged in Decisions_Log; that entry was not yet on master when this was written | CM, from Femi |
+| 2026-10-23 | **The purpose of internal control in FiSH is to protect the owner from being defrauded**: "put systems in place, as far as we can possibly do, to prevent the owner of a business from being defrauded by integrating good quality internal control systems into FiSH". Read together with "it is not up to us to police the Owner": the owner's own entries are recorded and flagged, not blocked; the controls guard the owner against staff, suppliers, buyers and mistakes. Section 6.6 proposes the extensions this asks for | Decisions_Log |
 
 Still **not** decided, and asked in section 7: the reference rule (D-FA-C); blocking manual journals (D-FA-D); policy ranges (D-FA-E). Impairments go through the Owner Admin's approval (D-FA-B first half: confirmed yes, 2026-10-13, from "the owner is the final authority"); that the approver also cannot change the impairment figures is FA's recommendation and the default design, **Femi to confirm** (his "fixed at request" covered disposals and acquisitions).
 
@@ -55,7 +56,7 @@ Still **not** decided, and asked in section 7: the reference rule (D-FA-C); bloc
 
 ## 3. Threat model (what we are securing against)
 
-Each row names the false statement it creates. **Direction** says whether it overstates (O) or understates (U) assets and profit.
+Read every row as a way the **owner** is harmed: a member of staff books a ghost asset to cover a theft, sells a real asset cheaply to a friend, or buries a missing one. Each row names the false statement it creates. **Direction** says whether it overstates (O) or understates (U) assets and profit.
 
 | ID | Attack or error | Direction | Today | Closed by |
 |---|---|---|---|---|
@@ -203,6 +204,21 @@ Tier 4  surfaces and later                    FS-15  FS-16 (Phase 2)
 
 Why this order: Tier 0 fixes real integrity and money bugs and needs no one's permission model to change. FS-5 comes before FS-10 because blocking manual journals without a way to correct an asset would strand real accountants. The spine (FS-7) is the answer to the acquisition gap and waits for GL's shared mechanism and EA's capability set; **it is the item Femi cares most about, so FS-6a (evidence) and FS-8 (dates) are pulled forward as the part of the gap that can close before the freeze lifts**, if CM agrees they are not RBAC changes.
 
+### 6.6 Internal-control extensions (PROPOSED: Femi chooses which; none is decided)
+
+Femi, 2026-10-23: put systems in place, as far as we can possibly do, to prevent the owner of a business from being defrauded, by integrating good-quality internal control into FiSH. Approval (sections 4 and 6.2) controls what gets **posted**. Fraud against an owner also happens around the posting: an asset that never existed, a real asset that quietly disappears, a sale to a friend, a change nobody told the owner about. These proposals cover that. They target everyone except the owner; the owner's own entries are recorded and flagged, never blocked.
+
+| ID | Control (requirement and task) | Fraud it answers | Needs | Task |
+|---|---|---|---|---|
+| FR-FA19 | **The owner hears about every fixed-asset movement.** Every request, approval, rejection and posting reaches the Owner Admin (the attention list, plus an optional email or push digest), including actions that need no approval, such as depreciation. Nothing in FA changes silently. Detective | Staff acting where the owner never looks; a change slipped in between two reviews | FS-3 (actor), FS-13 channel, EA/WEB notification | FS-18 |
+| FR-FA20 | **One serial or registration number, one asset.** An identifier, where given, is unique per Company; a duplicate is refused or flagged to the approver | The same item booked twice; ghost duplicates | Small; ships with FS-6a | FS-19 |
+| FR-FA21 | **Every asset has a custodian and a location.** A named person (from the Organisation's people list) and a place; a change of custodian or location is logged and shown to the owner | Nobody answerable for an asset; assets that wander | New fields and a migration; people list from HR/EA | FS-20 |
+| FR-FA22 | **Periodic physical verification.** The owner (or a reviewer they name) starts a verification round; each custodian confirms in writing, with the actor and time, that each asset exists, its condition and its place (an optional photo when FiSH has an attachments facility); assets not confirmed within a set time are listed to the owner and flagged for impairment or disposal review. Software cannot see the building, but it can make a person confirm, on the record, which is how ghost assets are found | Ghost assets; assets sold or stolen and left on the register | FR-FA21, FS-3; WEB screens; GL read and write | FS-21 |
+| FR-FA23 | **Disposal red flags shown to the approver.** The buyer is a required field; flagged when proceeds are below net book value by more than a set percentage, when the buyer matches a current or former member of staff (when the people list can be read), or when the person who requested the sale also recorded the cash receipt (FS-9). The approver still only approves or rejects | Selling a real asset cheaply to a friend or to oneself; pocketing the proceeds | FS-7, FS-9; a read of the people list | FS-22 |
+| FR-FA24 | **Unusual-pattern flags (detective, attention list only, never blocking):** acquisitions just before a period end, round-number costs, several purchases just under a figure the owner names | Padding a period; testing the controls | FS-13 channel | FS-23 |
+
+Recommended order if all are wanted: FR-FA20 first (small, ships with FS-6a); FR-FA19 next (cheap, and it alone puts the owner in the loop on everything); FR-FA21 then FR-FA22 (the answer to ghost assets); FR-FA23 once the disposal request flow exists; FR-FA24 last. Use cases: UC-FA26 (a ghost asset is found by a verification round), UC-FA27 (a disposal to an employee at half book value is flagged to the approver), UC-FA28 (a second asset with the same serial number is refused or flagged).
+
 ## 7. Questions for Femi (plain language)
 
 1. **D-FA-A. RESOLVED 2026-10-13 (Femi): every asset purchase, at any amount, requires approval from the Owner Admin.**
@@ -212,10 +228,11 @@ Why this order: Tier 0 fixes real integrity and money bugs and needs no one's pe
 5. **D-FA-E. Useful-life ranges and a minimum asset cost: should the platform enforce them, or just warn the approver?** Recommended: warn first, enforce later.
 6. **D-FA-F. DECIDED (Femi's rule "The owner is the final authority", via CM, 2026-10-13): when the Owner Admin buys an asset they remain the approver; self-approval is recorded and flagged in the attention list and the audit.** Delegate option dropped. Honest limit, kept on purpose: with self-approval, the Owner Admin's own purchases are the one place this design cannot stop a false asset; it can only make it visible. Femi, 2026-10-23: "It is not up to us to police the Owner of a Business." So this limit is intended, not a gap to close.
 7. **D-FA-G. DECIDED (same rule, 2026-10-13): the Owner Admin approves disposals and impairments too,** with the same fixed-at-request rule.
+8. **D-FA-H. Which of the owner-protection extensions in section 6.6 do you want, and in what order?** Recommended: FR-FA20 and FR-FA19 first (cheap, and the owner is told of everything), then FR-FA21 and FR-FA22 (finding ghost assets), then FR-FA23, FR-FA24 last.
 
 ## 8. What this does and does not secure
 
-It makes it hard to put a false asset, a false write-down or a false sale into the books without a second person seeing the exact figures, and it makes what slips through visible. It does **not** make an approver honest, verify an asset physically exists (a physical count is a business process, not software), or stop two people colluding. The Owner's self-approval stays possible by design and is recorded, not prevented. The approval step is only as good as the evidence it is shown, which is why evidence (FR-FA1) is part of the same gap, not a separate nicety.
+It makes it hard to put a false asset, a false write-down or a false sale into the books without a second person seeing the exact figures, and it makes what slips through visible. It does **not** make an approver honest or stop two people colluding, and it does not see the building: whether an asset physically exists is checked by a person, and FR-FA22 (proposed) makes that check a recorded, attributable round rather than a hope. The Owner's own entries stay possible by design and are recorded and flagged, not blocked: we protect the owner from being defrauded, we do not police the owner. The approval step is only as good as the evidence it is shown, which is why evidence (FR-FA1) is part of the same gap, not a separate nicety.
 
 ## 9. Coordination and status
 
