@@ -1,6 +1,6 @@
 # A readable transaction number on every posted entry, and keeping posted rows unchanged: design note
 
-**Status:** DRAFT, 2026-10-23, design only. Nothing here is built. Written by the GL session at CM's request after Femi asked "Do we have transaction ids???" and ruled "The audit trail will need one". Femi has not yet ruled on sections 5 and 6; do not build them. **Evidence tags:** **[code]** read on `origin/master` (GL `b0a106a` plus the open reversal PR); **[unverified]** believed, not read.
+**Status:** DRAFT, 2026-10-23, design only. Nothing here is built. Written by the GL session at CM's request after Femi asked "Do we have transaction ids???" and ruled "The audit trail will need one". **Femi ruled 2026-10-23 (via CM): the number is GAPLESS and any gap must be auditable and explained (Q12; Decisions_Log 2026-10-23); it is migration V38 and stays design only until the audit-trail Playbook is approved. Section 6c below sets out what that means.** Section 6 (the posted-row protection, V37) is built and released separately; see docs/GL_Posted_Entry_Immutability_Requirements.md in the GL repo. **Evidence tags:** **[code]** read on `origin/master` (GL `b0a106a` plus the open reversal PR); **[unverified]** believed, not read.
 
 ## 1. The requirement and what exists today
 
@@ -86,10 +86,26 @@ One caution on 8: a per-Company number still tells a reader how many entries THA
 5. **The counter row.** A trigger on `company_entry_counter` refuses DELETE and TRUNCATE, and refuses an UPDATE that does not increase `next_number`; the unique index on `(company_id, transaction_number)` makes a duplicate impossible; a manual jump upward would create a gap that the check read of point 3 shows. A table owner can always bypass a trigger; that is not preventable inside the database, and is why the application role should hold no DELETE or TRUNCATE on these tables.
 6. **Width.** `T-000123` is a minimum width; the integer is the truth. Past 999,999 it prints wider (`T-1000000`); nothing caps it.
 
+## 6c. Femi's ruling on gaps (Q12, 2026-10-23), and what it asks of the design
+
+Ruling, in his words: "Gapless... any gaps must be auditable for explanations." Recorded by CM as: the number is allocated inside the posting itself, a failed posting uses no number, a retry returns the same number, and if a gap ever appears the audit trail must be able to show it and explain it (never silently skipped).
+
+What this settles in the design above: section 3.2's locked per-Company counter is the choice (a SEQUENCE is out); section 6b point 1's rule stands (a single post takes its number at insert; a batch takes ONE bump at the end of its transaction, so a rolled-back batch consumes nothing); point 2 already gives "a retry returns the same number" through the entry row.
+
+What is new, and is a PROPOSAL until the audit-trail Playbook is approved (nothing is built):
+
+1. **A gap should be impossible in normal running, so "explainable" has to cover the abnormal causes:** a database restore to an earlier point, an owner-level manual change to the counter or the entries (the trigger of 6b point 5 cannot stop the table owner), a defect, or a migration. Each either removes a numbered entry or moves the counter without an entry.
+2. **Detect:** the check read of 6b point 3 becomes a contract, not an extra: per Company, `count`, `max`, the counter's `next_number - 1`, and the list of missing numbers (and any number beyond `max`). Read-only, tenant-scoped, one query on the unique index. A mismatch of `count`, `max` and the counter is the signal.
+3. **Explain:** an append-only `transaction_number_gap_notes` record (Company, first and last missing number, a reason, who recorded it, when), written only through a deliberate route by a platform operator or the Owner Admin, never by editing an entry and never deleted. A gap with no note shows as UNEXPLAINED in the check read; a note never closes a gap, it explains it. This table is itself immutable by the same kind of triggers as V37.
+4. **Backfill (V38) is the one planned source of unusual numbers:** entries stored before V38 are numbered in recorded order, flagged as assigned at backfill, in one migration. The V37 triggers must let that happen: either disable them deliberately for that one statement (table owner, inside the migration's transaction), or give the entry trigger a write-once NULL-to-value allowance for `transaction_number`. The second keeps the guard on, and is my preference.
+5. **Who reads it:** Q13 (same day) says the Owner Admin alone reads the audit trail first, the Accountant later; the check read and the notes follow that rule.
+
+Open for Femi or the audit-trail session, not decided here: whether an unexplained gap should also BLOCK further posting for that Company or only show (I recommend only show, and tell CM); who may write a gap note; and whether a note needs a second person's approval.
+
 ## 7. Questions for Femi (plain words)
 
 1. Is a **per-Company** series right, written `T-000123`, with **no restart each year**? Or a different letter, or a year in the number?
-2. Must the number be **gapless** (my recommendation, at a small cost in speed when one Company posts at the same instant), or is a number that can skip after a failed posting acceptable?
+2. ANSWERED 2026-10-23: gapless, and gaps auditable (section 6c). Was: must the number be **gapless** (my recommendation, at a small cost in speed when one Company posts at the same instant), or is a number that can skip after a failed posting acceptable?
 3. Do you rule on (a) and (b): may GL stop re-saving lines, and may the database refuse any change to a posted entry except marking it reversed?
 4. Should entries that existed before the number was introduced be numbered after the fact in the order they were STORED (my recommendation) or by their entry DATE first (the audit draft's suggestion)? Either is flagged as assigned at backfill; doing it before Live is the cheapest.
 
